@@ -90,11 +90,18 @@ interface ComponentDB {
   }>;
 }
 
+// Define types for individual components for clarity
+type Fuse = ComponentDB['fuses'][0];
+type Relay = ComponentDB['relays'][0];
+type Cable = { model: string; section: number; price: number; link: string };
+type Bms = ComponentDB['bms'][0];
+type Shunt = ComponentDB['shunts'][0];
+
 interface Requirements {
   Min_Max_Voltage: number;
   Max_Max_Voltage: number;
   Min_Rated_Energy: number;
-  Peak_Power: number;
+  Continuous_Power: number;
   Battery_max_weight: number;
   Max_Price: number;
   max_x: number;
@@ -104,9 +111,7 @@ interface Requirements {
 }
 
 interface Configuration {
-  cell_model: string;
-  brand: string;
-  composition: string;
+  cell: CellData;
   series_cells: number;
   parallel_cells: number;
   battery_voltage: number;
@@ -117,23 +122,11 @@ interface Configuration {
   continuous_power: number;
   peak_power: number;
   cell_price: number;
-  cell_link: string;
-  fuse_model: string;
-  fuse_price: number;
-  fuse_link: string;
-  relay_model: string;
-  relay_price: number;
-  relay_link: string;
-  cable_model: string;
-  cable_section: number;
-  cable_price: number;
-  cable_link: string;
-  bms_model: string;
-  bms_price: number;
-  bms_link: string;
-  shunt_model: string;
-  shunt_price: number;
-  shunt_link: string;
+  fuse: Fuse | null;
+  relay: Relay | null;
+  cable: Cable | null;
+  bms: Bms | null;
+  shunt: Shunt | null;
   total_price: number;
   dimensions: {
     length: number;
@@ -155,11 +148,13 @@ const COMPONENT_DB: ComponentDB = {
     { brand: "Cfriend", model: "EVAE-300A", vdc_max: 125, a_max: 300, temp_min: -40, temp_max: 125, price: 36.6, link: "" },
     { brand: "Cfriend", model: "EVAE-350A", vdc_max: 125, a_max: 350, temp_min: -40, temp_max: 125, price: 38, link: "" },
     { brand: "Cfriend", model: "EVAE-400A", vdc_max: 125, a_max: 400, temp_min: -40, temp_max: 125, price: 40, link: "" },
+    { brand: "Cfriend", model: "Example", vdc_max: 125, a_max: 1000, temp_min: -40, temp_max: 125, price: 40, link: "www.bestlink.com" },
   ],
   relays: [
     { brand: "OZSSLJJ", model: "RL/180", vdc_max: 72, a_max: 100, temp_min: -40, temp_max: 125, price: 47, link: "" },
     { brand: "Sensata", model: "D1D100", vdc_max: 100, a_max: 100, temp_min: -40, temp_max: 125, price: 159, link: "" },
     { brand: "Innuovo", model: "INVE01-200", vdc_max: 450, a_max: 200, temp_min: -40, temp_max: 125, price: 36.36, link: "" },
+    { brand: "Innuovo", model: "Placeholder", vdc_max: 450, a_max: 2000, temp_min: -40, temp_max: 125, price: 36.36, link: "" },
   ],
   cables: [
     { brand: "feked", model: "Single Core Electric Wire Cable", section: 2, vdc_max: 12, a_max: 17.5, temp_min: -40, temp_max: 120, price: 1, link: "" },
@@ -170,6 +165,7 @@ const COMPONENT_DB: ComponentDB = {
     { brand: "MidSummer", model: "Solar PV Cable", section: 10, vdc_max: 1000, a_max: 80, temp_min: -40, temp_max: 120, price: 2.18, link: "" },
     { brand: "Split Charge", model: "Hi-Flex Battery Cable 16mm²", section: 16, vdc_max: 1000, a_max: 110, temp_min: -40, temp_max: 120, price: 3.3, link: "" },
     { brand: "SplitCharge", model: "Hi-Flex Battery Cable 20mm²", section: 20, vdc_max: 1000, a_max: 135, temp_min: -40, temp_max: 120, price: 3.93, link: "" },
+    { brand: "SplitCharge", model: "Placeholder", section: 100, vdc_max: 1000, a_max: 1305, temp_min: -40, temp_max: 120, price: 3.93, link: "www.link.com" },
   ],
   bms: [
     { brand: "Sensata", model: "c-BMS", max_cells: 24, vdc_min: 11, vdc_max: 120, a_max: 2000, temp_min: -40, temp_max: 125, master_price: 800, slave_price: 0, link: "" },
@@ -245,22 +241,16 @@ function selectBMS(
   bmsOptions: ComponentDB['bms'],
   seriesCells: number,
   maxCurrent: number
-): { model: string; price: number; link: string } | null {
+): Bms | null {
   const suitable = bmsOptions.filter(
     (bms) => bms.max_cells >= seriesCells && bms.a_max >= maxCurrent
   );
 
   if (suitable.length === 0) return null;
 
-  const selected = suitable.reduce((cheapest, current) =>
+  return suitable.reduce((cheapest, current) =>
     current.master_price < cheapest.master_price ? current : cheapest
   );
-
-  return {
-    model: `${selected.brand} ${selected.model}`,
-    price: selected.master_price,
-    link: selected.link,
-  };
 }
 
 function selectCable(
@@ -399,10 +389,10 @@ function computeCellConfigurations(
       const cellEnergy = capacity * cell.NominalVoltage;
       const minParallelForEnergy = Math.ceil(requirements.Min_Rated_Energy / (series * cellEnergy));
 
-      const cellPeakCurrent = capacity * cell.MaxContinuousDischargeRate * 7;
-      const cellPeakPower = cellPeakCurrent * cell.NominalVoltage;
-      const minParallelForPower = Math.ceil(requirements.Peak_Power / (series * cellPeakPower));
-      console.log(`  Cell energy: ${cellEnergy}Wh, Cell peak power: ${cellPeakPower}W`);
+      const cellcontCurrent = capacity * cell.MaxContinuousDischargeRate;
+      const cellcontPower = cellcontCurrent * cell.NominalVoltage;
+      const minParallelForPower = Math.ceil(requirements.Continuous_Power / (series * cellcontPower));
+      console.log(`  Cell energy: ${cellEnergy}Wh, Cell peak power: ${cellcontPower}W`);
 
       console.log(`  Parallel range: ${Math.max(minParallelForEnergy, minParallelForPower)}P - 5P / Energy Pmin=${minParallelForEnergy}, Power Pmin=${minParallelForPower}`);
       for (let parallel = Math.max(minParallelForEnergy, minParallelForPower, 1); parallel <= 5; parallel++) {
@@ -416,11 +406,11 @@ function computeCellConfigurations(
         const batteryImpedance = (impedance * series) / parallel;
         const nominalCurrent = capacity * cell.MaxContinuousDischargeRate;
         const continuousPower = batteryVoltage * nominalCurrent * parallel;
-        const peakCurrent = cellPeakCurrent * parallel;
+        const peakCurrent = cellcontCurrent * parallel * 5;
         const peakPower = batteryVoltage * peakCurrent;
         const cellsPrice = cell.Price * totalCells;
 
-        console.log(`Battery specs: ${batteryVoltage}V, ${batteryCapacity}Ah, ${batteryEnergy}Wh, ${batteryWeight}kg, ${peakPower}W peak`);
+        console.log(`Battery specs: ${batteryVoltage}V, ${batteryCapacity}Ah, ${batteryEnergy}Wh, ${batteryWeight}kg, ${peakPower}W peak,${peakCurrent}A peak`);
 
         if (!configGeometryValidation(cell, series, parallel, requirements.max_x, requirements.max_y)) {
           console.log(' Failed geometry validation: minParallelForEnergy=', minParallelForEnergy, ' minParallelForPower=', minParallelForPower);
@@ -433,7 +423,7 @@ function computeCellConfigurations(
           continue;
         }
 
-        if (peakPower < requirements.Peak_Power) {
+        if (continuousPower < requirements.Continuous_Power) {
           failedPower++;
           continue;
         }
@@ -476,7 +466,7 @@ function computeCellConfigurations(
         if (fuse) totalPrice += fuse.price;
         if (relay) totalPrice += relay.price;
         if (cable) totalPrice += cable.price;
-        if (bms) totalPrice += bms.price;
+        if (bms) totalPrice += bms.master_price;
         if (shunt) totalPrice += shunt.price;
 
         if (totalPrice > requirements.Max_Price) {
@@ -488,9 +478,7 @@ function computeCellConfigurations(
         console.log(`  Energy: ${batteryEnergy}Wh, Power: ${peakPower}W, Weight: ${batteryWeight}kg`);
 
         configs.push({
-          cell_model: cell.CellModelNo,
-          brand: cell.Brand,
-          composition: cell.Composition,
+          cell: cell,
           series_cells: series,
           parallel_cells: parallel,
           battery_voltage: Math.round(batteryVoltage * 10) / 10,
@@ -501,23 +489,11 @@ function computeCellConfigurations(
           continuous_power: Math.round(continuousPower),
           peak_power: Math.round(peakPower),
           cell_price: Math.round(cellsPrice * 100) / 100,
-          cell_link: "",
-          fuse_model: fuse ? `${fuse.brand} ${fuse.model}` : "",
-          fuse_price: fuse ? Math.round(fuse.price * 100) / 100 : 0,
-          fuse_link: fuse ? fuse.link : "",
-          relay_model: relay ? `${relay.brand} ${relay.model}` : "",
-          relay_price: relay ? Math.round(relay.price * 100) / 100 : 0,
-          relay_link: relay ? relay.link : "",
-          cable_model: cable ? cable.model : "",
-          cable_section: cable ? cable.section : 0,
-          cable_price: cable ? Math.round(cable.price * 100) / 100 : 0,
-          cable_link: cable ? cable.link : "",
-          bms_model: bms ? bms.model : "",
-          bms_price: bms ? Math.round(bms.price * 100) / 100 : 0,
-          bms_link: bms ? bms.link : "",
-          shunt_model: shunt ? `${shunt.brand} ${shunt.model}` : "",
-          shunt_price: shunt ? Math.round(shunt.price * 100) / 100 : 0,
-          shunt_link: shunt ? shunt.link : "",
+          fuse: fuse,
+          relay: relay,
+          cable: cable,
+          bms: bms,
+          shunt: shunt,
           total_price: Math.round(totalPrice * 100) / 100,
           dimensions: {
             length: Math.round((cell.Cell_Width + 0.2) * Math.ceil(Math.sqrt(totalCells)) * 10) / 10,
@@ -582,7 +558,7 @@ serve(async (req) => {
       Min_Max_Voltage: parseFloat(data.min_voltage || '80'),
       Max_Max_Voltage: parseFloat(data.max_voltage || '90'),
       Min_Rated_Energy: parseFloat(data.min_energy || '3000'),
-      Peak_Power: parseFloat(data.max_power || '10000'),
+      Continuous_Power: parseFloat(data.min_continuous_power || '3000'),
       Battery_max_weight: parseFloat(data.max_weight || '65'),
       Max_Price: parseFloat(data.max_price || '5000'),
       max_x: parseFloat(data.max_width || '900'),
@@ -598,8 +574,8 @@ serve(async (req) => {
     if (requirements.Min_Rated_Energy <= 0) {
       throw new Error('Minimum rated energy must be greater than 0');
     }
-    if (requirements.Peak_Power <= 0) {
-      throw new Error('Peak power must be greater than 0');
+    if (requirements.Continuous_Power <= 0) {
+      throw new Error('Continuous power must be greater than 0');
     }
 
     console.log('Parsed requirements:', JSON.stringify(requirements, null, 2));

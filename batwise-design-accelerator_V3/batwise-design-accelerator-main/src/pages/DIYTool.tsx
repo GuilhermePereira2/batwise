@@ -14,13 +14,88 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Configuration, Component } from "@/types"; // Importar os tipos
+
+// Helper function to format W/Wh to kW/kWh
+const formatUnit = (value: number, unit: 'W' | 'Wh') => {
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(2)} k${unit}`;
+  }
+  return `${value.toFixed(0)} ${unit}`;
+};
+
+// Adicionar função para encontrar as melhores configurações
+const findBestConfigurations = (configs: Configuration[], targetPrice: number) => {
+  if (!configs.length) return [];
+
+  const findBest = (metric: (c: Configuration) => number, compare: 'min' | 'max' = 'max') => {
+    return configs.reduce((best, current) => {
+      const bestMetric = metric(best);
+      const currentMetric = metric(current);
+      return (compare === 'max' ? currentMetric > bestMetric : currentMetric < bestMetric) ? current : best;
+    });
+  };
+
+  // Nova função para calcular a pontuação baseada no preço target e densidade energética
+  const calculateOptimalScore = (config: Configuration) => {
+    const energyDensity = config.battery_energy / config.battery_weight;
+    const maxEnergyDensity = Math.max(...configs.map(c => c.battery_energy / c.battery_weight));
+
+    // Normalizar densidade energética (0-1)
+    const normalizedDensity = energyDensity / maxEnergyDensity;
+
+    // Calcular desvio do preço target (0-1, onde 1 é melhor)
+    const priceDifference = Math.abs(config.total_price - targetPrice);
+    const maxPriceDiff = Math.max(...configs.map(c => Math.abs(c.total_price - targetPrice)));
+    const normalizedPrice = 1 - (priceDifference / maxPriceDiff);
+
+    // Peso igual para ambos os fatores
+    return (normalizedDensity + normalizedPrice) / 2;
+  };
+
+  const bestConfigs = [
+    {
+      title: "Lowest Price",
+      config: findBest(c => c.total_price, 'min'),
+      metric: (c: Configuration) => `€${c.total_price.toFixed(2)}`
+    },
+    {
+      title: "Highest Energy",
+      config: findBest(c => c.battery_energy),
+      metric: (c: Configuration) => formatUnit(c.battery_energy, 'Wh')
+    },
+    {
+      title: "Highest Energy Density",
+      config: findBest(c => c.battery_energy / c.battery_weight),
+      metric: (c: Configuration) => `${(c.battery_energy / c.battery_weight).toFixed(1)} Wh/kg`
+    },
+    {
+      title: "Best Value",
+      config: findBest(c => c.battery_energy / c.total_price),
+      metric: (c: Configuration) => `${(c.battery_energy / c.total_price).toFixed(1)} Wh/€`
+    },
+    {
+      title: "Lightest",
+      config: findBest(c => c.battery_weight, 'min'),
+      metric: (c: Configuration) => `${c.battery_weight.toFixed(1)} kg`
+    },
+    {
+      title: "Optimal Balance",
+      config: findBest(c => calculateOptimalScore(c)),
+      metric: (c: Configuration) => `${(c.battery_energy / c.battery_weight).toFixed(1)} Wh/kg @ €${c.total_price.toFixed(0)}`
+    }
+  ];
+
+  return bestConfigs;
+};
 
 const DIYTool = () => {
   const USE_LOCAL_FUNCTIONS = import.meta.env.VITE_USE_LOCAL_FUNCTIONS === 'true';
   const LOCAL_BATTERY_FUNCTION_URL = import.meta.env.VITE_BATTERY_DESIGN_URL || 'http://localhost:8000';
   const [minVoltage, setMinVoltage] = useState("");
   const [maxVoltage, setMaxVoltage] = useState("");
-  const [maxPower, setMaxPower] = useState("");
+  const [minContinuousPower, setMinContinuousPower] = useState("");
   const [minEnergy, setMinEnergy] = useState("");
   const [maxEnergy, setMaxEnergy] = useState("");
   const [targetPrice, setTargetPrice] = useState("");
@@ -33,11 +108,13 @@ const DIYTool = () => {
   const [outputVoltage, setOutputVoltage] = useState("");
   const [showResults, setShowResults] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [results, setResults] = useState<any[]>([]);
-  const [plotResults, setPlotResults] = useState<any[]>([]);
+  const [results, setResults] = useState<Configuration[]>([]);
+  const [plotResults, setPlotResults] = useState<Configuration[]>([]);
   const [totalConfigurations, setTotalConfigurations] = useState(0);
+  const [selectedSolution, setSelectedSolution] = useState<Configuration | null>(null);
   const [xAxis, setXAxis] = useState("battery_energy");
   const [yAxis, setYAxis] = useState("total_price");
+  const [activeTab, setActiveTab] = useState("best-solutions");
   const { toast } = useToast();
 
   const handleGenerate = async () => {
@@ -51,7 +128,7 @@ const DIYTool = () => {
       const payload = {
         min_voltage: minVoltage || '80',
         max_voltage: maxVoltage || '90',
-        max_power: maxPower || '10000',
+        min_continuous_power: minContinuousPower || '3000',
         min_energy: minEnergy || '3000',
         max_weight: maxWeight || '65',
         max_price: maxPrice || '5000',
@@ -95,7 +172,7 @@ const DIYTool = () => {
       } else {
         toast({
           title: "Design generated successfully!",
-          description: `Found ${data.total} valid configurations. Showing top ${data.results.length}.`,
+          description: `Found ${data.total} valid configurations.`,
         });
       }
     } catch (error) {
@@ -175,9 +252,9 @@ const DIYTool = () => {
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-8">
+          <div className="flex flex-col items-center gap-8">
             {/* Input Panel */}
-            <Card className="shadow-soft animate-slide-up">
+            <Card className="shadow-soft animate-slide-up w-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Calculator className="w-5 h-5 text-accent" />
@@ -212,15 +289,14 @@ const DIYTool = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="maxPower">Maximum Power (W)</Label>
+                    <Label htmlFor="minContinuousPower">Minimum Continuous Power (W)</Label>
                     <Input
-                      id="maxPower"
+                      id="minContinuousPower"
                       type="number"
-                      placeholder="e.g., 5000"
-                      value={maxPower}
-                      onChange={(e) => setMaxPower(e.target.value)}
+                      placeholder="e.g., 3000"
+                      value={minContinuousPower}
+                      onChange={(e) => setMinContinuousPower(e.target.value)}
                     />
-                    <p className="text-xs text-muted-foreground">(Maximum power sustained for 30 seconds)</p>
                   </div>
 
                   <div className="space-y-2">
@@ -362,7 +438,7 @@ const DIYTool = () => {
             </Card>
 
             {/* Output Panel */}
-            <Card className="shadow-soft animate-slide-up" style={{ animationDelay: "100ms" }}>
+            <Card className="shadow-soft animate-slide-up w-full" style={{ animationDelay: "100ms" }}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Battery className="w-5 h-5 text-accent" />
@@ -378,15 +454,20 @@ const DIYTool = () => {
                     <div className="p-4 bg-accent/10 rounded-lg border border-accent/20">
                       <h3 className="font-semibold text-foreground mb-2">Best Matching Configurations</h3>
                       <p className="text-sm text-muted-foreground">
-                        Found {totalConfigurations} valid configurations. Showing top 30 in table, top 100 in plot.
+                        Found {totalConfigurations} valid configurations.
                       </p>
                     </div>
 
-                    <Tabs defaultValue="table" className="w-full">
+                    <Tabs
+                      defaultValue="best-solutions"
+                      className="w-full"
+                      value={activeTab}
+                      onValueChange={setActiveTab}
+                    >
                       <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="table" className="flex items-center gap-2">
-                          <Table2 className="w-4 h-4" />
-                          Table View
+                        <TabsTrigger value="best-solutions" className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4" />
+                          Best Solutions View
                         </TabsTrigger>
                         <TabsTrigger value="plot" className="flex items-center gap-2">
                           <BarChart3 className="w-4 h-4" />
@@ -394,113 +475,33 @@ const DIYTool = () => {
                         </TabsTrigger>
                       </TabsList>
 
-                      <TabsContent value="table" className="space-y-4">
+                      {/* Best Solutions View */}
+                      <TabsContent value="best-solutions" className="space-y-4">
                         <div className="p-3 bg-accent/10 rounded-lg border border-accent/20 mb-4">
                           <p className="text-sm text-muted-foreground">
                             * O peso apresentado não considera eletrónica nem caixa
                           </p>
                         </div>
-                        <div className="overflow-x-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Cell</TableHead>
-                                <TableHead className="text-center">Config</TableHead>
-                                <TableHead className="text-right">Energy</TableHead>
-                                <TableHead className="text-right">Weight*</TableHead>
-                                <TableHead>Fuse</TableHead>
-                                <TableHead>Relay</TableHead>
-                                <TableHead>Cable</TableHead>
-                                <TableHead>BMS</TableHead>
-                                <TableHead>Shunt</TableHead>
-                                <TableHead className="text-right">Total €</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {results.map((config, index) => (
-                                <TableRow key={index}>
-                                  <TableCell className="font-medium">
-                                    <div className="space-y-1">
-                                      <div className="flex items-center gap-1">
-                                        {config.cell_model}
-                                        {config.cell_link && (
-                                          <a href={config.cell_link} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent/80">
-                                            <ExternalLink className="w-3 h-3" />
-                                          </a>
-                                        )}
-                                      </div>
-                                      <div className="text-xs text-muted-foreground">{config.brand}</div>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    <div className="text-sm">{config.series_cells}S{config.parallel_cells}P</div>
-                                    <div className="text-xs text-muted-foreground">{config.battery_voltage.toFixed(1)}V</div>
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <div className="text-sm">{config.battery_energy} Wh</div>
-                                    <div className="text-xs text-muted-foreground">{config.battery_capacity.toFixed(1)}Ah</div>
-                                  </TableCell>
-                                  <TableCell className="text-right">{config.battery_weight.toFixed(1)} kg</TableCell>
-                                  <TableCell>
-                                    <div className="flex items-center gap-1 text-sm">
-                                      {config.fuse_model}
-                                      {config.fuse_link && (
-                                        <a href={config.fuse_link} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent/80">
-                                          <ExternalLink className="w-3 h-3" />
-                                        </a>
-                                      )}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">€{config.fuse_price}</div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex items-center gap-1 text-sm">
-                                      {config.relay_model}
-                                      {config.relay_link && (
-                                        <a href={config.relay_link} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent/80">
-                                          <ExternalLink className="w-3 h-3" />
-                                        </a>
-                                      )}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">€{config.relay_price}</div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex items-center gap-1 text-sm">
-                                      {config.cable_section}mm²
-                                      {config.cable_link && (
-                                        <a href={config.cable_link} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent/80">
-                                          <ExternalLink className="w-3 h-3" />
-                                        </a>
-                                      )}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">€{config.cable_price}/m</div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex items-center gap-1 text-sm">
-                                      {config.bms_model}
-                                      {config.bms_link && (
-                                        <a href={config.bms_link} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent/80">
-                                          <ExternalLink className="w-3 h-3" />
-                                        </a>
-                                      )}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">€{config.bms_price}</div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex items-center gap-1 text-sm">
-                                      {config.shunt_model}
-                                      {config.shunt_link && (
-                                        <a href={config.shunt_link} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent/80">
-                                          <ExternalLink className="w-3 h-3" />
-                                        </a>
-                                      )}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">€{config.shunt_price}</div>
-                                  </TableCell>
-                                  <TableCell className="text-right font-semibold">€{config.total_price.toFixed(2)}</TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                          {findBestConfigurations(results, Number(targetPrice) || 0).map(({ title, config, metric }) => (
+                            <Card
+                              key={title}
+                              className="cursor-pointer hover:shadow-lg transition-shadow"
+                              onClick={() => setSelectedSolution(config)}
+                            >
+                              <CardHeader>
+                                <CardTitle className="text-lg">{title}</CardTitle>
+                                <CardDescription>{metric(config)}</CardDescription>
+                              </CardHeader>
+                              <CardContent className="text-sm space-y-1">
+                                <p><strong>Model:</strong> {config.cell.CellModelNo}</p>
+                                <p><strong>Config:</strong> {config.series_cells}S{config.parallel_cells}P</p>
+                                <p><strong>Energy:</strong> {formatUnit(config.battery_energy, 'Wh')}</p>
+                                <p><strong>Weight:</strong> {config.battery_weight.toFixed(1)} kg</p>
+                                <p className="font-bold mt-2">Price: €{config.total_price.toFixed(2)}</p>
+                              </CardContent>
+                            </Card>
+                          ))}
                         </div>
 
                         <div className="pt-4 border-t border-border">
@@ -513,8 +514,13 @@ const DIYTool = () => {
                         </div>
                       </TabsContent>
 
-                      <TabsContent value="plot" className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
+                      {/* Plot View */}
+                      <TabsContent
+                        value="plot"
+                        className={`space-y-4 transition-all duration-200 ${activeTab === "plot" ? "min-h-[600px]" : "min-h-0"
+                          }`}
+                      >
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label>X-Axis Parameter</Label>
                             <Select value={xAxis} onValueChange={setXAxis}>
@@ -527,9 +533,8 @@ const DIYTool = () => {
                                 <SelectItem value="battery_voltage">Voltage (V)</SelectItem>
                                 <SelectItem value="battery_capacity">Capacity (Ah)</SelectItem>
                                 <SelectItem value="total_price">Total Price (€)</SelectItem>
-                                <SelectItem value="cells_price">Cells Price (€)</SelectItem>
+                                <SelectItem value="cell.Price">Cells Price (€)</SelectItem>
                                 <SelectItem value="peak_power">Peak Power (W)</SelectItem>
-                                <SelectItem value="impedance">Impedance (Ω)</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -545,15 +550,14 @@ const DIYTool = () => {
                                 <SelectItem value="battery_weight">Weight (kg)</SelectItem>
                                 <SelectItem value="battery_voltage">Voltage (V)</SelectItem>
                                 <SelectItem value="battery_capacity">Capacity (Ah)</SelectItem>
-                                <SelectItem value="cells_price">Cells Price (€)</SelectItem>
+                                <SelectItem value="cell.Price">Cells Price (€)</SelectItem>
                                 <SelectItem value="peak_power">Peak Power (W)</SelectItem>
-                                <SelectItem value="impedance">Impedance (Ω)</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
                         </div>
 
-                        <div className="h-[400px] w-full">
+                        <div className="relative w-full h-[500px] overflow-hidden">
                           <ChartContainer config={{
                             battery: {
                               label: "Battery Configuration",
@@ -561,13 +565,17 @@ const DIYTool = () => {
                             },
                           }}>
                             <ResponsiveContainer width="100%" height="100%">
-                              <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                              <ScatterChart margin={{ top: 20, right: 30, bottom: 200, left: 40 }}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis
                                   type="number"
                                   dataKey={xAxis}
                                   name={xAxis}
-                                  label={{ value: xAxis.replace('_', ' ').toUpperCase(), position: 'insideBottom', offset: -10 }}
+                                  label={{
+                                    value: xAxis.replace('_', ' ').toUpperCase(),
+                                    position: 'bottom',
+                                    offset: 20
+                                  }}
                                 />
                                 <YAxis
                                   type="number"
@@ -581,9 +589,9 @@ const DIYTool = () => {
                                       const data = payload[0].payload;
                                       return (
                                         <div className="bg-background border border-border p-3 rounded-lg shadow-lg">
-                                          <p className="font-semibold">{data.cell_model}</p>
+                                          <p className="font-semibold">{data.cell.CellModelNo}</p>
                                           <p className="text-sm text-muted-foreground">{data.series_cells}S{data.parallel_cells}P</p>
-                                          <p className="text-sm">Energy: {data.battery_energy} Wh</p>
+                                          <p className="text-sm">Energy: {formatUnit(data.battery_energy, "Wh")}</p>
                                           <p className="text-sm">Price: €{data.total_price.toFixed(2)}</p>
                                           <p className="text-sm">Weight: {data.battery_weight.toFixed(1)} kg</p>
                                         </div>
@@ -597,6 +605,7 @@ const DIYTool = () => {
                                   data={plotResults}
                                   fill="hsl(var(--accent))"
                                   fillOpacity={0.6}
+                                  onClick={(data) => setSelectedSolution(data.payload)}
                                 />
                               </ScatterChart>
                             </ResponsiveContainer>
@@ -651,7 +660,137 @@ const DIYTool = () => {
       </section>
 
       <Footer />
+
+      {selectedSolution && (
+        <SolutionDetailModal
+          solution={selectedSolution}
+          isOpen={!!selectedSolution}
+          onClose={() => setSelectedSolution(null)}
+        />
+      )}
     </div>
+  );
+};
+
+const SolutionDetailModal = ({ solution, isOpen, onClose }: { solution: Configuration, isOpen: boolean, onClose: () => void }) => {
+  if (!solution) return null;
+
+  const nominalCurrent = (solution.cell.Capacity / 1000) * solution.cell.MaxContinuousDischargeRate * solution.parallel_cells;
+  const nominalPower = solution.battery_voltage * nominalCurrent;
+
+  const AffiliateLink = ({ link }: { link?: string }) => {
+    if (!link) return null;
+    return (
+      <a href={link} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline flex items-center gap-1 mt-1">
+        Buy from Affiliate <ExternalLink className="inline w-3 h-3" />
+      </a>
+    );
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>Configuration Details: {solution.cell.CellModelNo} ({solution.series_cells}S{solution.parallel_cells}P)</DialogTitle>
+        </DialogHeader>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 max-h-[70vh] overflow-y-auto p-2">
+          {/* Column 1: Battery & Cell Specs */}
+          <div className="space-y-4">
+            <Card>
+              <CardHeader><CardTitle className="text-base">Battery Specs</CardTitle></CardHeader>
+              <CardContent className="text-sm space-y-1">
+                <p><strong>Nominal Voltage:</strong> {solution.battery_voltage.toFixed(1)} V</p>
+                <p><strong>Nominal Current:</strong> {nominalCurrent.toFixed(1)} A</p>
+                <p><strong>Energy:</strong> {formatUnit(solution.battery_energy, 'Wh')}</p>
+                <p><strong>Nominal Power:</strong> {formatUnit(nominalPower, 'W')}</p>
+                <p><strong>Peak Power:</strong> {formatUnit(solution.peak_power, 'W')}</p>
+                <p><strong>Weight:</strong> {solution.battery_weight.toFixed(2)} kg</p>
+                <p className="font-bold">Total Price: €{solution.total_price.toFixed(2)}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle className="text-base">Cell: {solution.cell.Brand} {solution.cell.CellModelNo}</CardTitle></CardHeader>
+              <CardContent className="text-sm space-y-1">
+                <p><strong>Nominal Voltage:</strong> {solution.cell.NominalVoltage} V</p>
+                <p><strong>Charge C-Rate:</strong> {solution.cell.MaxContinuousChargeRate}C</p>
+                <p><strong>Discharge C-Rate:</strong> {solution.cell.MaxContinuousDischargeRate}C</p>
+                <p><strong>Dimensions (mm):</strong> {solution.cell.Cell_Height}H x {solution.cell.Cell_Width}W x {solution.cell.Cell_Thickness}T</p>
+                <p><strong>Weight:</strong> {solution.cell.Weight} g</p>
+                <p><strong>Price:</strong> €{solution.cell.Price.toFixed(2)}</p>
+                <AffiliateLink link={solution.cell.Connection} />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Column 2 & 3: Components */}
+          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {solution.fuse && (
+              <Card>
+                <CardHeader><CardTitle className="text-base">Fuse</CardTitle></CardHeader>
+                <CardContent className="text-sm space-y-1">
+                  <p><strong>Brand:</strong> {solution.fuse.brand}</p>
+                  <p><strong>Model:</strong> {solution.fuse.model}</p>
+                  <p><strong>Max Voltage:</strong> {solution.fuse.vdc_max} V</p>
+                  <p><strong>Max Current:</strong> {solution.fuse.a_max} A</p>
+                  <p><strong>Price:</strong> €{solution.fuse.price.toFixed(2)}</p>
+                  <AffiliateLink link={solution.fuse.link} />
+                </CardContent>
+              </Card>
+            )}
+            {solution.relay && (
+              <Card>
+                <CardHeader><CardTitle className="text-base">Relay</CardTitle></CardHeader>
+                <CardContent className="text-sm space-y-1">
+                  <p><strong>Brand:</strong> {solution.relay.brand}</p>
+                  <p><strong>Model:</strong> {solution.relay.model}</p>
+                  <p><strong>Max Voltage:</strong> {solution.relay.vdc_max} V</p>
+                  <p><strong>Max Current:</strong> {solution.relay.a_max} A</p>
+                  <p><strong>Price:</strong> €{solution.relay.price.toFixed(2)}</p>
+                  <AffiliateLink link={solution.relay.link} />
+                </CardContent>
+              </Card>
+            )}
+            {solution.bms && (
+              <Card>
+                <CardHeader><CardTitle className="text-base">BMS</CardTitle></CardHeader>
+                <CardContent className="text-sm space-y-1">
+                  <p><strong>Brand:</strong> {solution.bms.brand}</p>
+                  <p><strong>Model:</strong> {solution.bms.model}</p>
+                  <p><strong>Max Cells:</strong> {solution.bms.max_cells}</p>
+                  <p><strong>Max Current:</strong> {solution.bms.a_max} A</p>
+                  <p><strong>Price:</strong> €{solution.bms.master_price.toFixed(2)}</p>
+                  <AffiliateLink link={solution.bms.link} />
+                </CardContent>
+              </Card>
+            )}
+            {solution.shunt && (
+              <Card>
+                <CardHeader><CardTitle className="text-base">Shunt</CardTitle></CardHeader>
+                <CardContent className="text-sm space-y-1">
+                  <p><strong>Brand:</strong> {solution.shunt.brand}</p>
+                  <p><strong>Model:</strong> {solution.shunt.model}</p>
+                  <p><strong>Max Voltage:</strong> {solution.shunt.vdc_max} V</p>
+                  <p><strong>Max Current:</strong> {solution.shunt.a_max} A</p>
+                  <p><strong>Price:</strong> €{solution.shunt.price.toFixed(2)}</p>
+                  <AffiliateLink link={solution.shunt.link} />
+                </CardContent>
+              </Card>
+            )}
+            {solution.cable && (
+              <Card>
+                <CardHeader><CardTitle className="text-base">Cable</CardTitle></CardHeader>
+                <CardContent className="text-sm space-y-1">
+                  <p><strong>Model:</strong> {solution.cable.model}</p>
+                  <p><strong>Section:</strong> {solution.cable.section} mm²</p>
+                  <p><strong>Price:</strong> €{solution.cable.price.toFixed(2)}</p>
+                  <AffiliateLink link={solution.cable.link} />
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
