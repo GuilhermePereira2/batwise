@@ -10,6 +10,7 @@ const Navigation = () => {
   const menuItems = [
     { label: "Home", path: "/" },
     { label: "DIY Tool", path: "/diy" },
+    { label: "Cell Explorer", path: "/cell-explorer" },
     { label: "Professional Solutions", path: "/business" },
     { label: "Pricing", path: "/pricing" },
     { label: "Blog", path: "/blog" },
@@ -32,11 +33,10 @@ const Navigation = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`transition-colors ${
-                  isActive(item.path)
+                className={`transition-colors ${isActive(item.path)
                     ? "text-accent font-medium"
                     : "text-foreground hover:text-accent"
-                }`}
+                  }`}
               >
                 {item.label}
               </Link>
@@ -69,11 +69,10 @@ const Navigation = () => {
                   key={item.path}
                   to={item.path}
                   onClick={() => setIsOpen(false)}
-                  className={`py-2 transition-colors ${
-                    isActive(item.path)
+                  className={`py-2 transition-colors ${isActive(item.path)
                       ? "text-accent font-medium"
                       : "text-foreground hover:text-accent"
-                  }`}
+                    }`}
                 >
                   {item.label}
                 </Link>

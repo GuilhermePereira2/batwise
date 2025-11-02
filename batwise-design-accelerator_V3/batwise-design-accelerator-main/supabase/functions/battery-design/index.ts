@@ -541,85 +541,107 @@ function computeCellConfigurations(
 }
 
 serve(async (req) => {
+  // 1. Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const data = await req.json();
-    console.log('Received request data:', JSON.stringify(data, null, 2));
-
-    // Validate input data is present
-    if (!data) {
-      throw new Error('No request data received');
-    }
-
-    const requirements: Requirements = {
-      Min_Max_Voltage: parseFloat(data.min_voltage || '80'),
-      Max_Max_Voltage: parseFloat(data.max_voltage || '90'),
-      Min_Rated_Energy: parseFloat(data.min_energy || '3000'),
-      Continuous_Power: parseFloat(data.min_continuous_power || '3000'),
-      Battery_max_weight: parseFloat(data.max_weight || '65'),
-      Max_Price: parseFloat(data.max_price || '5000'),
-      max_x: parseFloat(data.max_width || '900'),
-      max_y: parseFloat(data.max_length || '340'),
-      max_z: parseFloat(data.max_height || '250'),
-      T_amb: parseFloat(data.ambient_temp || '35'),
-    };
-
-    // Validate parsed values are reasonable
-    if (requirements.Min_Max_Voltage >= requirements.Max_Max_Voltage) {
-      throw new Error('Minimum voltage must be less than maximum voltage');
-    }
-    if (requirements.Min_Rated_Energy <= 0) {
-      throw new Error('Minimum rated energy must be greater than 0');
-    }
-    if (requirements.Continuous_Power <= 0) {
-      throw new Error('Continuous power must be greater than 0');
-    }
-
-    console.log('Parsed requirements:', JSON.stringify(requirements, null, 2));
-
-    const { configs: configurations, stats } = computeCellConfigurations(requirements, CELL_CATALOGUE, COMPONENT_DB);
-
-    const sortedConfigurations = configurations
-      .sort((a, b) => (b.battery_energy / b.total_price) - (a.battery_energy / a.total_price));
-
-    const top30 = sortedConfigurations.slice(0, 30);
-    const top100 = sortedConfigurations.slice(0, 100);
-
-    console.log(`Found ${configurations.length} valid configurations, returning top 30 for table and top 100 for plot`);
-
-    const responseBody: any = {
-      results: top30,
-      plotResults: top100,
-      total: configurations.length,
-    };
-
-    // If the client asked for debug info, include the internal stats summary
-    if (data && (data.debug === true || data.debug === 'true' || data.debug === '1')) {
-      responseBody.stats = stats;
-    }
-
+  // 2. Handle GET requests (para o CellExplorer)
+  //    Devolve simplesmente o catálogo de células
+  if (req.method === 'GET') {
+    console.log('Received GET request for cell catalogue');
     return new Response(
-      JSON.stringify(responseBody),
+      JSON.stringify(CELL_CATALOGUE), // Devolve a lista de células
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
-  } catch (error) {
-    console.error('Error in battery-design function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    return new Response(
-      JSON.stringify({
-        error: errorMessage,
-        results: [],
-        total: 0
-      }),
-      {
-        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   }
+
+  // 3. Handle POST requests (para o DIYTool)
+  if (req.method === 'POST') {
+    try {
+      const data = await req.json();
+      console.log('Received request data:', JSON.stringify(data, null, 2));
+
+      // Validate input data is present
+      if (!data) {
+        throw new Error('No request data received');
+      }
+
+      const requirements: Requirements = {
+        Min_Max_Voltage: parseFloat(data.min_voltage || '80'),
+        Max_Max_Voltage: parseFloat(data.max_voltage || '90'),
+        Min_Rated_Energy: parseFloat(data.min_energy || '3000'),
+        Continuous_Power: parseFloat(data.min_continuous_power || '3000'),
+        Battery_max_weight: parseFloat(data.max_weight || '65'),
+        Max_Price: parseFloat(data.max_price || '5000'),
+        max_x: parseFloat(data.max_width || '900'),
+        max_y: parseFloat(data.max_length || '340'),
+        max_z: parseFloat(data.max_height || '250'),
+        T_amb: parseFloat(data.ambient_temp || '35'),
+      };
+
+      // Validate parsed values are reasonable
+      if (requirements.Min_Max_Voltage >= requirements.Max_Max_Voltage) {
+        throw new Error('Minimum voltage must be less than maximum voltage');
+      }
+      if (requirements.Min_Rated_Energy <= 0) {
+        throw new Error('Minimum rated energy must be greater than 0');
+      }
+      if (requirements.Continuous_Power <= 0) {
+        throw new Error('Continuous power must be greater than 0');
+      }
+
+      console.log('Parsed requirements:', JSON.stringify(requirements, null, 2));
+
+      const { configs: configurations, stats } = computeCellConfigurations(requirements, CELL_CATALOGUE, COMPONENT_DB);
+
+      const sortedConfigurations = configurations
+        .sort((a, b) => (b.battery_energy / b.total_price) - (a.battery_energy / a.total_price));
+
+      const top30 = sortedConfigurations.slice(0, 30);
+      const top100 = sortedConfigurations.slice(0, 100);
+
+      console.log(`Found ${configurations.length} valid configurations, returning top 30 for table and top 100 for plot`);
+
+      const responseBody: any = {
+        results: top30,
+        plotResults: top100,
+        total: configurations.length,
+      };
+
+      // If the client asked for debug info, include the internal stats summary
+      if (data && (data.debug === true || data.debug === 'true' || data.debug === '1')) {
+        responseBody.stats = stats;
+      }
+
+      return new Response(
+        JSON.stringify(responseBody),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    } catch (error) {
+      console.error('Error in battery-design function:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      return new Response(
+        JSON.stringify({
+          error: errorMessage,
+          results: [],
+          total: 0
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+  }
+
+  // 4. Handle other methods
+  return new Response(JSON.stringify({ error: "Method Not Allowed" }), {
+    status: 405,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 });

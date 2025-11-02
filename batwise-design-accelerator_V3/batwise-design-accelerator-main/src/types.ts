@@ -48,3 +48,41 @@ export interface Configuration {
     bms: Component | null;
     shunt: Component | null;
 }
+
+// O tipo para uma célula individual (baseado no teu CellExplorer)
+export interface Cell {
+    id: number;
+    CellModelNo: string;
+    Brand: string;
+    Capacity: number; // Assumido em mAh
+    NominalVoltage: number; // Assumido em V
+    Weight: number; // Assumido em g
+    FormFactor: string;
+    Chemistry: string;
+    MaxContinuousDischargeRate: number; // Assumido em C
+    Connection: string; // Link de afiliado
+    Price: number; // Preço unitário
+    // ... outros campos da tua tabela
+}
+
+// Tipo para os filtros do CellExplorer
+export interface CellSearchFilters {
+    searchQuery?: string;
+    brand?: string;
+    chemistry?: string;
+    formFactor?: string;
+}
+
+// Tipo para o payload do DIYTool
+export interface DIYPayload {
+    min_voltage: string;
+    max_voltage: string;
+    min_continuous_power: string;
+    min_energy: string;
+    max_weight: string;
+    max_price: string;
+    max_width: string;
+    max_length: string;
+    max_height: string;
+    debug: boolean;
+}
