@@ -16,6 +16,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Configuration, Component } from "@/types"; // Importar os tipos
+import { calculateBatteryDesign } from "@/lib/battery-calculator";
 
 // Helper function to format W/Wh to kW/kWh
 const formatUnit = (value: number, unit: 'W' | 'Wh') => {
@@ -117,7 +118,62 @@ const DIYTool = () => {
   const [activeTab, setActiveTab] = useState("best-solutions");
   const { toast } = useToast();
 
-  const handleGenerate = async () => {
+
+const handleGenerate = async () => {
+  setIsLoading(true);
+  setShowResults(false);
+
+  // Pequeno delay para permitir que o UI mostre o "Loading" antes de congelar brevemente no cálculo
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  try {
+    const payload = {
+      min_voltage: minVoltage || '80',
+      max_voltage: maxVoltage || '90',
+      min_continuous_power: minContinuousPower || '3000',
+      min_energy: minEnergy || '3000',
+      max_weight: maxWeight || '65',
+      max_price: maxPrice || '5000',
+      max_width: maxWidth || '900',
+      max_length: maxLength || '340',
+      max_height: maxHeight || '250',
+      debug: true,
+    };
+
+    // Cálculo direto no browser (síncrono)
+    const data = calculateBatteryDesign(payload);
+
+    setResults(data.results || []);
+    setPlotResults(data.plotResults || []);
+    setTotalConfigurations(data.total || 0);
+    setShowResults(true);
+
+    if (data.results.length === 0) {
+      toast({
+        title: "No configurations found",
+        description: "Try adjusting your requirements to find matching battery configurations.",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Design generated successfully!",
+        description: `Found ${data.total} valid configurations.`,
+      });
+    }
+  } catch (error) {
+    console.error('Error generating design:', error);
+    toast({
+      title: "Error generating design",
+      description: "Please check your inputs and try again.",
+      variant: "destructive"
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
+/*  const handleGenerate = async () => {
     setIsLoading(true);
     setShowResults(false);
 
@@ -185,7 +241,7 @@ const DIYTool = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  };*/
 
   const scrollToCalculator = () => {
     document.getElementById("calculator")?.scrollIntoView({ behavior: "smooth" });
