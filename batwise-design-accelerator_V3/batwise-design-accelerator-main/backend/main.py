@@ -4,10 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
 # Importar Modelos (Inputs/Outputs)
-from models import RequirementModel, Configuration
+from models import Requirements, Configuration
 
 # Importar Lógica de Cálculo
-from calculator import compute_cell_configurations
+from logic import compute_cell_configurations
 
 # --- A GRANDE MUDANÇA ESTÁ AQUI ---
 # Em vez de importar listas, importamos a nossa "Base de Dados" viva
@@ -40,7 +40,7 @@ def read_root():
 
 
 @app.post("/calculate", response_model=List[Configuration])
-def calculate_endpoint(req: RequirementModel):
+def calculate_endpoint(req: Requirements):
     """
     Recebe os requisitos do Frontend, vai buscar os dados à classe DB,
     corre o algoritmo e devolve a lista de configurações.

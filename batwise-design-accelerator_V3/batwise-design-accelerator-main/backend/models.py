@@ -115,6 +115,13 @@ class Dimensions(BaseModel):
     width: float
     height: float
 
+
+class SafetyAssessment(BaseModel):
+    is_safe: bool
+    safety_score: int  # 0 a 100
+    warnings: List[str]  # Ex: "Current implies high heat generation"
+    recommendations: List[str]  # Ex: "Use Active Cooling"
+
 # Esta estrutura espelha exatamente a interface Configuration do TypeScript
 
 
@@ -139,6 +146,9 @@ class Configuration(BaseModel):
     total_price: float
     dimensions: Dimensions
     affiliate_link: str
+    safety: SafetyAssessment  # Novo campo
+    # Link para imagem gerada ou estática
+    wiring_diagram_url: Optional[str] = None
 
 
 class DesignResponse(BaseModel):

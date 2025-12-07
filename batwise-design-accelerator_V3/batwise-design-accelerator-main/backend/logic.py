@@ -1,7 +1,7 @@
 import math
 from functools import lru_cache
 from typing import List, Dict, Optional, Tuple, Any
-from models import CellData, Fuse, Relay, Cable, Bms, Shunt, Configuration, Dimensions
+from models import Requirements, CellData, Fuse, Relay, Cable, Bms, Shunt, Configuration, Dimensions, SafetyAssessment
 
 # --- CONSTANTES DE SEGURANÇA E FÍSICA ---
 HEIGHT_MARGIN_MM = 30.0
@@ -90,6 +90,51 @@ def config_geometry_validation_fast(cell: CellData, series: int, parallel: int, 
                 return True
     return False
 
+
+def assess_safety(req: Requirements, cell: CellData, config_values: dict) -> SafetyAssessment:
+    warnings = []
+    recs = []
+    score = 100
+    is_safe = True
+
+    # Calcular C-rate real solicitado
+    # I = P / V (Usamos tensão nominal para estimativa geral)
+    req_current = config_values['continuous_current']
+
+    # Capacidade total do pack em Ah
+    pack_capacity_ah = (cell.Capacity / 1000) * config_values['parallel_cells']
+
+    # C-rate efetivo = Corrente Total / Capacidade Total
+    actual_c_rate = req_current / pack_capacity_ah if pack_capacity_ah > 0 else 999
+
+    limit_continuous = cell.MaxContinuousDischargeRate
+
+    # 1. Verificação de Corrente (Thermal & Safety)
+    if actual_c_rate > limit_continuous:
+        warnings.append(
+            "DANGER: Discharge current exceeds cell physical limits. High fire risk.")
+        score = 0
+        is_safe = False
+
+    elif actual_c_rate > (limit_continuous * 0.8):
+        warnings.append(
+            f"Warning: High Load ({actual_c_rate:.2f}C). Cells will overheat without active cooling.")
+        score -= 20
+        recs.append("Add spacing (min 2mm) between cells for airflow.")
+        recs.append("Consider using a higher capacity cell to reduce stress.")
+
+    # 2. Verificação de Tensão (Voltage Safety)
+    if config_values['voltage'] > 60:
+        warnings.append(
+            "High Voltage (>60V): Lethal shock risk. Requires specialized handling and insulation.")
+        recs.append("Ensure all connections are insulated (IP54 or higher).")
+
+    return SafetyAssessment(
+        is_safe=is_safe,
+        safety_score=score,
+        warnings=warnings,
+        recommendations=recs
+    )
 # --- MOTOR DE CÁLCULO PRINCIPAL ---
 
 
@@ -166,6 +211,18 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                     stats["failedGeometry"] += 1
                     continue
 
+                cont_current = req.min_continuous_power / bat_voltage
+
+                safety = assess_safety(req, cell, {
+                    'continuous_current': cont_current,
+                    'parallel_cells': parallel,
+                    'voltage': bat_voltage
+                })
+
+                # Se for perigoso, ignorar imediatamente esta configuração
+                if not safety.is_safe:
+                    continue
+
                 # Seleção Componentes
                 peak_current = (cell.Capacity * 1e-3 *
                                 cell.MaxContinuousDischargeRate) * parallel * 5
@@ -236,6 +293,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                                     * math.ceil(math.sqrt(total_cells)), 1),
                         height=round(cell.Cell_Height, 1)
                     ),
+                    safety=safety,
                     affiliate_link=""
                 )
                 configs.append(config)
