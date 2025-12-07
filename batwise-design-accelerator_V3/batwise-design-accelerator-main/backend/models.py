@@ -1,19 +1,68 @@
 from pydantic import BaseModel
 from typing import List, Optional
 
+# --- Component Models (minúsculas, como no teu Deno) ---
 
-class Requirements(BaseModel):
-    min_voltage: float
-    max_voltage: float
-    min_energy: float
-    min_continuous_power: float
-    max_weight: float
-    max_price: float
-    max_width: float
-    max_length: float
-    max_height: float
-    ambient_temp: float
-    debug: bool = False
+
+class Fuse(BaseModel):
+    brand: str
+    model: str
+    vdc_max: float
+    a_max: float
+    temp_min: float
+    temp_max: float
+    price: float
+    link: str
+
+
+class Relay(BaseModel):
+    brand: str
+    model: str
+    vdc_max: float
+    a_max: float
+    temp_min: float
+    temp_max: float
+    price: float
+    link: str
+
+
+class Cable(BaseModel):
+    brand: str
+    model: str
+    section: float
+    vdc_max: float
+    a_max: float
+    temp_min: float
+    temp_max: float
+    price: float
+    link: str
+
+
+class Bms(BaseModel):
+    brand: str
+    model: str
+    max_cells: int
+    vdc_min: float
+    vdc_max: float
+    a_max: float
+    temp_min: float
+    temp_max: float
+    master_price: float
+    slave_price: float
+    link: str
+
+
+class Shunt(BaseModel):
+    brand: str
+    model: str
+    vdc_max: float
+    a_max: float
+    temp_min: float
+    temp_max: float
+    price: float
+    link: str
+
+# --- Cell Data (Maiúsculas, como no teu Deno) ---
 
 
 class CellData(BaseModel):
@@ -43,23 +92,30 @@ class CellData(BaseModel):
     OriginCountry: str
     Connection: str
 
+# --- Input & Output Structures ---
 
-class Component(BaseModel):
-    brand: str = ""
-    model: str
-    price: float
-    link: str = ""
-    # Campos opcionais para flexibilidade
-    vdc_max: Optional[float] = None
-    a_max: Optional[float] = None
-    section: Optional[float] = None
-    master_price: Optional[float] = None  # Para o BMS
+
+class Requirements(BaseModel):
+    # O frontend pode enviar strings ou números, o Pydantic converte
+    min_voltage: float
+    max_voltage: float
+    min_energy: float
+    min_continuous_power: float
+    max_weight: float
+    max_price: float
+    max_width: float
+    max_length: float
+    max_height: float
+    ambient_temp: float
+    debug: bool = False
 
 
 class Dimensions(BaseModel):
     length: float
     width: float
     height: float
+
+# Esta estrutura espelha exatamente a interface Configuration do TypeScript
 
 
 class Configuration(BaseModel):
@@ -74,11 +130,12 @@ class Configuration(BaseModel):
     continuous_power: float
     peak_power: float
     cell_price: float
-    fuse: Optional[Component]
-    relay: Optional[Component]
-    cable: Optional[Component]
-    bms: Optional[Component]
-    shunt: Optional[Component]
+    fuse: Optional[Fuse]
+    relay: Optional[Relay]
+    # No Deno tinhas um tipo custom para cable selecionado, aqui simplificamos
+    cable: Optional[Cable]
+    bms: Optional[Bms]
+    shunt: Optional[Shunt]
     total_price: float
     dimensions: Dimensions
     affiliate_link: str
@@ -88,3 +145,4 @@ class DesignResponse(BaseModel):
     results: List[Configuration]
     plotResults: List[Configuration]
     total: int
+    stats: Optional[dict] = None

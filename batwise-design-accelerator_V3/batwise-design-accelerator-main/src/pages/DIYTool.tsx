@@ -121,65 +121,69 @@ const DIYTool = () => {
     setIsLoading(true);
     setShowResults(false);
 
-    try {
-      let data: any = null;
-      let error: any = null;
+    // URL do teu backend Python local
+    const API_URL = "http://127.0.0.1:8000";
 
+    try {
+      // Prepara os dados (Payload)
       const payload = {
-        min_voltage: minVoltage || '80',
-        max_voltage: maxVoltage || '90',
-        min_continuous_power: minContinuousPower || '3000',
-        min_energy: minEnergy || '3000',
-        max_weight: maxWeight || '65',
-        max_price: maxPrice || '5000',
-        max_width: maxWidth || '900',
-        max_length: maxLength || '340',
-        max_height: maxHeight || '250',
+        min_voltage: Number(minVoltage) || 80,
+        max_voltage: Number(maxVoltage) || 90,
+        min_continuous_power: Number(minContinuousPower) || 3000,
+        min_energy: Number(minEnergy) || 3000,
+        max_weight: Number(maxWeight) || 65,
+        max_price: Number(maxPrice) || 5000,
+        max_width: Number(maxWidth) || 900,
+        max_length: Number(maxLength) || 340,
+        max_height: Number(maxHeight) || 250,
+        ambient_temp: 35, // O Python precisa disto
         debug: true,
       };
 
-      if (USE_LOCAL_FUNCTIONS) {
-        // Call local Deno function directly
-        const res = await fetch(LOCAL_BATTERY_FUNCTION_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) {
-          error = await res.text();
-        } else {
-          data = await res.json();
-        }
-      } else {
-        const invokeRes = await supabase.functions.invoke('battery-design', { body: payload });
-        data = invokeRes.data;
-        error = invokeRes.error;
+      console.log("Enviando pedido para Python:", payload); // Log para debug
+
+      // Faz o pedido FETCH normal (em vez de supabase.functions.invoke)
+      const response = await fetch(`${API_URL}/calculate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro do servidor Python: ${errorText}`);
       }
 
-      if (error) throw error;
+      const data = await response.json();
+      console.log("Resposta do Python:", data); // Log para veres os dados
 
+      // Atualiza a UI com os dados recebidos
       setResults(data.results || []);
       setPlotResults(data.plotResults || []);
       setTotalConfigurations(data.total || 0);
       setShowResults(true);
 
-      if (data.results.length === 0) {
+      if (data.total === 0) {
         toast({
           title: "No configurations found",
-          description: "Try adjusting your requirements to find matching battery configurations.",
+          description: "Try adjusting your requirements.",
           variant: "destructive"
         });
       } else {
         toast({
-          title: "Design generated successfully!",
-          description: `Found ${data.total} valid configurations.`,
+          title: "Design generated!",
+          description: `Found ${data.total} configurations via Python Backend.`,
         });
       }
-    } catch (error) {
+
+    } catch (error: any) {
       console.error('Error generating design:', error);
       toast({
         title: "Error generating design",
-        description: "Please check your inputs and try again.",
+        // Mostra o erro real para saberes o que se passa
+        description: error.message || "Failed to communicate with backend",
         variant: "destructive"
       });
     } finally {
