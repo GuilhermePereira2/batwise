@@ -3,10 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react"; // Adicionei Loader2
+import { useToast } from "@/hooks/use-toast"; // Assumindo que tens o hook do shadcn/ui
 
 const BatteryForm = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     maxWeight: "",
     minEnergy: "",
@@ -30,11 +34,75 @@ const BatteryForm = () => {
     return Object.values(formData).every((value) => value.trim() !== "");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isFormValid()) {
-      console.log("Form submitted:", formData);
-      // Handle form submission here
+
+    if (!isFormValid()) return;
+
+    setIsLoading(true);
+
+    // 1. Preparar os dados para o Backend Python
+    // NOTA: O Python espera mm, mas o form pede metros. Multiplicamos por 1000.
+    const payload = {
+      min_energy: Number(formData.minEnergy),
+      min_continuous_power: Number(formData.minPower),
+      min_voltage: Number(formData.minVoltage),
+      max_voltage: Number(formData.maxVoltage),
+      max_width: Number(formData.maxWidth),   // Converter m -> mm
+      max_length: Number(formData.maxLength), // Converter m -> mm
+      max_height: Number(formData.maxHeight), // Converter m -> mm
+      max_weight: Number(formData.maxWeight),
+      max_price: Number(formData.maxPrice),
+      ambient_temp: 25 // Valor default
+    };
+
+    try {
+      console.log("Enviando para o backend:", payload);
+
+      // 2. Chamar a API Python (Certifica-te que o main.py está a correr na porta 8000)
+      const response = await fetch('http://localhost:8000/calculate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro do servidor: ${errorText}`);
+      }
+
+      const results = await response.json();
+
+      if (results.length === 0) {
+        toast({
+          title: "Sem soluções",
+          description: "Não foi possível encontrar baterias compatíveis com estes limites.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Sucesso!",
+          description: `${results.length} configurações geradas.`,
+        });
+
+        console.log("Resultados recebidos:", results);
+
+        // AQUI: Deves navegar para a página de resultados e passar os dados
+        // Exemplo: navigate("/results", { state: { configurations: results } });
+        // Por enquanto, apenas logamos.
+      }
+
+    } catch (error) {
+      console.error("Erro no fetch:", error);
+      toast({
+        title: "Erro de Conexão",
+        description: "Verifica se o backend Python está a correr (uvicorn main:app).",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -76,16 +144,17 @@ const BatteryForm = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="minEnergy">Minimum energy (kWh)</Label>
+              <Label htmlFor="minEnergy">Minimum energy (Wh)</Label>
+              {/* NOTA: Mudei placeholder para Wh para bater certo com backend */}
               <Input
                 id="minEnergy"
                 name="minEnergy"
                 type="number"
-                step="0.01"
+                step="1"
                 value={formData.minEnergy}
                 onChange={handleChange}
                 required
-                placeholder="Enter minimum energy"
+                placeholder="Ex: 5000 Wh"
               />
             </div>
 
@@ -95,11 +164,11 @@ const BatteryForm = () => {
                 id="minVoltage"
                 name="minVoltage"
                 type="number"
-                step="0.01"
+                step="0.1"
                 value={formData.minVoltage}
                 onChange={handleChange}
                 required
-                placeholder="Enter minimum voltage"
+                placeholder="Ex: 40"
               />
             </div>
 
@@ -109,11 +178,11 @@ const BatteryForm = () => {
                 id="maxVoltage"
                 name="maxVoltage"
                 type="number"
-                step="0.01"
+                step="0.1"
                 value={formData.maxVoltage}
                 onChange={handleChange}
                 required
-                placeholder="Enter maximum voltage"
+                placeholder="Ex: 58.8"
               />
             </div>
 
@@ -123,11 +192,11 @@ const BatteryForm = () => {
                 id="minPower"
                 name="minPower"
                 type="number"
-                step="0.01"
+                step="1"
                 value={formData.minPower}
                 onChange={handleChange}
                 required
-                placeholder="Enter minimum power"
+                placeholder="Ex: 2000"
               />
             </div>
 
@@ -141,7 +210,7 @@ const BatteryForm = () => {
                 value={formData.maxLength}
                 onChange={handleChange}
                 required
-                placeholder="Enter maximum length"
+                placeholder="Ex: 0.5"
               />
             </div>
 
@@ -155,7 +224,7 @@ const BatteryForm = () => {
                 value={formData.maxWidth}
                 onChange={handleChange}
                 required
-                placeholder="Enter maximum width"
+                placeholder="Ex: 0.3"
               />
             </div>
 
@@ -169,7 +238,7 @@ const BatteryForm = () => {
                 value={formData.maxHeight}
                 onChange={handleChange}
                 required
-                placeholder="Enter maximum height"
+                placeholder="Ex: 0.2"
               />
             </div>
 
@@ -179,11 +248,11 @@ const BatteryForm = () => {
                 id="maxPrice"
                 name="maxPrice"
                 type="number"
-                step="0.01"
+                step="1"
                 value={formData.maxPrice}
                 onChange={handleChange}
                 required
-                placeholder="Enter maximum price"
+                placeholder="Ex: 1500"
               />
             </div>
           </div>
@@ -193,9 +262,16 @@ const BatteryForm = () => {
               type="submit"
               size="lg"
               className="w-full md:w-auto"
-              disabled={!isFormValid()}
+              disabled={!isFormValid() || isLoading}
             >
-              Submit Requirements
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Optimizing Designs...
+                </>
+              ) : (
+                "Generate Configurations"
+              )}
             </Button>
           </div>
         </form>
