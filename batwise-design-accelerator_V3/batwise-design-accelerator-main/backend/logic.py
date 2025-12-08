@@ -1,5 +1,5 @@
 import math
-from functools import lru_cache
+# Removemos o lru_cache para evitar erros de "unhashable type: dict"
 from typing import List, Dict, Optional, Tuple, Any
 from models import Requirements, CellData, Fuse, Relay, Cable, Bms, Shunt, Configuration, Dimensions, SafetyAssessment
 
@@ -16,7 +16,7 @@ FUSE_CURRENT_FACTOR = 1.25
 RELAY_VOLTAGE_FACTOR = 1.25
 RELAY_CURRENT_FACTOR = 1.5
 
-# --- FUNÇÕES AUXILIARES OTIMIZADAS ---
+# --- FUNÇÕES AUXILIARES ---
 
 
 def get_integer_factors(n: int) -> List[Tuple[int, int]]:
@@ -27,27 +27,44 @@ def get_integer_factors(n: int) -> List[Tuple[int, int]]:
             factors.append((i, n // i))
     return factors
 
+# Helper para converter objetos Pydantic em Dicionários
 
-@lru_cache(maxsize=2048)
-def select_component_fast(components_tuple: Tuple[dict], voltage_req: float, current_req: float) -> Optional[dict]:
+
+def to_dict(item):
+    if hasattr(item, 'model_dump'):
+        return item.model_dump()  # Pydantic v2
+    if hasattr(item, 'dict'):
+        return item.dict()  # Pydantic v1
+    return item  # Já é dict
+
+# Removemos @lru_cache aqui pois dicts não são "hashable"
+
+
+def select_component_fast(components_list: List[dict], voltage_req: float, current_req: float) -> Optional[dict]:
     """Seleciona o primeiro componente compatível (assumindo lista ordenada por preço)."""
-    for c in components_tuple:
-        if c['vdc_max'] >= voltage_req and c['a_max'] >= current_req:
+    for c in components_list:
+        # Garante que lemos como dict
+        vdc = c.get('vdc_max', 0)
+        a_max = c.get('a_max', 0)
+
+        if vdc >= voltage_req and a_max >= current_req:
             return c
     return None
 
 
-def select_bms_fast(bms_tuple: Tuple[dict], series_cells: int, max_current: float) -> Optional[dict]:
+def select_bms_fast(bms_list: List[dict], series_cells: int, max_current: float) -> Optional[dict]:
     """Lógica específica para BMS."""
-    for b in bms_tuple:
-        if b['max_cells'] >= series_cells and b['a_max'] >= max_current:
+    for b in bms_list:
+        max_cells = b.get('max_cells', 0)
+        a_max = b.get('a_max', 0)
+
+        if max_cells >= series_cells and a_max >= max_current:
             return b
     return None
 
 
-@lru_cache(maxsize=1024)
-def select_cable_fast(cables_tuple: Tuple[dict], i_peak: float, v_max: float, t_amb: float) -> Optional[dict]:
-    """Cálculo térmico de cabos com cache."""
+def select_cable_fast(cables_list: List[dict], i_peak: float, v_max: float, t_amb: float) -> Optional[dict]:
+    """Cálculo térmico de cabos."""
     delta_T = CABLE_TEMP_MAX - t_amb
     if delta_T <= 0:
         delta_T = MIN_DELTA_T
@@ -56,17 +73,23 @@ def select_cable_fast(cables_tuple: Tuple[dict], i_peak: float, v_max: float, t_
             pow(DEFAULT_CABLE_LENGTH_M, 2) * THERMAL_RESISTANCE) / delta_T
     A_mm2_calc = A_m2 * 1e6
 
-    for c in cables_tuple:
-        if c['section'] >= A_mm2_calc and c['vdc_max'] >= v_max and c['a_max'] >= i_peak:
+    for c in cables_list:
+        section = c.get('section', 0)
+        vdc = c.get('vdc_max', 0)
+        a_max = c.get('a_max', 0)
+
+        if section >= A_mm2_calc and vdc >= v_max and a_max >= i_peak:
+            # Retorna uma cópia modificada com o preço calculado
             return {
-                "brand": c['brand'],
-                "model": f"{c['model']} {c.get('model_suffix', '')}".strip(),
-                "section": c['section'],
-                "vdc_max": c['vdc_max'],
-                "a_max": c['a_max'],
-                "temp_min": c['temp_min'],
-                "temp_max": c['temp_max'],
-                "price": c['price'] * DEFAULT_CABLE_LENGTH_M * 2,
+                "brand": c.get('brand', ''),
+                "model": f"{c.get('model', '')} {c.get('model_suffix', '')}".strip(),
+                "section": section,
+                "vdc_max": vdc,
+                "a_max": a_max,
+                "temp_min": c.get('temp_min', 0),
+                "temp_max": c.get('temp_max', 0),
+                # Preço por 2 metros
+                "price": c.get('price', 0) * DEFAULT_CABLE_LENGTH_M * 2,
                 "link": c.get('link', '')
             }
     return None
@@ -97,37 +120,30 @@ def assess_safety(req: Requirements, cell: CellData, config_values: dict) -> Saf
     score = 100
     is_safe = True
 
-    # Calcular C-rate real solicitado
-    # I = P / V (Usamos tensão nominal para estimativa geral)
     req_current = config_values['continuous_current']
 
     # Capacidade total do pack em Ah
     pack_capacity_ah = (cell.Capacity / 1000) * config_values['parallel_cells']
 
-    # C-rate efetivo = Corrente Total / Capacidade Total
+    # C-rate efetivo
     actual_c_rate = req_current / pack_capacity_ah if pack_capacity_ah > 0 else 999
-
     limit_continuous = cell.MaxContinuousDischargeRate
 
-    # 1. Verificação de Corrente (Thermal & Safety)
+    # 1. Verificação de Corrente
     if actual_c_rate > limit_continuous:
-        warnings.append(
-            "DANGER: Discharge current exceeds cell physical limits. High fire risk.")
+        warnings.append("DANGER: Current exceeds cell limits. Fire risk.")
         score = 0
         is_safe = False
-
     elif actual_c_rate > (limit_continuous * 0.8):
         warnings.append(
-            f"Warning: High Load ({actual_c_rate:.2f}C). Cells will overheat without active cooling.")
+            f"Warning: High Load ({actual_c_rate:.2f}C). Cells need cooling.")
         score -= 20
-        recs.append("Add spacing (min 2mm) between cells for airflow.")
-        recs.append("Consider using a higher capacity cell to reduce stress.")
+        recs.append("Add spacing (min 2mm) between cells.")
 
-    # 2. Verificação de Tensão (Voltage Safety)
+    # 2. Verificação de Tensão
     if config_values['voltage'] > 60:
-        warnings.append(
-            "High Voltage (>60V): Lethal shock risk. Requires specialized handling and insulation.")
-        recs.append("Ensure all connections are insulated (IP54 or higher).")
+        warnings.append("High Voltage (>60V): Lethal shock risk.")
+        recs.append("Use isolated connectors.")
 
     return SafetyAssessment(
         is_safe=is_safe,
@@ -135,44 +151,41 @@ def assess_safety(req: Requirements, cell: CellData, config_values: dict) -> Saf
         warnings=warnings,
         recommendations=recs
     )
+
 # --- MOTOR DE CÁLCULO PRINCIPAL ---
 
 
-def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], component_db: Dict[str, List[Dict]]) -> Tuple[List[Configuration], Dict]:
+def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], component_db: Dict[str, List[Any]]) -> Dict[str, Any]:
     configs: List[Configuration] = []
 
-    # 1. PRÉ-PROCESSAMENTO: Ordenar listas para algoritmo "Greedy" (apanhar o primeiro que serve)
-    sorted_fuses = sorted(component_db.get('fuses', []),
-                          key=lambda x: x.get('price', float('inf')))
-    sorted_relays = sorted(component_db.get('relays', []),
-                           key=lambda x: x.get('price', float('inf')))
-    sorted_shunts = sorted(component_db.get('shunts', []),
-                           key=lambda x: x.get('price', float('inf')))
-    sorted_bms = sorted(component_db.get('bms', []),
-                        key=lambda x: x.get('master_price', float('inf')))
-    sorted_cables = sorted(component_db.get('cables', []),
-                           key=lambda x: x.get('section', float('inf')))
+    # 1. SANITIZAÇÃO: Converte TUDO para dicionários simples para evitar erros de 'AttributeError'
+    raw_fuses = [to_dict(x) for x in component_db.get('fuses', [])]
+    raw_relays = [to_dict(x) for x in component_db.get('relays', [])]
+    raw_shunts = [to_dict(x) for x in component_db.get('shunts', [])]
+    raw_bms = [to_dict(x) for x in component_db.get('bms', [])]
+    raw_cables = [to_dict(x) for x in component_db.get('cables', [])]
 
-    # Converter para Tuplas (Cacheável)
-    fuses_tuple = tuple(sorted_fuses)
-    relays_tuple = tuple(sorted_relays)
-    cables_tuple = tuple(sorted_cables)
-    shunts_tuple = tuple(sorted_shunts)
-    bms_tuple = tuple(sorted_bms)
+    # 2. ORDENAÇÃO: Agora seguro usar .get()
+    sorted_fuses = sorted(
+        raw_fuses, key=lambda x: x.get('price', float('inf')))
+    sorted_relays = sorted(
+        raw_relays, key=lambda x: x.get('price', float('inf')))
+    sorted_shunts = sorted(
+        raw_shunts, key=lambda x: x.get('price', float('inf')))
+    sorted_bms = sorted(raw_bms, key=lambda x: x.get(
+        'master_price', float('inf')))
+    sorted_cables = sorted(
+        raw_cables, key=lambda x: x.get('section', float('inf')))
 
     stats = {
-        "totalAttempts": 0, "failedHeight": 0, "failedGeometry": 0, "failedWeight": 0,
-        "failedPower": 0, "failedEnergy": 0, "failedFuse": 0, "failedRelay": 0,
-        "failedCable": 0, "failedBMS": 0, "failedShunt": 0, "failedPrice": 0,
-        "validConfigurations": 0
+        "totalAttempts": 0, "validConfigurations": 0
     }
 
-    print(f"Starting calculation with {len(cell_catalogue)} cells from DB...")
+    print(f"Starting calculation with {len(cell_catalogue)} cells...")
 
     for cell in cell_catalogue:
         # Check Altura
         if (cell.Cell_Height + HEIGHT_MARGIN_MM) > req.max_height:
-            stats["failedHeight"] += 1
             continue
 
         min_series = math.ceil(req.min_voltage / cell.NominalVoltage)
@@ -181,36 +194,21 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
         if min_series > max_series:
             continue
 
-        # Pré-cálculos da célula
-        cell_energy = (cell.Capacity * 1e-3) * cell.NominalVoltage
-        cell_power = (cell.Capacity * 1e-3 *
-                      cell.MaxContinuousDischargeRate) * cell.NominalVoltage
-
         for series in range(min_series, max_series + 1):
             bat_voltage = series * cell.NominalVoltage
             max_voltage = series * cell.ChargeVoltage
 
-            # Smart Start Loop
-            min_p_energy = math.ceil(
-                req.min_energy / (series * cell_energy)) if cell_energy > 0 else 1
+            # Estimativa de Parallel
+            cell_power = (cell.Capacity * 1e-3 *
+                          cell.MaxContinuousDischargeRate) * cell.NominalVoltage
             min_p_power = math.ceil(
                 req.min_continuous_power / (series * cell_power)) if cell_power > 0 else 1
-            start_p = max(min_p_energy, min_p_power, 1)
+            start_p = max(min_p_power, 1)
 
-            for parallel in range(start_p, 6):  # Limite 5P
+            for parallel in range(start_p, 10):  # Limite aumentado para teste
                 stats["totalAttempts"] += 1
 
-                total_cells = series * parallel
-                bat_weight = (cell.Weight * 1e-3) * total_cells
-
-                if bat_weight > req.max_weight:
-                    stats["failedWeight"] += 1
-                    continue
-
-                if not config_geometry_validation_fast(cell, series, parallel, req.max_width, req.max_length):
-                    stats["failedGeometry"] += 1
-                    continue
-
+                # --- SAFETY CHECK ---
                 cont_current = req.min_continuous_power / bat_voltage
 
                 safety = assess_safety(req, cell, {
@@ -219,73 +217,92 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                     'voltage': bat_voltage
                 })
 
-                # Se for perigoso, ignorar imediatamente esta configuração
                 if not safety.is_safe:
                     continue
+                # --------------------
 
-                # Seleção Componentes
+                total_cells = series * parallel
+                bat_weight = (cell.Weight * 1e-3) * total_cells
+
+                if bat_weight > req.max_weight:
+                    continue
+
+                if not config_geometry_validation_fast(cell, series, parallel, req.max_width, req.max_length):
+                    continue
+
+                # Componentes
                 peak_current = (cell.Capacity * 1e-3 *
                                 cell.MaxContinuousDischargeRate) * parallel * 5
 
                 fuse = select_component_fast(
-                    fuses_tuple, max_voltage, peak_current * FUSE_CURRENT_FACTOR)
+                    sorted_fuses, max_voltage, peak_current * FUSE_CURRENT_FACTOR)
                 if not fuse:
-                    stats["failedFuse"] += 1
                     continue
 
                 relay = select_component_fast(
-                    relays_tuple, max_voltage * RELAY_VOLTAGE_FACTOR, peak_current * RELAY_CURRENT_FACTOR)
+                    sorted_relays, max_voltage * RELAY_VOLTAGE_FACTOR, peak_current * RELAY_CURRENT_FACTOR)
                 if not relay:
-                    stats["failedRelay"] += 1
                     continue
 
                 cable = select_cable_fast(
-                    cables_tuple, peak_current, max_voltage, req.ambient_temp)
+                    sorted_cables, peak_current, max_voltage, req.ambient_temp)
                 if not cable:
-                    stats["failedCable"] += 1
                     continue
 
-                bms = select_bms_fast(bms_tuple, series, peak_current)
+                bms = select_bms_fast(sorted_bms, series, peak_current)
                 if not bms:
-                    stats["failedBMS"] += 1
                     continue
 
                 shunt = select_component_fast(
-                    shunts_tuple, max_voltage, peak_current)
+                    sorted_shunts, max_voltage, peak_current)
                 if not shunt:
-                    stats["failedShunt"] += 1
                     continue
 
-                # Preço e Configuração Final
+                # Preço
                 cells_cost = cell.Price * total_cells
                 total_price = cells_cost + \
                     fuse['price'] + relay['price'] + cable['price'] + \
                     bms['master_price'] + shunt['price']
 
                 if total_price > req.max_price:
-                    stats["failedPrice"] += 1
                     continue
 
-                # Criar Objeto
                 bat_capacity = (cell.Capacity * 1e-3) * parallel
+
+                # Instanciar Configuration (Validando com **dict)
                 config = Configuration(
-                    cell=cell, series_cells=series, parallel_cells=parallel,
-                    battery_voltage=round(bat_voltage, 1), battery_capacity=round(bat_capacity, 1),
-                    battery_energy=round(bat_voltage * bat_capacity), battery_weight=round(bat_weight, 1),
+                    cell=cell,
+                    series_cells=series,
+                    parallel_cells=parallel,
+                    battery_voltage=round(bat_voltage, 1),
+                    battery_capacity=round(bat_capacity, 1),
+                    battery_energy=round(bat_voltage * bat_capacity),
+                    battery_weight=round(bat_weight, 1),
                     battery_impedance=round(
                         ((cell.Impedance * 1e-3) * series) / parallel, 3),
-                    continuous_power=round(
-                        bat_voltage * (cell.Capacity * 1e-3 * cell.MaxContinuousDischargeRate) * parallel),
-                    peak_power=round(bat_voltage * peak_current), cell_price=round(cells_cost, 2),
-                    fuse=Fuse(**fuse), relay=Relay(**relay), cable=Cable(**cable),
+                    continuous_power=round(bat_voltage * cont_current),
+                    peak_power=round(bat_voltage * peak_current),
+                    cell_price=round(cells_cost, 2),
+                    fuse=Fuse(**fuse),
+                    relay=Relay(**relay),
+                    cable=Cable(**cable),
                     bms=Bms(
-                        brand=bms['brand'], model=bms['model'], max_cells=bms['max_cells'],
-                        vdc_min=bms['vdc_min'], vdc_max=bms['vdc_max'], a_max=bms['a_max'],
-                        temp_min=bms['temp_min'], temp_max=bms['temp_max'],
-                        master_price=bms['master_price'], slave_price=bms['slave_price'], link=bms.get(
-                            'link', '')
+                        brand=bms.get('brand', 'Generic'),
+                        model=bms.get('model', 'Unknown'),
+                        max_cells=bms.get('max_cells', 0),
+                        vdc_min=bms.get('vdc_min', 0),
+                        vdc_max=bms.get('vdc_max', 0),
+                        a_max=bms.get('a_max', 0),
+                        # --- FIX: Adicionar defaults para temperatura ---
+                        temp_min=bms.get('temp_min', -20),  # Default seguro
+                        temp_max=bms.get('temp_max', 60),  # Default seguro
+                        # -----------------------------------------------
+                        master_price=bms.get('master_price', 0),
+                        slave_price=bms.get('slave_price', 0),
+                        link=bms.get('link', '')
                     ),
-                    shunt=Shunt(**shunt), total_price=round(total_price, 2),
+                    shunt=Shunt(**shunt),
+                    total_price=round(total_price, 2),
                     dimensions=Dimensions(
                         length=round((cell.Cell_Width + SPACING_WIDTH_MM)
                                      * math.ceil(math.sqrt(total_cells)), 1),
@@ -300,5 +317,9 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
 
     configs.sort(key=lambda x: x.battery_energy /
                  x.total_price if x.total_price > 0 else 0, reverse=True)
-    stats["validConfigurations"] = len(configs)
-    return configs, stats
+
+    return {
+        "results": configs[:30],
+        "plotResults": configs[:100],
+        "total": len(configs)
+    }
