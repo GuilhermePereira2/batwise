@@ -7,14 +7,14 @@ from models import Requirements, CellData, Fuse, Relay, Cable, Bms, Shunt, Confi
 HEIGHT_MARGIN_MM = 30.0
 SPACING_THICKNESS_MM = 0.2
 SPACING_WIDTH_MM = 0.2
-CABLE_TEMP_MAX = 120
+CABLE_TEMP_MAX = 100
 RHO_E_COPPER = 1.68e-8
-DEFAULT_CABLE_LENGTH_M = 1
+DEFAULT_CABLE_LENGTH_M = 2
 THERMAL_RESISTANCE = 0.5
 MIN_DELTA_T = 1.0
-FUSE_CURRENT_FACTOR = 1.25
-RELAY_VOLTAGE_FACTOR = 1.25
-RELAY_CURRENT_FACTOR = 1.5
+FUSE_CURRENT_FACTOR = 1
+RELAY_VOLTAGE_FACTOR = 1
+RELAY_CURRENT_FACTOR = 1.1
 
 # --- FUNÇÕES AUXILIARES ---
 
@@ -108,9 +108,9 @@ def config_geometry_validation_fast(cell: CellData, series: int, parallel: int, 
     for dim_x, dim_y in dim_ops:
         for nx, ny in factors:
             if (nx * dim_x <= max_x) and (ny * dim_y <= max_y):
-                return True
+                return (nx, ny)
             if (ny * dim_x <= max_x) and (nx * dim_y <= max_y):
-                return True
+                return (ny, nx)
     return False
 
 
@@ -137,13 +137,34 @@ def assess_safety(req: Requirements, cell: CellData, config_values: dict) -> Saf
     elif actual_c_rate > (limit_continuous * 0.8):
         warnings.append(
             f"Warning: High Load ({actual_c_rate:.2f}C). Cells need cooling.")
-        score -= 20
+        score -= 50
         recs.append("Add spacing (min 2mm) between cells.")
+    elif actual_c_rate > (limit_continuous * 0.7):
+        warnings.append(
+            f"Warning: High Load ({actual_c_rate:.2f}C). Cells need cooling.")
+        score -= 40
+        recs.append("Add spacing (min 2mm) between cells.")
+    elif actual_c_rate > (limit_continuous * 0.6):
+        warnings.append(
+            f"Warning: High Load ({actual_c_rate:.2f}C).")
+        score -= 20
+        recs.append("Add spacing (min 1mm) between cells.")
+    elif actual_c_rate > (limit_continuous * 0.5):
+        score -= 10
+        recs.append("Add spacing (min 0.5mm) between cells.")
 
     # 2. Verificação de Tensão
-    if config_values['voltage'] > 60:
+    if config_values['voltage'] > 90:
+        score -= 40
+        warnings.append("Very High Voltage (>90V): Severe shock risk.")
+        recs.append("Use isolated connectors and protective casing.")
+    elif config_values['voltage'] > 60:
+        score -= 20
         warnings.append("High Voltage (>60V): Lethal shock risk.")
         recs.append("Use isolated connectors.")
+
+    if score < 0:
+        score = 0
 
     return SafetyAssessment(
         is_safe=is_safe,
@@ -188,8 +209,8 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
         if (cell.Cell_Height + HEIGHT_MARGIN_MM) > req.max_height:
             continue
 
-        min_series = math.ceil(req.min_voltage / cell.NominalVoltage)
-        max_series = math.floor(req.max_voltage / cell.NominalVoltage)
+        min_series = math.ceil(req.min_voltage / (cell.NominalVoltage-0.7))
+        max_series = math.floor(req.max_voltage / (cell.ChargeVoltage))
 
         if min_series > max_series:
             continue
@@ -205,7 +226,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 req.min_continuous_power / (series * cell_power)) if cell_power > 0 else 1
             start_p = max(min_p_power, 1)
 
-            for parallel in range(start_p, 10):  # Limite aumentado para teste
+            for parallel in range(start_p, 8):  # Limite aumentado para teste
                 stats["totalAttempts"] += 1
 
                 # --- SAFETY CHECK ---
@@ -224,10 +245,12 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 total_cells = series * parallel
                 bat_weight = (cell.Weight * 1e-3) * total_cells
 
-                if bat_weight > req.max_weight:
+                if bat_weight > (req.max_weight*0.7):
                     continue
 
-                if not config_geometry_validation_fast(cell, series, parallel, req.max_width, req.max_length):
+                layout = config_geometry_validation_fast(
+                    cell, series, parallel, req.max_width, req.max_length)
+                if not layout:
                     continue
 
                 # Componentes
@@ -311,6 +334,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                         height=round(cell.Cell_Height, 1)
                     ),
                     safety=safety,
+                    layout=layout,
                     affiliate_link=""
                 )
                 configs.append(config)

@@ -242,6 +242,33 @@ const DIYTool = () => {
     }
   };
 
+  const interpolateColor = (score: number) => {
+    const opacity = Math.max(0.05, score / 100);
+    return `rgba(249, 115, 22, ${opacity})`; // laranja do site
+  };
+
+
+  const CustomScatterDot = (props: any) => {
+    const { cx, cy, payload } = props;
+
+    // O safety score vem do objeto Configuration
+    const score = payload?.safety?.safety_score ?? 0;
+
+    const color = interpolateColor(score);
+
+    return (
+      <circle
+        cx={cx}
+        cy={cy}
+        r={6}           // tamanho dos pontos
+        fill={color}    // cor interpolada
+        strokeWidth={1}
+        style={{ cursor: "pointer" }}
+      />
+    );
+  };
+
+
   const scrollToCalculator = () => {
     document.getElementById("calculator")?.scrollIntoView({ behavior: "smooth" });
   };
@@ -333,7 +360,7 @@ const DIYTool = () => {
                     <div className="space-y-2">
                       <Label htmlFor="minVoltage">
                         Min Voltage (V)
-                        <InfoTooltip content="Minimum Nominal Voltage that your battery can have. Check the minimum voltage that your system allows and calculate what is the minimum nominal voltage your battery can have." />
+                        <InfoTooltip content="The minimum voltage where your system shuts down (Low Voltage Cutoff of the controller/inverter). Setting this correctly prevents the battery from shutting down before it is fully depleted and helps us calculate the real runtime/range." />
                       </Label>
                       <Input id="minVoltage" type="number" value={minVoltage} onChange={(e) => setMinVoltage(e.target.value)} placeholder="e.g., 36" />
                     </div>
@@ -341,7 +368,7 @@ const DIYTool = () => {
                     <div className="space-y-2">
                       <Label htmlFor="maxVoltage">
                         Max Voltage (V)
-                        <InfoTooltip content="Maximum Nominal Voltage your battery can have. Must match the maximum voltage your system allows and your charger maximum voltage." />
+                        <InfoTooltip content="The battery voltage at 100% capacity. This MUST exactly match the output voltage of your charger or controller/inverter. E.g.: If your charger specifies 54.6V, enter 54.6V. Errors here can be dangerous." />
                       </Label>
                       <Input id="maxVoltage" type="number" value={maxVoltage} onChange={(e) => setMaxVoltage(e.target.value)} placeholder="e.g., 54.6" />
                     </div>
@@ -349,7 +376,7 @@ const DIYTool = () => {
                     <div className="space-y-2">
                       <Label htmlFor="minContinuousPower">
                         Continuous Power (W)
-                        <InfoTooltip content="Average Power your device consumes constantly. " />
+                        <InfoTooltip content="The average power your motor/equipment consumes constantly. We use this value to calculate thermal dissipation and prevent cell overheating (ensuring a safe C-rate)." />
                       </Label>
                       <Input id="minContinuousPower" type="number" value={minContinuousPower} onChange={(e) => setMinContinuousPower(e.target.value)} placeholder="e.g., 3000" />
                     </div>
@@ -357,7 +384,7 @@ const DIYTool = () => {
                     <div className="space-y-2">
                       <Label htmlFor="minEnergy">
                         Min Energy (Wh)
-                        <InfoTooltip content="Minimum Energy you want your battery to have. Determines your range or runtime." />
+                        <InfoTooltip content="Defines your autonomy (range or runtime). Higher values will increase the cell count, weight, and cost. (Nominal Voltage x Ah = Wh)." />
                       </Label>
                       <Input id="minEnergy" type="number" value={minEnergy} onChange={(e) => setMinEnergy(e.target.value)} placeholder="e.g., 2000" />
                     </div>
@@ -365,13 +392,13 @@ const DIYTool = () => {
                     {/* Opcionais */}
                     <div className="space-y-2">
                       <Label>Max Weight (kg)
-                        <InfoTooltip content="Maximum Weight you want your battery to have (including electronics)." />
+                        <InfoTooltip content="Maximum weight limit of the final battery pack (including cells, BMS, and structural supports). Crucial for applications like drones or electric bicycles." />
                       </Label>
                       <Input type="number" value={maxWeight} onChange={(e) => setMaxWeight(e.target.value)} placeholder="Optional" />
                     </div>
                     <div className="space-y-2">
                       <Label>Max Price (€)
-                        <InfoTooltip content="Maximum Price you want for your battery." />
+                        <InfoTooltip content="Your maximum budget. The algorithm will prioritize finding the best cells (safety/quality) that fit within this value." />
                       </Label>
                       <Input type="number" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Optional" />
                     </div>
@@ -401,7 +428,7 @@ const DIYTool = () => {
             </div>
 
             {/* --- OUTPUT PANEL (RIGHT) --- */}
-            <div className="lg:col-span-2" id="results-section">
+            <div className="lg:col-span-2 relative z-0" id="results-section">
               <Card className="shadow-soft animate-slide-up w-full h-full" style={{ animationDelay: "100ms" }}>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
@@ -435,7 +462,7 @@ const DIYTool = () => {
                             <Card
                               key={title + idx}
                               // Removi classes desnecessárias, mantive as visuais
-                              className={`cursor-pointer hover:shadow-lg transition-all border-l-4 ${config.safety.is_safe ? 'border-l-emerald-500' : 'border-l-red-500'}`}
+                              className={`cursor-pointer hover:shadow-lg transition-all border-l-4 ${config.safety.is_safe ? 'border-l-[#f97316]' : 'border-l-red-500'}`}
                               onClick={() => setSelectedSolution(config)}
                             >
                               <CardHeader className="pb-2">
@@ -444,7 +471,7 @@ const DIYTool = () => {
                                     <CardTitle className="text-lg">{title}</CardTitle>
                                     <CardDescription>{metric(config)}</CardDescription>
                                   </div>
-                                  <Badge variant={config.safety.safety_score > 80 ? "default" : "destructive"}>
+                                  <Badge variant={config.safety.safety_score > 0 ? "default" : "destructive"}>
                                     Safety: {config.safety.safety_score}
                                   </Badge>
                                 </div>
@@ -497,7 +524,7 @@ const DIYTool = () => {
                             </Select>
                           </div>
                         </div>
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="90%">
                           <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                             <CartesianGrid />
                             <XAxis
@@ -533,7 +560,14 @@ const DIYTool = () => {
                                 return null;
                               }}
                             />
-                            <Scatter name="Batteries" data={plotResults} fill="#10b981" onClick={(d) => setSelectedSolution(d.payload)} />
+                            <Scatter
+                              name="Batteries"
+                              data={plotResults}
+                              // A cor 'fill' aqui é ignorada pelo 'shape' mas é um prop obrigatório
+                              fill="#8884d8"
+                              shape={CustomScatterDot} // ISTO APLICA A COR INDIVIDUALMENTE
+                              onClick={(d) => setSelectedSolution(d.payload)}
+                            />
                           </ScatterChart>
                         </ResponsiveContainer>
                       </TabsContent>
