@@ -104,14 +104,14 @@ const findBestConfigurations = (configs: Configuration[], targetPrice: number) =
     const maxPriceDiff = Math.max(...configs.map(c => Math.abs(c.total_price - targetPrice)));
     const normalizedPrice = 1 - (priceDifference / maxPriceDiff);
 
-    return (normalizedDensity + normalizedPrice) / 2;
+    return (normalizedDensity + normalizedPrice + (config.safety.safety_score / 100)) / 3;
   };
 
   return [
     { title: "Lowest Price", config: findBest(c => c.total_price, 'min'), metric: (c: Configuration) => `€${c.total_price.toFixed(2)}` },
     { title: "Highest Energy", config: findBest(c => c.battery_energy), metric: (c: Configuration) => formatUnit(c.battery_energy, 'Wh') },
     { title: "Highest Energy Density", config: findBest(c => c.battery_energy / c.battery_weight), metric: (c: Configuration) => `${(c.battery_energy / c.battery_weight).toFixed(1)} Wh/kg` },
-    { title: "Best Value", config: findBest(c => c.battery_energy / c.total_price), metric: (c: Configuration) => `${(c.battery_energy / c.total_price).toFixed(1)} Wh/€` },
+    { title: "Best Value", config: findBest(c => c.total_price / c.battery_energy), metric: (c: Configuration) => `${(c.total_price / c.battery_energy).toFixed(1)} €/Wh` },
     { title: "Lightest", config: findBest(c => c.battery_weight, 'min'), metric: (c: Configuration) => `${c.battery_weight.toFixed(1)} kg` },
     { title: "Optimal Balance", config: findBest(c => calculateOptimalScore(c)), metric: (c: Configuration) => `${(c.battery_energy / c.battery_weight).toFixed(1)} Wh/kg @ €${c.total_price.toFixed(0)}` }
   ];
@@ -177,15 +177,16 @@ const DIYTool = () => {
     try {
       // Conversão e defaults para mm (inputs assumem-se em mm ou valores brutos)
       const payload = {
-        min_voltage: Number(minVoltage) || 0,
-        max_voltage: Number(maxVoltage) || 0,
-        min_continuous_power: Number(minContinuousPower) || 0,
-        min_energy: Number(minEnergy) || 0,
-        max_weight: Number(maxWeight) || 1000, // Default alto se vazio
-        max_price: Number(maxPrice) || 10000,
+        min_voltage: Number(minVoltage) || 70,
+        max_voltage: Number(maxVoltage) || 80,
+        min_continuous_power: Number(minContinuousPower) || 2000,
+        min_energy: Number(minEnergy) || 3000,
+        max_weight: Number(maxWeight) || 100, // Default alto se vazio
+        max_price: Number(maxPrice) || 100000,
         max_width: Number(maxWidth) || 2000,
-        max_length: Number(maxLength) || 2000,
+        max_length: Number(maxLength) || 10000,
         max_height: Number(maxHeight) || 2000,
+        target_price: Number(targetPrice) || 0,
         ambient_temp: 25,
         debug: true,
       };
@@ -220,7 +221,7 @@ const DIYTool = () => {
       } else {
         toast({
           title: "Success!",
-          description: `Found ${data.total} safe configurations.`,
+          description: `Showing ${data.plotResults.length} configurations out of ${data.total} safe configurations.`,
         });
 
         // Scroll suave para os resultados
@@ -240,6 +241,33 @@ const DIYTool = () => {
       setIsLoading(false);
     }
   };
+
+  const interpolateColor = (score: number) => {
+    const opacity = Math.max(0.05, score / 100);
+    return `rgba(249, 115, 22, ${opacity})`; // laranja do site
+  };
+
+
+  const CustomScatterDot = (props: any) => {
+    const { cx, cy, payload } = props;
+
+    // O safety score vem do objeto Configuration
+    const score = payload?.safety?.safety_score ?? 0;
+
+    const color = interpolateColor(score);
+
+    return (
+      <circle
+        cx={cx}
+        cy={cy}
+        r={6}           // tamanho dos pontos
+        fill={color}    // cor interpolada
+        strokeWidth={1}
+        style={{ cursor: "pointer" }}
+      />
+    );
+  };
+
 
   const scrollToCalculator = () => {
     document.getElementById("calculator")?.scrollIntoView({ behavior: "smooth" });
@@ -332,7 +360,7 @@ const DIYTool = () => {
                     <div className="space-y-2">
                       <Label htmlFor="minVoltage">
                         Min Voltage (V)
-                        <InfoTooltip content="Voltage when battery is 0% empty. Usually 3.0V per cell." />
+                        <InfoTooltip content="The minimum voltage where your system shuts down (Low Voltage Cutoff of the controller/inverter). Setting this correctly prevents the battery from shutting down before it is fully depleted and helps us calculate the real runtime/range." />
                       </Label>
                       <Input id="minVoltage" type="number" value={minVoltage} onChange={(e) => setMinVoltage(e.target.value)} placeholder="e.g., 36" />
                     </div>
@@ -340,7 +368,7 @@ const DIYTool = () => {
                     <div className="space-y-2">
                       <Label htmlFor="maxVoltage">
                         Max Voltage (V)
-                        <InfoTooltip content="Voltage when 100% full. Must match your charger voltage." />
+                        <InfoTooltip content="The battery voltage at 100% capacity. This MUST exactly match the output voltage of your charger or controller/inverter. E.g.: If your charger specifies 54.6V, enter 54.6V. Errors here can be dangerous." />
                       </Label>
                       <Input id="maxVoltage" type="number" value={maxVoltage} onChange={(e) => setMaxVoltage(e.target.value)} placeholder="e.g., 54.6" />
                     </div>
@@ -348,7 +376,7 @@ const DIYTool = () => {
                     <div className="space-y-2">
                       <Label htmlFor="minContinuousPower">
                         Continuous Power (W)
-                        <InfoTooltip content="Average power your device consumes constantly." />
+                        <InfoTooltip content="The average power your motor/equipment consumes constantly. We use this value to calculate thermal dissipation and prevent cell overheating (ensuring a safe C-rate)." />
                       </Label>
                       <Input id="minContinuousPower" type="number" value={minContinuousPower} onChange={(e) => setMinContinuousPower(e.target.value)} placeholder="e.g., 3000" />
                     </div>
@@ -356,22 +384,22 @@ const DIYTool = () => {
                     <div className="space-y-2">
                       <Label htmlFor="minEnergy">
                         Min Energy (Wh)
-                        <InfoTooltip content="Determines your range or runtime." />
+                        <InfoTooltip content="Defines your autonomy (range or runtime). Higher values will increase the cell count, weight, and cost. (Nominal Voltage x Ah = Wh)." />
                       </Label>
                       <Input id="minEnergy" type="number" value={minEnergy} onChange={(e) => setMinEnergy(e.target.value)} placeholder="e.g., 2000" />
                     </div>
 
                     {/* Opcionais */}
                     <div className="space-y-2">
-                      <Label>Target Price (€)</Label>
-                      <Input type="number" value={targetPrice} onChange={(e) => setTargetPrice(e.target.value)} placeholder="e.g., 500" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Max Weight (kg)</Label>
+                      <Label>Max Weight (kg)
+                        <InfoTooltip content="Maximum weight limit of the final battery pack (including cells, BMS, and structural supports). Crucial for applications like drones or electric bicycles." />
+                      </Label>
                       <Input type="number" value={maxWeight} onChange={(e) => setMaxWeight(e.target.value)} placeholder="Optional" />
                     </div>
                     <div className="space-y-2">
-                      <Label>Max Price (€)</Label>
+                      <Label>Max Price (€)
+                        <InfoTooltip content="Your maximum budget. The algorithm will prioritize finding the best cells (safety/quality) that fit within this value." />
+                      </Label>
                       <Input type="number" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Optional" />
                     </div>
                   </div>
@@ -400,7 +428,7 @@ const DIYTool = () => {
             </div>
 
             {/* --- OUTPUT PANEL (RIGHT) --- */}
-            <div className="lg:col-span-2" id="results-section">
+            <div className="lg:col-span-2 relative z-0" id="results-section">
               <Card className="shadow-soft animate-slide-up w-full h-full" style={{ animationDelay: "100ms" }}>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
@@ -427,38 +455,42 @@ const DIYTool = () => {
                         <TabsTrigger value="plot">Graph View</TabsTrigger>
                       </TabsList>
 
-                      <TabsContent value="best-solutions" className="space-y-4">
-                        {findBestConfigurations(results, Number(targetPrice) || 0).map(({ title, config, metric }, idx) => (
-                          <Card
-                            key={title + idx}
-                            className={`cursor-pointer hover:shadow-lg transition-all border-l-4 ${config.safety.is_safe ? 'border-l-emerald-500' : 'border-l-red-500'}`}
-                            onClick={() => setSelectedSolution(config)}
-                          >
-                            <CardHeader className="pb-2">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <CardTitle className="text-lg">{title}</CardTitle>
-                                  <CardDescription>{metric(config)}</CardDescription>
+                      <TabsContent value="best-solutions">
+                        {/* Adicionei esta DIV para criar a grelha */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {findBestConfigurations(results, Number(targetPrice) || 0).map(({ title, config, metric }, idx) => (
+                            <Card
+                              key={title + idx}
+                              // Removi classes desnecessárias, mantive as visuais
+                              className={`cursor-pointer hover:shadow-lg transition-all border-l-4 ${config.safety.is_safe ? 'border-l-[#f97316]' : 'border-l-red-500'}`}
+                              onClick={() => setSelectedSolution(config)}
+                            >
+                              <CardHeader className="pb-2">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <CardTitle className="text-lg">{title}</CardTitle>
+                                    <CardDescription>{metric(config)}</CardDescription>
+                                  </div>
+                                  <Badge variant={config.safety.safety_score > 0 ? "default" : "destructive"}>
+                                    Safety: {config.safety.safety_score}
+                                  </Badge>
                                 </div>
-                                <Badge variant={config.safety.safety_score > 80 ? "default" : "destructive"}>
-                                  Safety: {config.safety.safety_score}
-                                </Badge>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="text-sm space-y-1">
-                              <p><strong>Model:</strong> {config.cell.CellModelNo}</p>
-                              <p><strong>Config:</strong> {config.series_cells}S {config.parallel_cells}P</p>
-                              <p><strong>Energy:</strong> {formatUnit(config.battery_energy, 'Wh')}</p>
-
-                              {/* Aviso Rápido no Card */}
-                              {config.safety.warnings.length > 0 && (
-                                <div className="mt-2 text-xs text-amber-600 flex items-center gap-1 font-semibold">
-                                  <AlertTriangle className="w-3 h-3" /> Check Warnings
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
-                        ))}
+                              </CardHeader>
+                              <CardContent className="text-sm space-y-1">
+                                <p><strong>Cell Model:</strong> {config.cell.CellModelNo}</p>
+                                <p><strong>Configuration:</strong> {config.series_cells}S {config.parallel_cells}P</p>
+                                <p><strong>Energy:</strong> {formatUnit(config.battery_energy, 'Wh')}</p>
+                                <p><strong>Cells' Weight:</strong> {config.battery_weight.toFixed(1)} kg</p>
+                                <p><strong>Estimated Price:</strong> €{config.total_price.toFixed(2)}</p>
+                                {config.safety.warnings.length > 0 && (
+                                  <div className="mt-2 text-xs text-amber-600 flex items-center gap-1 font-semibold">
+                                    <AlertTriangle className="w-3 h-3" /> Check Warnings
+                                  </div>
+                                )}
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
                       </TabsContent>
 
                       <TabsContent value="plot" className="h-[500px]">
@@ -469,8 +501,12 @@ const DIYTool = () => {
                             <Select value={xAxis} onValueChange={setXAxis}>
                               <SelectTrigger><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="battery_energy">Energy</SelectItem>
-                                <SelectItem value="total_price">Price</SelectItem>
+                                <SelectItem value="battery_energy">Energy (Wh)</SelectItem>
+                                <SelectItem value="battery_weight">Weight (kg)</SelectItem>
+                                <SelectItem value="battery_voltage">Voltage (V)</SelectItem>
+                                <SelectItem value="battery_capacity">Capacity (Ah)</SelectItem>
+                                <SelectItem value="total_price">Price (€)</SelectItem>
+                                <SelectItem value="peak_power">Power (W)</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -479,19 +515,60 @@ const DIYTool = () => {
                             <Select value={yAxis} onValueChange={setYAxis}>
                               <SelectTrigger><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="total_price">Price</SelectItem>
-                                <SelectItem value="battery_weight">Weight</SelectItem>
+                                <SelectItem value="battery_energy">Energy (Wh)</SelectItem>
+                                <SelectItem value="battery_weight">Weight (kg)</SelectItem>
+                                <SelectItem value="battery_voltage">Voltage (V)</SelectItem>
+                                <SelectItem value="battery_capacity">Capacity (Ah)</SelectItem>
+                                <SelectItem value="total_price">Price (€)</SelectItem>
+                                <SelectItem value="peak_power">Power (W)</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
                         </div>
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="90%">
                           <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                             <CartesianGrid />
-                            <XAxis type="number" dataKey={xAxis} name={xAxis} />
-                            <YAxis type="number" dataKey={yAxis} name={yAxis} />
-                            <ChartTooltip cursor={{ strokeDasharray: '3 3' }} />
-                            <Scatter name="Batteries" data={plotResults} fill="#10b981" onClick={(d) => setSelectedSolution(d.payload)} />
+                            <XAxis
+                              type="number"
+                              dataKey={xAxis}
+                              name={xAxis}
+                              label={{
+                                value: xAxis.replace('_', ' ').toUpperCase(),
+                                position: 'bottom',
+                                offset: 5
+                              }}
+                            />
+                            <YAxis
+                              type="number"
+                              dataKey={yAxis}
+                              name={yAxis}
+                              label={{ value: yAxis.replace('_', ' ').toUpperCase(), angle: -90, position: 'insideLeft', offset: -5, dy: 65 }}
+                            />
+                            <ChartTooltip
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  const data = payload[0].payload;
+                                  return (
+                                    <div className="bg-background border border-border p-3 rounded-lg shadow-lg">
+                                      <p className="font-semibold">{data.cell.CellModelNo}</p>
+                                      <p className="text-sm text-muted-foreground">{data.series_cells}S{data.parallel_cells}P</p>
+                                      <p className="text-sm">Energy: {formatUnit(data.battery_energy, "Wh")}</p>
+                                      <p className="text-sm">Price: €{data.total_price.toFixed(2)}</p>
+                                      <p className="text-sm">Weight: {data.battery_weight.toFixed(1)} kg</p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                            <Scatter
+                              name="Batteries"
+                              data={plotResults}
+                              // A cor 'fill' aqui é ignorada pelo 'shape' mas é um prop obrigatório
+                              fill="#8884d8"
+                              shape={CustomScatterDot} // ISTO APLICA A COR INDIVIDUALMENTE
+                              onClick={(d) => setSelectedSolution(d.payload)}
+                            />
                           </ScatterChart>
                         </ResponsiveContainer>
                       </TabsContent>
@@ -535,7 +612,7 @@ const SolutionDetailModal = ({ solution, isOpen, onClose }: { solution: Configur
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl flex items-center gap-2">
             Configuration: {solution.cell.CellModelNo} ({solution.series_cells}S{solution.parallel_cells}P)
@@ -571,12 +648,12 @@ const SolutionDetailModal = ({ solution, isOpen, onClose }: { solution: Configur
             <Card>
               <CardHeader><CardTitle className="text-base">Battery Specs</CardTitle></CardHeader>
               <CardContent className="text-sm space-y-1">
-                <p><strong>Voltage:</strong> {solution.battery_voltage.toFixed(1)} V</p>
+                <p><strong>Configuration:</strong> {solution.series_cells}S {solution.parallel_cells}P</p>
+                <p><strong>Nominal Voltage:</strong> {solution.battery_voltage.toFixed(1)} V</p>
                 <p><strong>Capacity:</strong> {solution.battery_capacity.toFixed(1)} Ah</p>
                 <p><strong>Energy:</strong> {formatUnit(solution.battery_energy, 'Wh')}</p>
                 <p><strong>Continuous Power:</strong> {formatUnit(solution.continuous_power, 'W')}</p>
-                <p><strong>Peak Power:</strong> {formatUnit(solution.peak_power, 'W')}</p>
-                <p><strong>Total Weight:</strong> {solution.battery_weight.toFixed(2)} kg</p>
+                <p><strong>Cells' Weight:</strong> {solution.battery_weight.toFixed(2)} kg</p>
                 <p className="font-bold mt-2 border-t pt-1">Total Price: €{solution.total_price.toFixed(2)}</p>
               </CardContent>
             </Card>
@@ -585,55 +662,98 @@ const SolutionDetailModal = ({ solution, isOpen, onClose }: { solution: Configur
               <CardContent className="text-sm space-y-1">
                 <p><strong>Brand:</strong> {solution.cell.Brand}</p>
                 <p><strong>Model:</strong> {solution.cell.CellModelNo}</p>
-                <p><strong>Discharge:</strong> {solution.cell.MaxContinuousDischargeRate}C</p>
-                <p><strong>Price/Cell:</strong> €{solution.cell.Price.toFixed(2)}</p>
+                <p><strong>Nominal Voltage:</strong> {solution.cell.NominalVoltage}</p>
+                <p><strong>Cont. Discharge Rate:</strong> {solution.cell.MaxContinuousDischargeRate}C</p>
+                <p><strong>Capacity:</strong> {solution.cell.Capacity / 1000} Ah</p>
+                <p><strong>Est. Price/Cell:</strong> €{solution.cell.Price.toFixed(2)}</p>
                 <AffiliateLink link={solution.cell.Connection} />
               </CardContent>
             </Card>
           </div>
 
           {/* Column 2 & 3: Components */}
-          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
             {solution.bms && (
               <Card>
-                <CardHeader><CardTitle className="text-base flex items-center gap-2"><Zap className="w-4 h-4" /> BMS</CardTitle></CardHeader>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Zap className="w-4 h-4" /> BMS
+                  </CardTitle>
+                </CardHeader>
                 <CardContent className="text-sm space-y-1">
-                  <p><strong>Model:</strong> {solution.bms.brand} {solution.bms.model}</p>
+                  <p><strong>Brand:</strong> {solution.bms.brand}</p>
+                  <p><strong>Model:</strong> {solution.bms.model}</p>
+                  <p><strong>Max Cells:</strong> {solution.bms.max_cells}</p>
+                  {/*<p><strong>Voltage Range:</strong> {solution.bms.vdc_min} – {solution.bms.vdc_max} V</p>*/}
                   <p><strong>Max Current:</strong> {solution.bms.a_max} A</p>
-                  <p><strong>Price:</strong> €{solution.bms.master_price?.toFixed(2)}</p>
+                  {/*<p><strong>Operating Temp:</strong> {solution.bms.temp_min}°C – {solution.bms.temp_max}°C</p>*/}
+                  <p><strong>Est. Price:</strong> €{solution.bms.master_price?.toFixed(2)} (Master) / €{solution.bms.slave_price?.toFixed(2)} (Slave)</p>
                   <AffiliateLink link={solution.bms.link} />
                 </CardContent>
               </Card>
             )}
+
             {solution.fuse && (
               <Card>
-                <CardHeader><CardTitle className="text-base flex items-center gap-2"><CheckCircle className="w-4 h-4" /> Fuse</CardTitle></CardHeader>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" /> Fuse
+                  </CardTitle>
+                </CardHeader>
                 <CardContent className="text-sm space-y-1">
-                  <p><strong>Model:</strong> {solution.fuse.brand} {solution.fuse.model}</p>
-                  <p><strong>Rating:</strong> {solution.fuse.a_max} A / {solution.fuse.vdc_max} V</p>
-                  <p><strong>Price:</strong> €{solution.fuse.price.toFixed(2)}</p>
+                  <p><strong>Brand:</strong> {solution.fuse.brand}</p>
+                  <p><strong>Model:</strong> {solution.fuse.model}</p>
+                  <p><strong>Voltage Rating:</strong> {solution.fuse.vdc_max} V</p>
+                  <p><strong>Current Rating:</strong> {solution.fuse.a_max} A</p>
+                  {/*<p><strong>Operating Temp:</strong> {solution.fuse.temp_min}°C – {solution.fuse.temp_max}°C</p>*/}
+                  <p><strong>Est. Price:</strong> €{solution.fuse.price.toFixed(2)}</p>
                   <AffiliateLink link={solution.fuse.link} />
                 </CardContent>
               </Card>
             )}
+
             {solution.relay && (
               <Card>
                 <CardHeader><CardTitle className="text-base">Relay / Contactor</CardTitle></CardHeader>
                 <CardContent className="text-sm space-y-1">
-                  <p><strong>Model:</strong> {solution.relay.brand} {solution.relay.model}</p>
-                  <p><strong>Rating:</strong> {solution.relay.a_max} A</p>
-                  <p><strong>Price:</strong> €{solution.relay.price.toFixed(2)}</p>
+                  <p><strong>Brand:</strong> {solution.relay.brand}</p>
+                  <p><strong>Model:</strong> {solution.relay.model}</p>
+                  <p><strong>Voltage Rating:</strong> {solution.relay.vdc_max} V</p>
+                  <p><strong>Current Rating:</strong> {solution.relay.a_max} A</p>
+                  {/*<p><strong>Operating Temp:</strong> {solution.relay.temp_min}°C – {solution.relay.temp_max}°C</p>*/}
+                  <p><strong>Est. Price:</strong> €{solution.relay.price.toFixed(2)}</p>
                   <AffiliateLink link={solution.relay.link} />
                 </CardContent>
               </Card>
             )}
+
             {solution.cable && (
               <Card>
                 <CardHeader><CardTitle className="text-base">Cabling</CardTitle></CardHeader>
                 <CardContent className="text-sm space-y-1">
-                  <p><strong>Type:</strong> {solution.cable.model}</p>
-                  <p><strong>Section:</strong> {solution.cable.section} mm²</p>
+                  <p><strong>Brand:</strong> {solution.cable.brand}</p>
+                  <p><strong>Model:</strong> {solution.cable.model}</p>
+                  <p><strong>Cross Section:</strong> {solution.cable.section} mm²</p>
+                  <p><strong>Voltage Rating:</strong> {solution.cable.vdc_max} V</p>
+                  <p><strong>Current Rating:</strong> {solution.cable.a_max} A</p>
+                  {/*<p><strong>Operating Temp:</strong> {solution.cable.temp_min}°C – {solution.cable.temp_max}°C</p>*/}
                   <p><strong>Est. Price (2m):</strong> €{solution.cable.price.toFixed(2)}</p>
+                  <AffiliateLink link={solution.cable.link} />
+                </CardContent>
+              </Card>
+            )}
+
+            {solution.shunt && (
+              <Card>
+                <CardHeader><CardTitle className="text-base">Shunt</CardTitle></CardHeader>
+                <CardContent className="text-sm space-y-1">
+                  <p><strong>Brand:</strong> {solution.shunt.brand}</p>
+                  <p><strong>Model:</strong> {solution.shunt.model}</p>
+                  <p><strong>Voltage Rating:</strong> {solution.shunt.vdc_max} V</p>
+                  <p><strong>Current Rating:</strong> {solution.shunt.a_max} A</p>
+                  {/*<p><strong>Operating Temp:</strong> {solution.shunt.temp_min}°C – {solution.shunt.temp_max}°C</p>*/}
+                  <p><strong>Est. Price:</strong> €{solution.shunt.price.toFixed(2)}</p>
+                  <AffiliateLink link={solution.shunt.link} />
                 </CardContent>
               </Card>
             )}
