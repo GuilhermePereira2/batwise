@@ -104,14 +104,14 @@ const findBestConfigurations = (configs: Configuration[], targetPrice: number) =
     const maxPriceDiff = Math.max(...configs.map(c => Math.abs(c.total_price - targetPrice)));
     const normalizedPrice = 1 - (priceDifference / maxPriceDiff);
 
-    return (normalizedDensity + normalizedPrice) / 2;
+    return (normalizedDensity + normalizedPrice + (config.safety.safety_score / 100)) / 3;
   };
 
   return [
     { title: "Lowest Price", config: findBest(c => c.total_price, 'min'), metric: (c: Configuration) => `€${c.total_price.toFixed(2)}` },
     { title: "Highest Energy", config: findBest(c => c.battery_energy), metric: (c: Configuration) => formatUnit(c.battery_energy, 'Wh') },
     { title: "Highest Energy Density", config: findBest(c => c.battery_energy / c.battery_weight), metric: (c: Configuration) => `${(c.battery_energy / c.battery_weight).toFixed(1)} Wh/kg` },
-    { title: "Best Value", config: findBest(c => c.battery_energy / c.total_price), metric: (c: Configuration) => `${(c.battery_energy / c.total_price).toFixed(1)} Wh/€` },
+    { title: "Best Value", config: findBest(c => c.total_price / c.battery_energy), metric: (c: Configuration) => `${(c.total_price / c.battery_energy).toFixed(1)} €/Wh` },
     { title: "Lightest", config: findBest(c => c.battery_weight, 'min'), metric: (c: Configuration) => `${c.battery_weight.toFixed(1)} kg` },
     { title: "Optimal Balance", config: findBest(c => calculateOptimalScore(c)), metric: (c: Configuration) => `${(c.battery_energy / c.battery_weight).toFixed(1)} Wh/kg @ €${c.total_price.toFixed(0)}` }
   ];
@@ -182,10 +182,10 @@ const DIYTool = () => {
         min_continuous_power: Number(minContinuousPower) || 2000,
         min_energy: Number(minEnergy) || 3000,
         max_weight: Number(maxWeight) || 100, // Default alto se vazio
-        max_price: Number(maxPrice) || 1000,
-        max_width: Number(maxWidth) || 200,
-        max_length: Number(maxLength) || 1000,
-        max_height: Number(maxHeight) || 200,
+        max_price: Number(maxPrice) || 100000,
+        max_width: Number(maxWidth) || 2000,
+        max_length: Number(maxLength) || 10000,
+        max_height: Number(maxHeight) || 2000,
         target_price: Number(targetPrice) || 0,
         ambient_temp: 25,
         debug: true,
@@ -477,10 +477,11 @@ const DIYTool = () => {
                                 </div>
                               </CardHeader>
                               <CardContent className="text-sm space-y-1">
-                                <p><strong>Model:</strong> {config.cell.CellModelNo}</p>
-                                <p><strong>Config:</strong> {config.series_cells}S {config.parallel_cells}P</p>
+                                <p><strong>Cell Model:</strong> {config.cell.CellModelNo}</p>
+                                <p><strong>Configuration:</strong> {config.series_cells}S {config.parallel_cells}P</p>
                                 <p><strong>Energy:</strong> {formatUnit(config.battery_energy, 'Wh')}</p>
-
+                                <p><strong>Cells' Weight:</strong> {config.battery_weight.toFixed(1)} kg</p>
+                                <p><strong>Estimated Price:</strong> €{config.total_price.toFixed(2)}</p>
                                 {config.safety.warnings.length > 0 && (
                                   <div className="mt-2 text-xs text-amber-600 flex items-center gap-1 font-semibold">
                                     <AlertTriangle className="w-3 h-3" /> Check Warnings
@@ -611,7 +612,7 @@ const SolutionDetailModal = ({ solution, isOpen, onClose }: { solution: Configur
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl flex items-center gap-2">
             Configuration: {solution.cell.CellModelNo} ({solution.series_cells}S{solution.parallel_cells}P)
@@ -647,12 +648,12 @@ const SolutionDetailModal = ({ solution, isOpen, onClose }: { solution: Configur
             <Card>
               <CardHeader><CardTitle className="text-base">Battery Specs</CardTitle></CardHeader>
               <CardContent className="text-sm space-y-1">
-                <p><strong>Voltage:</strong> {solution.battery_voltage.toFixed(1)} V</p>
+                <p><strong>Configuration:</strong> {solution.series_cells}S {solution.parallel_cells}P</p>
+                <p><strong>Nominal Voltage:</strong> {solution.battery_voltage.toFixed(1)} V</p>
                 <p><strong>Capacity:</strong> {solution.battery_capacity.toFixed(1)} Ah</p>
                 <p><strong>Energy:</strong> {formatUnit(solution.battery_energy, 'Wh')}</p>
                 <p><strong>Continuous Power:</strong> {formatUnit(solution.continuous_power, 'W')}</p>
-                <p><strong>Peak Power:</strong> {formatUnit(solution.peak_power, 'W')}</p>
-                <p><strong>Total Weight:</strong> {solution.battery_weight.toFixed(2)} kg</p>
+                <p><strong>Cells' Weight:</strong> {solution.battery_weight.toFixed(2)} kg</p>
                 <p className="font-bold mt-2 border-t pt-1">Total Price: €{solution.total_price.toFixed(2)}</p>
               </CardContent>
             </Card>
@@ -661,55 +662,98 @@ const SolutionDetailModal = ({ solution, isOpen, onClose }: { solution: Configur
               <CardContent className="text-sm space-y-1">
                 <p><strong>Brand:</strong> {solution.cell.Brand}</p>
                 <p><strong>Model:</strong> {solution.cell.CellModelNo}</p>
-                <p><strong>Discharge:</strong> {solution.cell.MaxContinuousDischargeRate}C</p>
-                <p><strong>Price/Cell:</strong> €{solution.cell.Price.toFixed(2)}</p>
+                <p><strong>Nominal Voltage:</strong> {solution.cell.NominalVoltage}</p>
+                <p><strong>Cont. Discharge Rate:</strong> {solution.cell.MaxContinuousDischargeRate}C</p>
+                <p><strong>Capacity:</strong> {solution.cell.Capacity / 1000} Ah</p>
+                <p><strong>Est. Price/Cell:</strong> €{solution.cell.Price.toFixed(2)}</p>
                 <AffiliateLink link={solution.cell.Connection} />
               </CardContent>
             </Card>
           </div>
 
           {/* Column 2 & 3: Components */}
-          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
             {solution.bms && (
               <Card>
-                <CardHeader><CardTitle className="text-base flex items-center gap-2"><Zap className="w-4 h-4" /> BMS</CardTitle></CardHeader>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Zap className="w-4 h-4" /> BMS
+                  </CardTitle>
+                </CardHeader>
                 <CardContent className="text-sm space-y-1">
-                  <p><strong>Model:</strong> {solution.bms.brand} {solution.bms.model}</p>
+                  <p><strong>Brand:</strong> {solution.bms.brand}</p>
+                  <p><strong>Model:</strong> {solution.bms.model}</p>
+                  <p><strong>Max Cells:</strong> {solution.bms.max_cells}</p>
+                  {/*<p><strong>Voltage Range:</strong> {solution.bms.vdc_min} – {solution.bms.vdc_max} V</p>*/}
                   <p><strong>Max Current:</strong> {solution.bms.a_max} A</p>
-                  <p><strong>Price:</strong> €{solution.bms.master_price?.toFixed(2)}</p>
+                  {/*<p><strong>Operating Temp:</strong> {solution.bms.temp_min}°C – {solution.bms.temp_max}°C</p>*/}
+                  <p><strong>Est. Price:</strong> €{solution.bms.master_price?.toFixed(2)} (Master) / €{solution.bms.slave_price?.toFixed(2)} (Slave)</p>
                   <AffiliateLink link={solution.bms.link} />
                 </CardContent>
               </Card>
             )}
+
             {solution.fuse && (
               <Card>
-                <CardHeader><CardTitle className="text-base flex items-center gap-2"><CheckCircle className="w-4 h-4" /> Fuse</CardTitle></CardHeader>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" /> Fuse
+                  </CardTitle>
+                </CardHeader>
                 <CardContent className="text-sm space-y-1">
-                  <p><strong>Model:</strong> {solution.fuse.brand} {solution.fuse.model}</p>
-                  <p><strong>Rating:</strong> {solution.fuse.a_max} A / {solution.fuse.vdc_max} V</p>
-                  <p><strong>Price:</strong> €{solution.fuse.price.toFixed(2)}</p>
+                  <p><strong>Brand:</strong> {solution.fuse.brand}</p>
+                  <p><strong>Model:</strong> {solution.fuse.model}</p>
+                  <p><strong>Voltage Rating:</strong> {solution.fuse.vdc_max} V</p>
+                  <p><strong>Current Rating:</strong> {solution.fuse.a_max} A</p>
+                  {/*<p><strong>Operating Temp:</strong> {solution.fuse.temp_min}°C – {solution.fuse.temp_max}°C</p>*/}
+                  <p><strong>Est. Price:</strong> €{solution.fuse.price.toFixed(2)}</p>
                   <AffiliateLink link={solution.fuse.link} />
                 </CardContent>
               </Card>
             )}
+
             {solution.relay && (
               <Card>
                 <CardHeader><CardTitle className="text-base">Relay / Contactor</CardTitle></CardHeader>
                 <CardContent className="text-sm space-y-1">
-                  <p><strong>Model:</strong> {solution.relay.brand} {solution.relay.model}</p>
-                  <p><strong>Rating:</strong> {solution.relay.a_max} A</p>
-                  <p><strong>Price:</strong> €{solution.relay.price.toFixed(2)}</p>
+                  <p><strong>Brand:</strong> {solution.relay.brand}</p>
+                  <p><strong>Model:</strong> {solution.relay.model}</p>
+                  <p><strong>Voltage Rating:</strong> {solution.relay.vdc_max} V</p>
+                  <p><strong>Current Rating:</strong> {solution.relay.a_max} A</p>
+                  {/*<p><strong>Operating Temp:</strong> {solution.relay.temp_min}°C – {solution.relay.temp_max}°C</p>*/}
+                  <p><strong>Est. Price:</strong> €{solution.relay.price.toFixed(2)}</p>
                   <AffiliateLink link={solution.relay.link} />
                 </CardContent>
               </Card>
             )}
+
             {solution.cable && (
               <Card>
                 <CardHeader><CardTitle className="text-base">Cabling</CardTitle></CardHeader>
                 <CardContent className="text-sm space-y-1">
-                  <p><strong>Type:</strong> {solution.cable.model}</p>
-                  <p><strong>Section:</strong> {solution.cable.section} mm²</p>
+                  <p><strong>Brand:</strong> {solution.cable.brand}</p>
+                  <p><strong>Model:</strong> {solution.cable.model}</p>
+                  <p><strong>Cross Section:</strong> {solution.cable.section} mm²</p>
+                  <p><strong>Voltage Rating:</strong> {solution.cable.vdc_max} V</p>
+                  <p><strong>Current Rating:</strong> {solution.cable.a_max} A</p>
+                  {/*<p><strong>Operating Temp:</strong> {solution.cable.temp_min}°C – {solution.cable.temp_max}°C</p>*/}
                   <p><strong>Est. Price (2m):</strong> €{solution.cable.price.toFixed(2)}</p>
+                  <AffiliateLink link={solution.cable.link} />
+                </CardContent>
+              </Card>
+            )}
+
+            {solution.shunt && (
+              <Card>
+                <CardHeader><CardTitle className="text-base">Shunt</CardTitle></CardHeader>
+                <CardContent className="text-sm space-y-1">
+                  <p><strong>Brand:</strong> {solution.shunt.brand}</p>
+                  <p><strong>Model:</strong> {solution.shunt.model}</p>
+                  <p><strong>Voltage Rating:</strong> {solution.shunt.vdc_max} V</p>
+                  <p><strong>Current Rating:</strong> {solution.shunt.a_max} A</p>
+                  {/*<p><strong>Operating Temp:</strong> {solution.shunt.temp_min}°C – {solution.shunt.temp_max}°C</p>*/}
+                  <p><strong>Est. Price:</strong> €{solution.shunt.price.toFixed(2)}</p>
+                  <AffiliateLink link={solution.shunt.link} />
                 </CardContent>
               </Card>
             )}

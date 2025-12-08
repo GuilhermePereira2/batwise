@@ -12,9 +12,9 @@ RHO_E_COPPER = 1.68e-8
 DEFAULT_CABLE_LENGTH_M = 2
 THERMAL_RESISTANCE = 0.5
 MIN_DELTA_T = 1.0
-FUSE_CURRENT_FACTOR = 1
-RELAY_VOLTAGE_FACTOR = 1
-RELAY_CURRENT_FACTOR = 1.1
+FUSE_CURRENT_FACTOR = 1.5
+RELAY_VOLTAGE_FACTOR = 1.1
+RELAY_CURRENT_FACTOR = 2.0
 
 # --- FUNÇÕES AUXILIARES ---
 
@@ -78,7 +78,8 @@ def select_cable_fast(cables_list: List[dict], i_peak: float, v_max: float, t_am
         vdc = c.get('vdc_max', 0)
         a_max = c.get('a_max', 0)
 
-        if section >= A_mm2_calc and vdc >= v_max and a_max >= i_peak:
+        # section >= A_mm2_calc and vdc >= v_max and
+        if a_max >= i_peak:
             # Retorna uma cópia modificada com o preço calculado
             return {
                 "brand": c.get('brand', ''),
@@ -226,11 +227,13 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 req.min_continuous_power / (series * cell_power)) if cell_power > 0 else 1
             start_p = max(min_p_power, 1)
 
-            for parallel in range(start_p, 8):  # Limite aumentado para teste
+            for parallel in range(start_p, 5):  # Limite aumentado para teste
                 stats["totalAttempts"] += 1
 
                 # --- SAFETY CHECK ---
                 cont_current = req.min_continuous_power / bat_voltage
+                cont_current_pack = max(cont_current, cell.Capacity * 1e-3 *
+                                        cell.MaxContinuousDischargeRate*parallel)
 
                 safety = assess_safety(req, cell, {
                     'continuous_current': cont_current,
@@ -258,17 +261,17 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                                 cell.MaxContinuousDischargeRate) * parallel * 5
 
                 fuse = select_component_fast(
-                    sorted_fuses, max_voltage, peak_current * FUSE_CURRENT_FACTOR)
+                    sorted_fuses, max_voltage, cont_current_pack * FUSE_CURRENT_FACTOR)
                 if not fuse:
                     continue
 
                 relay = select_component_fast(
-                    sorted_relays, max_voltage * RELAY_VOLTAGE_FACTOR, peak_current * RELAY_CURRENT_FACTOR)
+                    sorted_relays, max_voltage * RELAY_VOLTAGE_FACTOR, cont_current_pack * RELAY_CURRENT_FACTOR)
                 if not relay:
                     continue
 
                 cable = select_cable_fast(
-                    sorted_cables, peak_current, max_voltage, req.ambient_temp)
+                    sorted_cables, cont_current_pack, max_voltage, req.ambient_temp)
                 if not cable:
                     continue
 
@@ -339,11 +342,11 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 )
                 configs.append(config)
 
-    configs.sort(key=lambda x: x.battery_energy /
-                 x.total_price if x.total_price > 0 else 0, reverse=True)
+    configs.sort(key=lambda x: x.total_price /
+                 x.battery_energy if x.battery_energy > 0 else 0, reverse=True)
 
     return {
-        "results": configs[:100],
+        "results": configs[:30],
         "plotResults": configs[:100],
         "total": len(configs),
         "stats": stats if req.debug else None
