@@ -186,7 +186,7 @@ const DIYTool = () => {
         max_width: Number(maxWidth) || 200,
         max_length: Number(maxLength) || 1000,
         max_height: Number(maxHeight) || 200,
-        target_price: Number(targetPrice) || 500,
+        target_price: Number(targetPrice) || 0,
         ambient_temp: 25,
         debug: true,
       };
@@ -333,7 +333,7 @@ const DIYTool = () => {
                     <div className="space-y-2">
                       <Label htmlFor="minVoltage">
                         Min Voltage (V)
-                        <InfoTooltip content="Voltage when battery is 0% empty. Usually 3.0V per cell." />
+                        <InfoTooltip content="Minimum Nominal Voltage that your battery can have. Check the minimum voltage that your system allows and calculate what is the minimum nominal voltage your battery can have." />
                       </Label>
                       <Input id="minVoltage" type="number" value={minVoltage} onChange={(e) => setMinVoltage(e.target.value)} placeholder="e.g., 36" />
                     </div>
@@ -341,7 +341,7 @@ const DIYTool = () => {
                     <div className="space-y-2">
                       <Label htmlFor="maxVoltage">
                         Max Voltage (V)
-                        <InfoTooltip content="Voltage when 100% full. Must match your charger voltage." />
+                        <InfoTooltip content="Maximum Nominal Voltage your battery can have. Must match the maximum voltage your system allows and your charger maximum voltage." />
                       </Label>
                       <Input id="maxVoltage" type="number" value={maxVoltage} onChange={(e) => setMaxVoltage(e.target.value)} placeholder="e.g., 54.6" />
                     </div>
@@ -349,7 +349,7 @@ const DIYTool = () => {
                     <div className="space-y-2">
                       <Label htmlFor="minContinuousPower">
                         Continuous Power (W)
-                        <InfoTooltip content="Average power your device consumes constantly." />
+                        <InfoTooltip content="Average Power your device consumes constantly. " />
                       </Label>
                       <Input id="minContinuousPower" type="number" value={minContinuousPower} onChange={(e) => setMinContinuousPower(e.target.value)} placeholder="e.g., 3000" />
                     </div>
@@ -357,22 +357,22 @@ const DIYTool = () => {
                     <div className="space-y-2">
                       <Label htmlFor="minEnergy">
                         Min Energy (Wh)
-                        <InfoTooltip content="Determines your range or runtime." />
+                        <InfoTooltip content="Minimum Energy you want your battery to have. Determines your range or runtime." />
                       </Label>
                       <Input id="minEnergy" type="number" value={minEnergy} onChange={(e) => setMinEnergy(e.target.value)} placeholder="e.g., 2000" />
                     </div>
 
                     {/* Opcionais */}
                     <div className="space-y-2">
-                      <Label>Target Price (€)</Label>
-                      <Input type="number" value={targetPrice} onChange={(e) => setTargetPrice(e.target.value)} placeholder="e.g., 500" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Max Weight (kg)</Label>
+                      <Label>Max Weight (kg)
+                        <InfoTooltip content="Maximum Weight you want your battery to have (including electronics)." />
+                      </Label>
                       <Input type="number" value={maxWeight} onChange={(e) => setMaxWeight(e.target.value)} placeholder="Optional" />
                     </div>
                     <div className="space-y-2">
-                      <Label>Max Price (€)</Label>
+                      <Label>Max Price (€)
+                        <InfoTooltip content="Maximum Price you want for your battery." />
+                      </Label>
                       <Input type="number" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Optional" />
                     </div>
                   </div>
@@ -428,38 +428,41 @@ const DIYTool = () => {
                         <TabsTrigger value="plot">Graph View</TabsTrigger>
                       </TabsList>
 
-                      <TabsContent value="best-solutions" className="space-y-4">
-                        {findBestConfigurations(results, Number(targetPrice) || 0).map(({ title, config, metric }, idx) => (
-                          <Card
-                            key={title + idx}
-                            className={`cursor-pointer hover:shadow-lg transition-all border-l-4 ${config.safety.is_safe ? 'border-l-emerald-500' : 'border-l-red-500'}`}
-                            onClick={() => setSelectedSolution(config)}
-                          >
-                            <CardHeader className="pb-2">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <CardTitle className="text-lg">{title}</CardTitle>
-                                  <CardDescription>{metric(config)}</CardDescription>
+                      <TabsContent value="best-solutions">
+                        {/* Adicionei esta DIV para criar a grelha */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {findBestConfigurations(results, Number(targetPrice) || 0).map(({ title, config, metric }, idx) => (
+                            <Card
+                              key={title + idx}
+                              // Removi classes desnecessárias, mantive as visuais
+                              className={`cursor-pointer hover:shadow-lg transition-all border-l-4 ${config.safety.is_safe ? 'border-l-emerald-500' : 'border-l-red-500'}`}
+                              onClick={() => setSelectedSolution(config)}
+                            >
+                              <CardHeader className="pb-2">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <CardTitle className="text-lg">{title}</CardTitle>
+                                    <CardDescription>{metric(config)}</CardDescription>
+                                  </div>
+                                  <Badge variant={config.safety.safety_score > 80 ? "default" : "destructive"}>
+                                    Safety: {config.safety.safety_score}
+                                  </Badge>
                                 </div>
-                                <Badge variant={config.safety.safety_score > 80 ? "default" : "destructive"}>
-                                  Safety: {config.safety.safety_score}
-                                </Badge>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="text-sm space-y-1">
-                              <p><strong>Model:</strong> {config.cell.CellModelNo}</p>
-                              <p><strong>Config:</strong> {config.series_cells}S {config.parallel_cells}P</p>
-                              <p><strong>Energy:</strong> {formatUnit(config.battery_energy, 'Wh')}</p>
+                              </CardHeader>
+                              <CardContent className="text-sm space-y-1">
+                                <p><strong>Model:</strong> {config.cell.CellModelNo}</p>
+                                <p><strong>Config:</strong> {config.series_cells}S {config.parallel_cells}P</p>
+                                <p><strong>Energy:</strong> {formatUnit(config.battery_energy, 'Wh')}</p>
 
-                              {/* Aviso Rápido no Card */}
-                              {config.safety.warnings.length > 0 && (
-                                <div className="mt-2 text-xs text-amber-600 flex items-center gap-1 font-semibold">
-                                  <AlertTriangle className="w-3 h-3" /> Check Warnings
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
-                        ))}
+                                {config.safety.warnings.length > 0 && (
+                                  <div className="mt-2 text-xs text-amber-600 flex items-center gap-1 font-semibold">
+                                    <AlertTriangle className="w-3 h-3" /> Check Warnings
+                                  </div>
+                                )}
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
                       </TabsContent>
 
                       <TabsContent value="plot" className="h-[500px]">
@@ -470,8 +473,12 @@ const DIYTool = () => {
                             <Select value={xAxis} onValueChange={setXAxis}>
                               <SelectTrigger><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="battery_energy">Energy</SelectItem>
-                                <SelectItem value="total_price">Price</SelectItem>
+                                <SelectItem value="battery_energy">Energy (Wh)</SelectItem>
+                                <SelectItem value="battery_weight">Weight (kg)</SelectItem>
+                                <SelectItem value="battery_voltage">Voltage (V)</SelectItem>
+                                <SelectItem value="battery_capacity">Capacity (Ah)</SelectItem>
+                                <SelectItem value="total_price">Price (€)</SelectItem>
+                                <SelectItem value="peak_power">Power (W)</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -480,8 +487,12 @@ const DIYTool = () => {
                             <Select value={yAxis} onValueChange={setYAxis}>
                               <SelectTrigger><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="total_price">Price</SelectItem>
-                                <SelectItem value="battery_weight">Weight</SelectItem>
+                                <SelectItem value="battery_energy">Energy (Wh)</SelectItem>
+                                <SelectItem value="battery_weight">Weight (kg)</SelectItem>
+                                <SelectItem value="battery_voltage">Voltage (V)</SelectItem>
+                                <SelectItem value="battery_capacity">Capacity (Ah)</SelectItem>
+                                <SelectItem value="total_price">Price (€)</SelectItem>
+                                <SelectItem value="peak_power">Power (W)</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -489,9 +500,39 @@ const DIYTool = () => {
                         <ResponsiveContainer width="100%" height="100%">
                           <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                             <CartesianGrid />
-                            <XAxis type="number" dataKey={xAxis} name={xAxis} />
-                            <YAxis type="number" dataKey={yAxis} name={yAxis} />
-                            <ChartTooltip cursor={{ strokeDasharray: '3 3' }} />
+                            <XAxis
+                              type="number"
+                              dataKey={xAxis}
+                              name={xAxis}
+                              label={{
+                                value: xAxis.replace('_', ' ').toUpperCase(),
+                                position: 'bottom',
+                                offset: 5
+                              }}
+                            />
+                            <YAxis
+                              type="number"
+                              dataKey={yAxis}
+                              name={yAxis}
+                              label={{ value: yAxis.replace('_', ' ').toUpperCase(), angle: -90, position: 'insideLeft', offset: -5, dy: 65 }}
+                            />
+                            <ChartTooltip
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  const data = payload[0].payload;
+                                  return (
+                                    <div className="bg-background border border-border p-3 rounded-lg shadow-lg">
+                                      <p className="font-semibold">{data.cell.CellModelNo}</p>
+                                      <p className="text-sm text-muted-foreground">{data.series_cells}S{data.parallel_cells}P</p>
+                                      <p className="text-sm">Energy: {formatUnit(data.battery_energy, "Wh")}</p>
+                                      <p className="text-sm">Price: €{data.total_price.toFixed(2)}</p>
+                                      <p className="text-sm">Weight: {data.battery_weight.toFixed(1)} kg</p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
                             <Scatter name="Batteries" data={plotResults} fill="#10b981" onClick={(d) => setSelectedSolution(d.payload)} />
                           </ScatterChart>
                         </ResponsiveContainer>
