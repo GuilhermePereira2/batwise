@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
 # Importar Modelos (Inputs/Outputs)
-from models import Requirements, Configuration
+from models import Requirements, Configuration, DesignResponse
 
 # Importar Lógica de Cálculo
 from logic import compute_cell_configurations
@@ -39,31 +39,23 @@ def read_root():
     }
 
 
-@app.post("/calculate", response_model=List[Configuration])
+@app.post("/calculate", response_model=DesignResponse)
 def calculate_endpoint(req: Requirements):
-    """
-    Recebe os requisitos do Frontend, vai buscar os dados à classe DB,
-    corre o algoritmo e devolve a lista de configurações.
-    """
     try:
-        # AQUI: Passamos os dados dinâmicos (db.cells, db.components)
-        # para a função de cálculo que criámos anteriormente.
-        configs, stats = compute_cell_configurations(
+        res = compute_cell_configurations(
             req,
             db.cells,
             db.components
         )
 
-        # Log para a consola do backend (ajuda a debugar performance)
-        print(f"📊 Pedido processado: {stats}")
-
-        # Retorna os top 50 resultados para manter o JSON leve
-        return configs[:50]
+        return res
 
     except Exception as e:
-        print(f"❌ Erro crítico no cálculo: {e}")
-        # Envia o erro para o Frontend ver (aparece no Toast de erro)
+        import traceback
+        print("❌ Erro crítico no cálculo:")
+        traceback.print_exc()   # <---- ATIVAR LOGGING AQUI
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # --- Endpoint Bónus: Recarregar Dados sem desligar o servidor ---
 

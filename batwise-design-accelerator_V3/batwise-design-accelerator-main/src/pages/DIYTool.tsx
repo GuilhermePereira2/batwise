@@ -177,15 +177,16 @@ const DIYTool = () => {
     try {
       // Conversão e defaults para mm (inputs assumem-se em mm ou valores brutos)
       const payload = {
-        min_voltage: Number(minVoltage) || 0,
-        max_voltage: Number(maxVoltage) || 0,
-        min_continuous_power: Number(minContinuousPower) || 0,
-        min_energy: Number(minEnergy) || 0,
-        max_weight: Number(maxWeight) || 1000, // Default alto se vazio
-        max_price: Number(maxPrice) || 10000,
-        max_width: Number(maxWidth) || 2000,
-        max_length: Number(maxLength) || 2000,
-        max_height: Number(maxHeight) || 2000,
+        min_voltage: Number(minVoltage) || 70,
+        max_voltage: Number(maxVoltage) || 80,
+        min_continuous_power: Number(minContinuousPower) || 2000,
+        min_energy: Number(minEnergy) || 3000,
+        max_weight: Number(maxWeight) || 100, // Default alto se vazio
+        max_price: Number(maxPrice) || 1000,
+        max_width: Number(maxWidth) || 200,
+        max_length: Number(maxLength) || 1000,
+        max_height: Number(maxHeight) || 200,
+        target_price: Number(targetPrice) || 500,
         ambient_temp: 25,
         debug: true,
       };
@@ -220,7 +221,7 @@ const DIYTool = () => {
       } else {
         toast({
           title: "Success!",
-          description: `Found ${data.total} safe configurations.`,
+          description: `Showing ${data.plotResults.length} configurations out of ${data.total} safe configurations.`,
         });
 
         // Scroll suave para os resultados

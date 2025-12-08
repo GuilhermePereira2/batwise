@@ -319,7 +319,8 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                  x.total_price if x.total_price > 0 else 0, reverse=True)
 
     return {
-        "results": configs[:30],
+        "results": configs[:100],
         "plotResults": configs[:100],
-        "total": len(configs)
+        "total": len(configs),
+        "stats": stats if req.debug else None
     }

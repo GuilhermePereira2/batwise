@@ -97,16 +97,16 @@ class CellData(BaseModel):
 
 class Requirements(BaseModel):
     # O frontend pode enviar strings ou números, o Pydantic converte
-    min_voltage: float
-    max_voltage: float
-    min_energy: float
-    min_continuous_power: float
-    max_weight: float
-    max_price: float
-    max_width: float
-    max_length: float
-    max_height: float
-    ambient_temp: float
+    min_voltage: float = 70
+    max_voltage: float = 80
+    min_energy: float = 3000.0  # Default valor razoável
+    min_continuous_power: float = 2000.0  # Default valor razoável
+    max_weight: float = 50.0  # Default valor alto
+    max_price: float = 10000.0  # Default valor alto
+    max_width: float = 150.0  # Default valor estreito
+    max_length: float = 700.0  # Default longo valor
+    max_height: float = 200.0  # Default alto valor
+    ambient_temp: float = 25.0
     debug: bool = False
 
 
