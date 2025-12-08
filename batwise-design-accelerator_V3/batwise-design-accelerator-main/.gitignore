@@ -9,6 +9,10 @@ lerna-debug.log*
 
 venv/
 
+__pycache__/
+*.pyc
+
+
 node_modules
 dist
 dist-ssr
