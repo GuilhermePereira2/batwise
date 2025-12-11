@@ -164,6 +164,7 @@ class BatteryDesign(BaseModel):
     safety_score: float
     durability_score: float
     subpacks: List[Configuration]  # Aqui está a lista hierárquica
+    financial_KPIs: Optional[dict] = None
 
 # 3. DesignResponse: A resposta final da API
 

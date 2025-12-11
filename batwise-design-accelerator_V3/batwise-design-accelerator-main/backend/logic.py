@@ -1,3 +1,4 @@
+import numpy as np
 import math
 # Removemos o lru_cache para evitar erros de "unhashable type: dict"
 from typing import List, Dict, Optional, Tuple, Any
@@ -18,11 +19,15 @@ RELAY_CURRENT_FACTOR = 2.0
 PRICE_BUY = 0.12
 PRICE_SELL = 0.25
 CYCLES_PER_YEAR = 300
-ROUND_TRIP_EFF = 0.92
+ROUND_TRIP_EFF = 0.85
 YEARS = 15
 INTEREST_RATE = 0.06
 OPEX_RATE = 0.02
 DEGRADATION_PER_YEAR = 0.02
+EPSILON = 0.8
+LAMBDA1 = 0.8
+LAMBDA2 = 2.34
+PHI = 3.7e3
 
 # --- FUNÇÕES AUXILIARES ---
 
@@ -282,6 +287,65 @@ def compute_single_chemistry(req, cell, stats):
     return config.model_dump()
 
 
+def durability_assessment(req, cell, series_cells, parallel_cells):
+    """
+    Replica o modelo de durabilidade do MATLAB:
+
+    Real_N_Cycle = N_cycles *
+                    SoC_Val *
+                    Discharge_Val *
+                    Charge_Val *
+                    Temp_Val
+    """
+    # ------------------------------
+    # 2) Valores que vêm do req (médias de corrente e SoC)
+    # ------------------------------
+    # Tens estes no teu código? Se não, adicionamos ao Requirements.
+    SoC_diff = 0.6          # amplitude da variação SoC
+    SoC_ref = ROUND_TRIP_EFF           # swing de referência
+    positive_av = req.min_continuous_power / \
+        (series_cells * cell.NominalVoltage)
+    negative_av = req.min_continuous_power / \
+        (series_cells * cell.NominalVoltage)
+    T_amb = req.ambient_temp
+
+    # ------------------------------
+    # 3) Dados provenientes da célula
+    # ------------------------------
+    N_cycles = cell.Cycles   # vida útil nominal da célula (ex: 3000 ciclos)
+    C_Ah = (cell.Capacity * 1e-3) * parallel_cells
+
+    max_discharge_current = cell.MaxContinuousDischargeRate * C_Ah
+    max_charge_current = cell.MaxContinuousChargeRate * C_Ah
+
+    # ------------------------------
+    # 4) Converter fielmente fórmulas MATLAB
+    # ------------------------------
+
+    # SoC stress term
+    # SoC_Val = ((SoC_Diff) ./ SoC_Ref).^(-1/epsilon)
+    SoC_Val = ((SoC_diff) / SoC_ref) ** (-1 / EPSILON)
+
+    # Discharge term
+    # Discharge_Val = (positive_av / (MaxDischargeRate*C_Ah)).^(-1/lambda1)
+    Discharge_Val = (positive_av / max_discharge_current) ** (-1 / LAMBDA1)
+
+    # Charge term (é média 50/50 tal como no MATLAB)
+    # Charge_Val = ((neg_av/(maxC*C) * 0.5 + charging_current/(maxC*C) * 0.5))^(-1/lambda2)
+    Charge_Val = 0.5 * (negative_av / max_charge_current) ** (-1 / LAMBDA2)
+
+    # Temperature term
+    # Temp_Val = exp(-(phi)*(1/(T+273.15) - 1/(25+273.15)))
+    Temp_Val = math.exp(-(PHI) * (1 / (T_amb + 273.15) - 1 / (25 + 273.15)))
+
+    # ------------------------------
+    # 5) Real cycle life — igual ao MATLAB
+    # ------------------------------
+    Real_N_Cycle = N_cycles * SoC_Val * Discharge_Val * Charge_Val * Temp_Val
+
+    return Real_N_Cycle
+
+
 def financial_analysis(
     battery_cost: float,
     battery_energy_kWh: float,
@@ -459,7 +523,14 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
             subpack_cells = single_result["series_cells"] * \
                 single_result["parallel_cells"]
 
-            durability = cell.Cycles
+            durability = float('inf')
+            if subpack_cells > 0:
+                durability = durability_assessment(
+                    req,
+                    cell,
+                    single_result["series_cells"],
+                    single_result["parallel_cells"]
+                )
 
             # guardar para calcular o total no final
             subpacks.append(
@@ -506,7 +577,8 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
             "battery_weight": total_weight,
             "safety_score": weighted_safety,
             "durability_score": total_durability,
-            "subpacks": subpacks
+            "subpacks": subpacks,
+            "financial_KPIs": analysis
         }
 
         configs.append(final_config)

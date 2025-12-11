@@ -140,10 +140,47 @@ if generate:
                         row_data[f"{prefix} Price (€)"] = round(price, 2)
 
                 expanded_rows.append(row_data)
-
             # Juntar as novas colunas ao DataFrame principal
             subpacks_df = pd.DataFrame(expanded_rows)
             df = pd.concat([df, subpacks_df], axis=1)
+
+        # --- FEATURE ENGINEERING FINANCE ---
+        if "financial_KPIs" in df.columns:
+            expanded_financial = []
+
+            for _, row in df.iterrows():
+                fa = row["financial_KPIs"]
+                if isinstance(fa, dict):
+                    expanded_financial.append({
+                        "CapEx (€)": fa.get("capex", 0),
+                        "Opex Annual (€)": fa.get("opex_annual", 0),
+                        "Cycles per Year": fa.get("cycles_per_year", 0),
+                        "Revenue First Year (€)": fa.get("revenue_first_year", 0),
+                        "Payback Years": fa.get("payback_years", 0),
+                        "NPV (€)": fa.get("npv", 0),
+                        "IRR (%)": fa.get("irr", 0) * 100 if fa.get("irr") is not None else None,
+                        "Total Profit (€)": fa.get("total_profit_over_lifetime", 0)
+                    })
+                else:
+                    expanded_financial.append({
+                        "CapEx (€)": 0,
+                        "Opex Annual (€)": 0,
+                        "Cycles per Year": 0,
+                        "Revenue First Year (€)": 0,
+                        "Payback Years": 0,
+                        "NPV (€)": 0,
+                        "IRR (%)": 0,
+                        "Total Profit (€)": 0
+                    })
+
+            # Remover colunas financeiras antigas se existirem
+            # financial_cols = ["CapEx (€)", "Opex Annual (€)", "Cycles per Year",
+            #                  "Revenue First Year (€)", "Payback Years", "NPV (€)", "IRR (%)", "Total Profit (€)"]
+            # df = df.drop(
+            #    columns=[c for c in financial_cols if c in df.columns])
+
+            # financial_df = pd.DataFrame(expanded_financial)
+            # df = pd.concat([df, financial_df], axis=1)
 
         # 3. Remover colunas complexas originais
         cols_to_drop = ["multiChemistry", "subpacks"]
@@ -152,19 +189,28 @@ if generate:
         # 4. Reordenar Colunas (Prioridade ao que interessa)
         priority_cols = [
             "Split Energy (%)", "Split Power (%)", "total_price", "battery_energy", "continuous_power",
-            "safety_score"
+            "safety_score", "financial_analysis"
         ]
         # Agrupar colunas dos Packs (P1..., P2...)
         sp_cols = sorted([c for c in df.columns if c.startswith("P") and (
-            c.endswith("Model") or c.endswith("Series") or c.endswith("Parallel"))])
+            c.endswith("Model") or c.endswith("Series") or c.endswith("Parallel") or c.endswith("Price (€)"))])
 
         # Resto das colunas
         other_cols = [
             c for c in df.columns if c not in priority_cols and c not in sp_cols and c != "_multiChemStr"]
 
+        financial_cols = ["CapEx (€)", "Opex Annual (€)", "Cycles per Year",
+                          "Revenue First Year (€)", "Payback Years", "NPV (€)", "IRR (%)", "Total Profit (€)"]
+
         final_order = sp_cols + [
             c for c in priority_cols if c in df.columns] + other_cols
-        df = df[final_order]
+        # Garante que só usamos colunas existentes e preenchemos zeros caso faltem
+        final_order_existing = [c for c in final_order if c in df.columns]
+        missing_cols = [c for c in final_order if c not in df.columns]
+        for c in missing_cols:
+            df[c] = 0  # ou np.nan se preferires
+
+        df = df[final_order]  # agora todas as colunas existem
 
     st.session_state.df = df
     st.success(f"Encontradas **{total} configurações**")
@@ -187,8 +233,8 @@ if df.empty:
 # Ratios
 if "energy_density" not in df.columns:
     df["energy_density"] = df["battery_energy"] / df["battery_weight"]
-if "value_ratio" not in df.columns:
-    df["value_ratio"] = df["total_price"] / df["battery_energy"]
+if "price_per_kWh" not in df.columns:
+    df["price_per_kWh"] = (df["total_price"] / df["battery_energy"]) * 1e3
 
 st.header("🏆 Best Configurations")
 
@@ -196,7 +242,7 @@ best = {
     "💰 Lowest Price": df.loc[df["total_price"].idxmin()],
     "🔋 Highest Energy": df.loc[df["battery_energy"].idxmax()],
     "⚡ Highest Energy Density": df.loc[df["energy_density"].idxmax()],
-    "🏅 Best Value (€/Wh)": df.loc[df["value_ratio"].idxmin()],
+    "🏅 Best Value (€/Wh)": df.loc[df["price_per_kWh"].idxmin()],
     "🏋️ Lightest": df.loc[df["battery_weight"].idxmin()],
 }
 
