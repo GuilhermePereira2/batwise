@@ -1,68 +1,68 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Tuple, Any
 
-# --- Component Models (minúsculas, como no teu Deno) ---
+# --- Component Models ---
 
 
 class Fuse(BaseModel):
-    brand: str
-    model: str
-    vdc_max: float
-    a_max: float
-    temp_min: float
-    temp_max: float
-    price: float
-    link: str
+    brand: str = ""
+    model: str = ""
+    vdc_max: float = 0
+    a_max: float = 0
+    temp_min: float = 0
+    temp_max: float = 0
+    price: float = 0
+    link: str = ""
 
 
 class Relay(BaseModel):
-    brand: str
-    model: str
-    vdc_max: float
-    a_max: float
-    temp_min: float
-    temp_max: float
-    price: float
-    link: str
+    brand: str = ""
+    model: str = ""
+    vdc_max: float = 0
+    a_max: float = 0
+    temp_min: float = 0
+    temp_max: float = 0
+    price: float = 0
+    link: str = ""
 
 
 class Cable(BaseModel):
-    brand: str
-    model: str
-    section: float
-    vdc_max: float
-    a_max: float
-    temp_min: float
-    temp_max: float
-    price: float
-    link: str
+    brand: str = ""
+    model: str = ""
+    section: float = 0
+    vdc_max: float = 0
+    a_max: float = 0
+    temp_min: float = 0
+    temp_max: float = 0
+    price: float = 0
+    link: str = ""
 
 
 class Bms(BaseModel):
-    brand: str
-    model: str
-    max_cells: int
-    vdc_min: float
-    vdc_max: float
-    a_max: float
-    temp_min: float
-    temp_max: float
-    master_price: float
-    slave_price: float
-    link: str
+    brand: str = ""
+    model: str = ""
+    max_cells: int = 0
+    vdc_min: float = 0
+    vdc_max: float = 0
+    a_max: float = 0
+    temp_min: float = 0
+    temp_max: float = 0
+    master_price: float = 0
+    slave_price: float = 0
+    link: str = ""
 
 
 class Shunt(BaseModel):
-    brand: str
-    model: str
-    vdc_max: float
-    a_max: float
-    temp_min: float
-    temp_max: float
-    price: float
-    link: str
+    brand: str = ""
+    model: str = ""
+    vdc_max: float = 0
+    a_max: float = 0
+    temp_min: float = 0
+    temp_max: float = 0
+    price: float = 0
+    link: str = ""
 
-# --- Cell Data (Maiúsculas, como no teu Deno) ---
+# --- Cell Data ---
 
 
 class CellData(BaseModel):
@@ -75,7 +75,8 @@ class CellData(BaseModel):
     NominalVoltage: float
     ChargeVoltage: float
     Capacity: float
-    TheMaxDischargeCurrentOfTheTabs: float
+    # Opcional pois nem todas as DBs têm
+    PeakDischargeRate: Optional[float] = 0.0
     Impedance: float
     Weight: float
     Cell_Thickness: float
@@ -85,28 +86,28 @@ class CellData(BaseModel):
     TabsWidth: float
     TabsLength: float
     DistanceBetweenTwoTabs: float
-    VolumeEnergyDensity: float
-    PowerEnergyDensity: float
+    VolumeEnergyDensity: Optional[float] = 0
+    PowerEnergyDensity: Optional[float] = 0
     Cycles: int
     Price: float
     OriginCountry: str
     Connection: str
 
-# --- Input & Output Structures ---
+# --- Inputs ---
 
 
 class Requirements(BaseModel):
-    # O frontend pode enviar strings ou números, o Pydantic converte
-    min_voltage: float = 70
-    max_voltage: float = 80
-    min_energy: float = 3000.0  # Default valor razoável
-    min_continuous_power: float = 2000.0  # Default valor razoável
-    max_weight: float = 50.0  # Default valor alto
-    max_price: float = 10000.0  # Default valor alto
-    max_width: float = 150.0  # Default valor estreito
-    max_length: float = 700.0  # Default longo valor
-    max_height: float = 200.0  # Default alto valor
+    min_voltage: float = 48.0
+    max_voltage: float = 52.0
+    min_energy: float = 5000.0
+    min_continuous_power: float = 2000.0
+    max_weight: float = 100.0
+    max_price: float = 10000.0
+    max_width: float = 500.0
+    max_length: float = 1000.0
+    max_height: float = 300.0
     ambient_temp: float = 25.0
+    target_price: float = 0.0
     debug: bool = False
 
 
@@ -118,11 +119,13 @@ class Dimensions(BaseModel):
 
 class SafetyAssessment(BaseModel):
     is_safe: bool
-    safety_score: int  # 0 a 100
-    warnings: List[str]  # Ex: "Current implies high heat generation"
-    recommendations: List[str]  # Ex: "Use Active Cooling"
+    safety_score: int
+    warnings: List[str]
+    recommendations: List[str]
 
-# Esta estrutura espelha exatamente a interface Configuration do TypeScript
+# --- Output Structures ---
+
+# 1. Configuration (Subpack): Representa um bloco de uma única química
 
 
 class Configuration(BaseModel):
@@ -137,22 +140,37 @@ class Configuration(BaseModel):
     continuous_power: float
     peak_power: float
     cell_price: float
-    fuse: Optional[Fuse]
-    relay: Optional[Relay]
-    # No Deno tinhas um tipo custom para cable selecionado, aqui simplificamos
-    cable: Optional[Cable]
-    bms: Optional[Bms]
-    shunt: Optional[Shunt]
     total_price: float
-    dimensions: Dimensions
-    affiliate_link: str
-    safety: SafetyAssessment  # Novo campo
-    # Link para imagem gerada ou estática
-    wiring_diagram_url: Optional[str] = None
+    safety: SafetyAssessment
+
+    # Componentes Opcionais (caso a lógica os preencha no futuro)
+    fuse: Optional[Fuse] = None
+    relay: Optional[Relay] = None
+    cable: Optional[Cable] = None
+    bms: Optional[Bms] = None
+    shunt: Optional[Shunt] = None
+    dimensions: Optional[Dimensions] = None
+
+# 2. BatteryDesign (Top Level): O resultado final que combina subpacks
+
+
+class BatteryDesign(BaseModel):
+    # Lista de tuplas [Modelo, %Energia, %Potencia]
+    multiChemistry: List[Tuple[str, float, float]]
+    battery_energy: float
+    continuous_power: float
+    total_price: float
+    battery_weight: float
+    safety_score: float
+    durability_score: float
+    subpacks: List[Configuration]  # Aqui está a lista hierárquica
+
+# 3. DesignResponse: A resposta final da API
 
 
 class DesignResponse(BaseModel):
-    results: List[Configuration]
-    plotResults: List[Configuration]
+    # Agora usa a estrutura nova BatteryDesign
+    results: List[BatteryDesign]
+    plotResults: List[BatteryDesign]  # Mesma coisa
     total: int
     stats: Optional[dict] = None

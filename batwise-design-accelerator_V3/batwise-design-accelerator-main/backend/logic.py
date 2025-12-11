@@ -15,6 +15,14 @@ MIN_DELTA_T = 1.0
 FUSE_CURRENT_FACTOR = 1.5
 RELAY_VOLTAGE_FACTOR = 1.1
 RELAY_CURRENT_FACTOR = 2.0
+PRICE_BUY = 0.12
+PRICE_SELL = 0.25
+CYCLES_PER_YEAR = 300
+ROUND_TRIP_EFF = 0.92
+YEARS = 15
+INTEREST_RATE = 0.06
+OPEX_RATE = 0.02
+DEGRADATION_PER_YEAR = 0.02
 
 # --- FUNÇÕES AUXILIARES ---
 
@@ -174,180 +182,341 @@ def assess_safety(req: Requirements, cell: CellData, config_values: dict) -> Saf
         recommendations=recs
     )
 
-# --- MOTOR DE CÁLCULO PRINCIPAL ---
+
+def compute_single_chemistry(req, cell, stats):
+
+    configs = []
+    min_series = math.ceil(req.min_voltage / (cell.NominalVoltage))
+    max_series = math.floor(req.max_voltage / (cell.NominalVoltage))
+    max_series = min_series
+
+    if min_series > max_series:
+        return None  # Nenhuma configuração possível
+
+    for series in range(min_series, max_series + 1):
+        bat_voltage = series * cell.NominalVoltage
+        max_voltage = series * cell.ChargeVoltage
+
+        # Estimativa de Parallel
+        cell_power = (cell.Capacity * 1e-3 *
+                      cell.MaxContinuousDischargeRate) * cell.NominalVoltage
+        min_p_power = math.ceil(
+            req.min_continuous_power / (series * cell_power)) if cell_power > 0 else 1
+
+        cell_energy = (cell.Capacity * 1e-3 * cell.NominalVoltage)
+        min_p_energy = math.ceil(
+            req.min_energy / (series * cell_energy)) if cell_energy > 0 else 1
+
+        parallel = max(min_p_power, min_p_energy)
+
+        stats["totalAttempts"] += 1
+
+        # --- SAFETY CHECK ---
+        cont_current = req.min_continuous_power / bat_voltage
+        cont_current_pack = max(cont_current, cell.Capacity * 1e-3 *
+                                cell.MaxContinuousDischargeRate*parallel)
+
+        safety = assess_safety(req, cell, {
+            'continuous_current': cont_current,
+            'parallel_cells': parallel,
+            'voltage': bat_voltage
+        })
+
+        # if not safety.is_safe:
+        #    continue
+        # --------------------
+
+        total_cells = series * parallel
+        bat_weight = (cell.Weight * 1e-3) * total_cells
+
+        # if bat_weight > (req.max_weight*0.7):
+        #    continue
+
+        # layout = config_geometry_validation_fast(
+        #    cell, series, parallel, req.max_width, req.max_length)
+        # if not layout:
+        #    continue
+
+        # Componentes
+        peak_current = (cell.Capacity * 1e-3 *
+                        cell.PeakDischargeRate) * parallel
+
+        bat_capacity = (cell.Capacity * 1e-3) * parallel
+
+        # Preço
+        cells_cost = cell.Price * bat_voltage*bat_capacity * 1e-3
+        total_price = cells_cost / (2/3)
+
+        # if total_price > req.max_price:
+        #    continue
+
+        # Instanciar Configuration (Validando com **dict)
+        config = Configuration(
+            cell=cell,
+            series_cells=series,
+            parallel_cells=parallel,
+            battery_voltage=round(bat_voltage, 1),
+            battery_capacity=round(bat_capacity, 1),
+            battery_energy=round(bat_voltage * bat_capacity),
+            battery_weight=round(bat_weight, 1),
+            battery_impedance=round(
+                ((cell.Impedance * 1e-3) * series) / parallel, 3) if parallel > 0 else 0,
+            continuous_power=round(bat_voltage * cont_current),
+            peak_power=round(bat_voltage * peak_current),
+            cell_price=round(cells_cost, 2),
+            total_price=round(total_price, 2),
+            # dimensions=Dimensions(
+            #    length=round((cell.Cell_Width + SPACING_WIDTH_MM)
+            #                 * math.ceil(math.sqrt(total_cells)), 1),
+            #    width=round((cell.Cell_Thickness + SPACING_THICKNESS_MM)
+            #                * math.ceil(math.sqrt(total_cells)), 1),
+            #    height=round(cell.Cell_Height, 1)
+            # ),
+            safety=safety,
+            # layout=layout,
+            # affiliate_link=""
+        )
+        configs.append(config)
+
+    # No final devolves "config" mas como dict:
+    return config.model_dump()
+
+
+def financial_analysis(
+    battery_cost: float,
+    battery_energy_kWh: float,
+    cycle_life: int,
+    price_buy: float,
+    price_sell: float,
+    cycles_per_year: int,
+    years: int = 15
+) -> dict:
+    """
+    Calcula retorno financeiro total de uma bateria:
+    - cash flow anual
+    - payback
+    - NPV
+    - IRR
+    - receita e lucro
+
+    Adequado para:
+    • arbitragem energia
+    • peak-shaving
+    • autoconsumo
+    • microgrid
+    • utility-scale
+    """
+
+    # ------------------------------
+    # PRODUÇÃO DE RECEITA ANUAL
+    # ------------------------------
+    # Energia útil por ciclo (com degradação integrada depois)
+    usable_energy_kWh = battery_energy_kWh * ROUND_TRIP_EFF
+
+    # Receita bruta anual (diferença compra vs venda)
+    revenue_per_cycle = usable_energy_kWh * (price_sell - price_buy)
+    base_annual_revenue = revenue_per_cycle * cycles_per_year
+
+    # ------------------------------
+    # OPEX ANUAL
+    # ------------------------------
+    annual_opex = battery_cost * OPEX_RATE
+
+    # ------------------------------
+    # CASH FLOW ANUAL POR ANO (inclui degradação)
+    # ------------------------------
+    cashflows = []
+    capacities = []
+
+    current_capacity = battery_energy_kWh
+
+    for year in range(1, years + 1):
+        # degrada capacidade
+        current_capacity *= (1 - DEGRADATION_PER_YEAR)
+        capacities.append(current_capacity)
+
+        usable_energy_y = current_capacity * ROUND_TRIP_EFF
+
+        annual_revenue_y = (
+            usable_energy_y * (price_sell - price_buy)) * cycles_per_year
+
+        annual_profit = annual_revenue_y - annual_opex
+        cashflows.append(annual_profit)
+
+    # ------------------------------
+    # PAYBACK
+    # ------------------------------
+    cumulative = 0
+    payback_year = None
+    for y, cf in enumerate(cashflows, start=1):
+        cumulative += cf
+        if cumulative >= battery_cost:
+            payback_year = y
+            break
+
+    # ------------------------------
+    # NPV
+    # ------------------------------
+    npv = -battery_cost
+    for y, cf in enumerate(cashflows, start=1):
+        npv += cf / ((1 + INTEREST_RATE) ** y)
+
+    # ------------------------------
+    # IRR
+    # ------------------------------
+    def try_irr():
+        # Tenta IRR via pesquisa simples
+        low, high = -0.9, 1.0
+        for _ in range(200):
+            mid = (low + high) / 2
+            npv_test = -battery_cost + sum(
+                cf / ((1 + mid) ** (i + 1)) for i, cf in enumerate(cashflows)
+            )
+            if npv_test > 0:
+                low = mid
+            else:
+                high = mid
+        return (low + high) / 2
+
+    irr = try_irr()
+
+    # ------------------------------
+    # OUTPUT FINAL
+    # ------------------------------
+    return {
+        "capex": battery_cost,
+        "opex_annual": annual_opex,
+        "cycles_per_year": cycles_per_year,
+        "revenue_first_year": base_annual_revenue,
+        "cashflows": cashflows,
+        "payback_years": payback_year,
+        "npv": npv,
+        "irr": irr,
+        "capacity_vs_year": capacities,
+        "total_profit_over_lifetime": sum(cashflows) - battery_cost
+    }
 
 
 def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], component_db: Dict[str, List[Any]]) -> Dict[str, Any]:
-    configs: List[Configuration] = []
 
-    # 1. SANITIZAÇÃO: Converte TUDO para dicionários simples para evitar erros de 'AttributeError'
-    raw_fuses = [to_dict(x) for x in component_db.get('fuses', [])]
-    raw_relays = [to_dict(x) for x in component_db.get('relays', [])]
-    raw_shunts = [to_dict(x) for x in component_db.get('shunts', [])]
-    raw_bms = [to_dict(x) for x in component_db.get('bms', [])]
-    raw_cables = [to_dict(x) for x in component_db.get('cables', [])]
+    configs = []
+    stats = {"totalAttempts": 0, "validConfigurations": 0}
 
-    # 2. ORDENAÇÃO: Agora seguro usar .get()
-    sorted_fuses = sorted(
-        raw_fuses, key=lambda x: x.get('price', float('inf')))
-    sorted_relays = sorted(
-        raw_relays, key=lambda x: x.get('price', float('inf')))
-    sorted_shunts = sorted(
-        raw_shunts, key=lambda x: x.get('price', float('inf')))
-    sorted_bms = sorted(raw_bms, key=lambda x: x.get(
-        'master_price', float('inf')))
-    sorted_cables = sorted(
-        raw_cables, key=lambda x: x.get('section', float('inf')))
+    # -----------------------------------
+    # 1) Construir combinações independentes de energia e potência
+    # -----------------------------------
 
-    stats = {
-        "totalAttempts": 0, "validConfigurations": 0
-    }
+    percent_steps = [0, 0.25, 0.5, 0.75, 1]
 
-    print(f"Starting calculation with {len(cell_catalogue)} cells...")
+    combinations = []   # (cellA, pE, pP), (cellB, 1-pE, 1-pP)
 
-    for cell in cell_catalogue:
-        # Check Altura
-        if (cell.Cell_Height + HEIGHT_MARGIN_MM) > req.max_height:
+    for i in range(len(cell_catalogue)):
+        for j in range(i+1, len(cell_catalogue)):
+
+            for pE in percent_steps:       # divisões de energia
+                for pP in percent_steps:   # para cada energia → divisões independentes de potência
+
+                    combinations.append([
+                        (cell_catalogue[i], pE, pP),              # química A
+                        (cell_catalogue[j], 1 - pE, 1 - pP)       # química B
+                    ])
+
+    # -----------------------------------
+    # 2) Avaliar cada combinação multiquímica
+    # -----------------------------------
+
+    for combo in combinations:
+
+        total_energy = 0
+        total_power = 0
+        total_cost = 0
+        total_weight = 0
+        weighted_safety = 0
+        weighted_durability = 0
+        total_durability = float('inf')
+
+        valid_combo = True
+        subpacks = []
+
+        for cell, pE, pP in combo:
+
+            energy_req = req.min_energy * pE
+            power_req = req.min_continuous_power * pP
+
+            # criar uma cópia local dos requisitos
+            local_req = Requirements(**req.model_dump())
+            local_req.min_energy = energy_req
+            local_req.min_continuous_power = power_req
+
+            # computação de 1 química
+            single_result = compute_single_chemistry(local_req, cell, stats)
+
+            if single_result is None:
+                valid_combo = False
+                break
+
+            # número de células usadas no subpack
+            subpack_cells = single_result["series_cells"] * \
+                single_result["parallel_cells"]
+
+            durability = cell.Cycles
+
+            # guardar para calcular o total no final
+            subpacks.append(
+                {**single_result, "cell_count": subpack_cells, "Cycles": durability})
+
+            total_energy += single_result['battery_energy']
+            total_power += single_result['continuous_power']
+            total_cost += single_result['total_price']
+            total_weight += single_result['battery_weight']
+            total_durability = min(durability, total_durability)
+
+        if not valid_combo:
             continue
 
-        min_series = math.ceil(req.min_voltage / (cell.NominalVoltage-0.7))
-        max_series = math.floor(req.max_voltage / (cell.ChargeVoltage))
+        # calcular total de células do pack multi-química
+        total_cells = sum(sp["cell_count"] for sp in subpacks)
 
-        if min_series > max_series:
-            continue
+        weighted_safety = 0
+        weighted_durability = 0
 
-        for series in range(min_series, max_series + 1):
-            bat_voltage = series * cell.NominalVoltage
-            max_voltage = series * cell.ChargeVoltage
+        for sp, (cell, _pE, _pP) in zip(subpacks, combo):
 
-            # Estimativa de Parallel
-            cell_power = (cell.Capacity * 1e-3 *
-                          cell.MaxContinuousDischargeRate) * cell.NominalVoltage
-            min_p_power = math.ceil(
-                req.min_continuous_power / (series * cell_power)) if cell_power > 0 else 1
-            start_p = max(min_p_power, 1)
+            cell_fraction = sp["cell_count"] / \
+                total_cells  # percentagem real de células
 
-            for parallel in range(start_p, 5):  # Limite aumentado para teste
-                stats["totalAttempts"] += 1
+            weighted_safety += sp["safety"]["safety_score"] * cell_fraction
+            weighted_durability += cell.Cycles * cell_fraction
 
-                # --- SAFETY CHECK ---
-                cont_current = req.min_continuous_power / bat_voltage
-                cont_current_pack = max(cont_current, cell.Capacity * 1e-3 *
-                                        cell.MaxContinuousDischargeRate*parallel)
+        analysis = financial_analysis(
+            battery_cost=total_cost,
+            battery_energy_kWh=total_energy / 1000,
+            cycle_life=weighted_durability,   # ou outra métrica
+            price_buy=PRICE_BUY,
+            price_sell=PRICE_SELL,
+            cycles_per_year=CYCLES_PER_YEAR,
+            years=YEARS
+        )
 
-                safety = assess_safety(req, cell, {
-                    'continuous_current': cont_current,
-                    'parallel_cells': parallel,
-                    'voltage': bat_voltage
-                })
+        final_config = {
+            "multiChemistry": [(c.CellModelNo, pE, pP) for c, pE, pP in combo],
+            "battery_energy": total_energy,
+            "continuous_power": total_power,
+            "total_price": total_cost,
+            "battery_weight": total_weight,
+            "safety_score": weighted_safety,
+            "durability_score": total_durability,
+            "subpacks": subpacks
+        }
 
-                if not safety.is_safe:
-                    continue
-                # --------------------
+        configs.append(final_config)
 
-                total_cells = series * parallel
-                bat_weight = (cell.Weight * 1e-3) * total_cells
-
-                if bat_weight > (req.max_weight*0.7):
-                    continue
-
-                layout = config_geometry_validation_fast(
-                    cell, series, parallel, req.max_width, req.max_length)
-                if not layout:
-                    continue
-
-                # Componentes
-                peak_current = (cell.Capacity * 1e-3 *
-                                cell.MaxContinuousDischargeRate) * parallel * 5
-
-                fuse = select_component_fast(
-                    sorted_fuses, max_voltage, cont_current_pack * FUSE_CURRENT_FACTOR)
-                if not fuse:
-                    continue
-
-                relay = select_component_fast(
-                    sorted_relays, max_voltage * RELAY_VOLTAGE_FACTOR, cont_current_pack * RELAY_CURRENT_FACTOR)
-                if not relay:
-                    continue
-
-                cable = select_cable_fast(
-                    sorted_cables, cont_current_pack, max_voltage, req.ambient_temp)
-                if not cable:
-                    continue
-
-                bms = select_bms_fast(sorted_bms, series, peak_current)
-                if not bms:
-                    continue
-
-                shunt = select_component_fast(
-                    sorted_shunts, max_voltage, peak_current)
-                if not shunt:
-                    continue
-
-                # Preço
-                cells_cost = cell.Price * total_cells
-                total_price = cells_cost + \
-                    fuse['price'] + relay['price'] + cable['price'] + \
-                    bms['master_price'] + shunt['price']
-
-                if total_price > req.max_price:
-                    continue
-
-                bat_capacity = (cell.Capacity * 1e-3) * parallel
-
-                # Instanciar Configuration (Validando com **dict)
-                config = Configuration(
-                    cell=cell,
-                    series_cells=series,
-                    parallel_cells=parallel,
-                    battery_voltage=round(bat_voltage, 1),
-                    battery_capacity=round(bat_capacity, 1),
-                    battery_energy=round(bat_voltage * bat_capacity),
-                    battery_weight=round(bat_weight, 1),
-                    battery_impedance=round(
-                        ((cell.Impedance * 1e-3) * series) / parallel, 3),
-                    continuous_power=round(bat_voltage * cont_current),
-                    peak_power=round(bat_voltage * peak_current),
-                    cell_price=round(cells_cost, 2),
-                    fuse=Fuse(**fuse),
-                    relay=Relay(**relay),
-                    cable=Cable(**cable),
-                    bms=Bms(
-                        brand=bms.get('brand', 'Generic'),
-                        model=bms.get('model', 'Unknown'),
-                        max_cells=bms.get('max_cells', 0),
-                        vdc_min=bms.get('vdc_min', 0),
-                        vdc_max=bms.get('vdc_max', 0),
-                        a_max=bms.get('a_max', 0),
-                        # --- FIX: Adicionar defaults para temperatura ---
-                        temp_min=bms.get('temp_min', -20),  # Default seguro
-                        temp_max=bms.get('temp_max', 60),  # Default seguro
-                        # -----------------------------------------------
-                        master_price=bms.get('master_price', 0),
-                        slave_price=bms.get('slave_price', 0),
-                        link=bms.get('link', '')
-                    ),
-                    shunt=Shunt(**shunt),
-                    total_price=round(total_price, 2),
-                    dimensions=Dimensions(
-                        length=round((cell.Cell_Width + SPACING_WIDTH_MM)
-                                     * math.ceil(math.sqrt(total_cells)), 1),
-                        width=round((cell.Cell_Thickness + SPACING_THICKNESS_MM)
-                                    * math.ceil(math.sqrt(total_cells)), 1),
-                        height=round(cell.Cell_Height, 1)
-                    ),
-                    safety=safety,
-                    layout=layout,
-                    affiliate_link=""
-                )
-                configs.append(config)
-
-    configs.sort(key=lambda x: x.total_price /
-                 x.battery_energy if x.battery_energy > 0 else 0, reverse=True)
+    # ordenar por €/kWh
+    # configs.sort(key=lambda x: x["total_price"] / x["battery_energy"])
 
     return {
-        "results": configs[:30],
-        "plotResults": configs[:100],
+        "results": configs,
+        "plotResults": configs,
         "total": len(configs),
-        "stats": stats if req.debug else None
+        "stats": stats
     }

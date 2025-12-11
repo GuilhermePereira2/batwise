@@ -77,3 +77,9 @@ def reload_data():
 if __name__ == "__main__":
     # Corre o servidor na porta 8000
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+#
+# python main.py
+#
+# python -m streamlit run ui.py
