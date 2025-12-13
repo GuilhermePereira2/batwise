@@ -1,5 +1,6 @@
 import numpy as np
 import math
+from scipy.optimize import linprog
 # Removemos o lru_cache para evitar erros de "unhashable type: dict"
 from typing import List, Dict, Optional, Tuple, Any
 from models import Requirements, CellData, Fuse, Relay, Cable, Bms, Shunt, Configuration, Dimensions, SafetyAssessment
@@ -266,7 +267,7 @@ def compute_single_chemistry(req, cell, stats):
             battery_weight=round(bat_weight, 1),
             battery_impedance=round(
                 ((cell.Impedance * 1e-3) * series) / parallel, 3) if parallel > 0 else 0,
-            continuous_power=round(bat_voltage * cont_current),
+            continuous_power=round(bat_voltage * cont_current_pack),
             peak_power=round(bat_voltage * peak_current),
             cell_price=round(cells_cost, 2),
             total_price=round(total_price, 2),
@@ -461,6 +462,242 @@ def financial_analysis(
     }
 
 
+def solve_multichemistry_optimization(req: Requirements, cell_catalogue: List[CellData]) -> Optional[Dict[str, Any]]:
+    """
+    Otimiza a combinação de TODAS as químicas disponíveis para satisfazer os requisitos
+    ao menor custo possível.
+
+    Variáveis de decisão: P_i (Número de células em paralelo para a química i)
+    Restrições:
+      1. Tensão: S_i (Série) é fixo por química -> V_req / V_nom_i
+      2. Energia: Sum(P_i * S_i * Energia_celula_i) >= Energia_Req
+      3. Potência: Sum(P_i * S_i * Potencia_celula_i) >= Potencia_Req
+      4. Inteiros: P_i >= 0 e inteiro.
+
+    Objetivo: Minimizar Sum(P_i * S_i * Preço_celula_i)
+    """
+
+    if not cell_catalogue:
+        return None
+
+    # 1. Preparar Vetores para o Solver Linear (scipy.optimize.linprog)
+    # c: coeficientes da função objetivo (Custo por string paralela)
+    # A_ub: matriz das desigualdades (Energia, Potência) - Usamos negativo pois linprog é <=
+    # b_ub: limites das desigualdades
+
+    c = []          # Custo por string
+    A_ub = [[], []]  # [0]: Energia, [1]: Potência
+
+    series_counts = []  # Guarda o valor de S calculado para cada química
+    valid_indices = []  # Mapeia índice do solver para índice no catálogo original
+
+    for idx, cell in enumerate(cell_catalogue):
+        # Constraint de Tensão: S = multiplo necessário para atingir tensão mínima
+        if cell.NominalVoltage <= 0:
+            continue
+
+        s_cells = math.ceil(req.min_voltage / cell.NominalVoltage)
+        series_counts.append(s_cells)
+        valid_indices.append(idx)
+
+        # Custo de uma string desta química (S * Preço_unitário)
+        cost_string = s_cells * \
+            (cell.Price * (cell.Capacity * 1e-6 * cell.NominalVoltage))
+        c.append(cost_string)
+
+        # Energia de uma string (S * Wh_cell)
+        energy_string = s_cells * (cell.Capacity * 1e-3 * cell.NominalVoltage)
+        # Negativo para converter >= Req em <= -Req
+        A_ub[0].append(-energy_string)
+
+        # Potência de uma string (S * W_cell_cont)
+        power_string = s_cells * \
+            (cell.Capacity * 1e-3 * cell.MaxContinuousDischargeRate * cell.NominalVoltage)
+        A_ub[1].append(-power_string)
+
+    b_ub = [-req.min_energy, -req.min_continuous_power]
+
+    c = np.array(c, dtype=float)
+    A_ub = np.array(A_ub, dtype=float)
+    b_ub = np.array(b_ub, dtype=float)
+
+    # 2. Executar Otimização (MILP - Mixed Integer Linear Programming)
+    # O método 'highs' suporta restrição de integridade (integrality=1)
+    try:
+        res = linprog(c, A_ub=A_ub, b_ub=b_ub, bounds=(
+            0, None), integrality=1, method='highs')
+    except Exception as e:
+        print(f"Erro na otimização MILP: {e}. Tentando relaxamento linear.")
+        # Fallback para versões antigas do scipy: resolve linear e arredonda para cima
+        res = linprog(c, A_ub=A_ub, b_ub=b_ub,
+                      bounds=(0, None), method='highs')
+        if res.success:
+            # Arredondar para cima garante cumprimento dos requisitos
+            res.x = np.ceil(res.x)
+
+    if not res.success:
+        return None  # Não foi possível encontrar solução ótima
+
+    # 3. Construir o Resultado
+    parallel_counts = np.round(res.x).astype(int)
+
+    subpacks = []
+    total_energy = 0
+    total_power = 0
+    total_cost = 0
+    total_weight = 0
+    weighted_safety = 0
+    weighted_durability = 0
+    total_durability = float('inf')
+    total_cells_all = 0
+
+    # Primeiro passo: calcular totais para ponderação
+    temp_results = []
+    for solver_idx, p_count in enumerate(parallel_counts):
+        if p_count <= 0:
+            continue
+
+        original_idx = valid_indices[solver_idx]
+        cell = cell_catalogue[original_idx]
+        s_count = series_counts[solver_idx]
+
+        # Calcular propriedades deste subpack
+        n_cells = s_count * p_count
+        sub_voltage = s_count * cell.NominalVoltage
+        sub_energy = n_cells * (cell.Capacity * 1e-3 * cell.NominalVoltage)
+        sub_power = n_cells * \
+            (cell.Capacity * 1e-3 * cell.MaxContinuousDischargeRate * cell.NominalVoltage)
+        sub_cost = n_cells * \
+            (cell.Price * (cell.Capacity * 1e-6 * cell.NominalVoltage))
+        sub_weight = n_cells * (cell.Weight * 1e-3)
+
+        sub_capacity_ah = p_count * (cell.Capacity * 1e-3)
+
+        # Impedância do Pack: (S * Impedância_célula_mOhm / 1000) / P
+        if p_count > 0:
+            sub_impedance = (
+                (cell.Impedance * 1e-3) * s_count) / p_count
+        else:
+            sub_impedance = 0
+
+        # Corrente de pico do pack: C-rate pico * Ah_pack
+        peak_current = cell.PeakDischargeRate * sub_capacity_ah
+
+        # Potência de pico
+        sub_peak_power = sub_voltage * peak_current
+
+        # Durabilidade e Segurança
+        durability = durability_assessment(req, cell, s_count, p_count)
+
+        safety = assess_safety(req, cell, {
+            # Simplificação para safety score
+            'continuous_current': req.min_continuous_power / sub_voltage,
+            'parallel_cells': p_count,
+            'voltage': sub_voltage
+        })
+
+        temp_results.append({
+            "cell": cell,
+            "s": s_count,
+            "p": p_count,
+            "n": n_cells,
+            "energy": sub_energy,
+            "power": sub_power,
+            "cost": sub_cost,
+            "weight": sub_weight,
+            "durability": durability,
+            "safety": safety
+        })
+
+        total_energy += sub_energy
+        total_power += sub_power
+        total_cost += sub_cost
+        total_weight += sub_weight
+        total_cells_all += n_cells
+        total_durability = min(total_durability, durability)
+
+    if total_cells_all == 0:
+        return None
+
+    total_cost = total_cost/(2/3)  # Ajuste de margem
+
+    # Segundo passo: Montar objeto final e médias ponderadas
+    multi_chem_list = []
+
+    for item in temp_results:
+        fraction = item['n'] / total_cells_all
+        weighted_safety += item['safety'].safety_score * fraction
+        weighted_durability += item['cell'].Cycles * \
+            fraction  # Durabilidade nominal ponderada
+
+        sub_voltage = item['s'] * item['cell'].NominalVoltage
+        sub_capacity_ah = item['p'] * (item['cell'].Capacity * 1e-3)
+
+        # Impedância do Pack: (S * Impedância_célula_mOhm / 1000) / P
+        if item['p'] > 0:
+            sub_impedance = (
+                (item['cell'].Impedance * 1e-3) * item['s']) / item['p']
+        else:
+            sub_impedance = 0
+
+        # Corrente de pico do pack: C-rate pico * Ah_pack
+        peak_current = item['cell'].PeakDischargeRate * sub_capacity_ah
+
+        # Potência de pico
+        sub_peak_power = sub_voltage * peak_current
+
+        # Estrutura similar ao compute_single_chemistry
+        sp_dict = {
+            "cell": item['cell'].model_dump(),
+            "series_cells": item['s'],
+            "parallel_cells": item['p'],
+            "cell_count": item['n'],
+            "battery_voltage": round(sub_voltage, 1),
+            "battery_capacity": round(sub_capacity_ah, 1),
+            "battery_impedance": round(sub_impedance, 3),
+            "peak_power": round(sub_peak_power, 0),
+            "cell_price": round(item['cost'], 2),
+            "battery_energy": item['energy'],
+            "continuous_power": item['power'],
+            "total_price": item['cost'],
+            "battery_weight": item['weight'],
+            "Cycles": item['durability'],
+            "safety": item['safety']
+        }
+        subpacks.append(sp_dict)
+
+        # Percentagem de contribuição para energia e potência (aproximada)
+        pE = item['energy'] / total_energy if total_energy > 0 else 0
+        pP = item['power'] / total_power if total_power > 0 else 0
+        multi_chem_list.append((item['cell'].CellModelNo, pE, pP))
+
+    # Análise Financeira Global
+    analysis = financial_analysis(
+        battery_cost=total_cost,
+        battery_energy_kWh=total_energy / 1000,
+        cycle_life=weighted_durability,
+        price_buy=PRICE_BUY,
+        price_sell=PRICE_SELL,
+        cycles_per_year=CYCLES_PER_YEAR,
+        years=YEARS
+    )
+
+    final_config = {
+        "description": "Optimal Multi-Chemistry Mix (Solver)",
+        "multiChemistry": multi_chem_list,
+        "battery_energy": total_energy,
+        "continuous_power": total_power,
+        "total_price": total_cost,
+        "battery_weight": total_weight,
+        "safety_score": weighted_safety,
+        "durability_score": total_durability,
+        "subpacks": subpacks,
+        "financial_KPIs": analysis
+    }
+
+    return final_config
+
+
 def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], component_db: Dict[str, List[Any]]) -> Dict[str, Any]:
 
     configs = []
@@ -488,7 +725,6 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
     # -----------------------------------
     # 2) Avaliar cada combinação multiquímica
     # -----------------------------------
-
     for combo in combinations:
 
         total_energy = 0
@@ -582,6 +818,16 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
         }
 
         configs.append(final_config)
+
+    # -----------------------------------
+    # 3) Fazer otimização de combinação multiquímica
+    # -----------------------------------
+    optimal_mix = solve_multichemistry_optimization(req, cell_catalogue)
+
+    if optimal_mix:
+        # Adiciona o resultado da otimização global à lista de configurações
+        configs.insert(0, optimal_mix)  # Coloca no topo como destaque
+        stats['validConfigurations'] += 1
 
     # ordenar por €/kWh
     # configs.sort(key=lambda x: x["total_price"] / x["battery_energy"])

@@ -13,6 +13,10 @@ st.set_page_config(page_title="DIY Battery Designer", layout="wide")
 
 if "df" not in st.session_state:
     st.session_state.df = None
+if "highlight_index" not in st.session_state:
+    st.session_state.highlight_index = None
+if "raw_dara" not in st.session_state:
+    st.session_state.raw_data = None
 
 st.title("🔋 DIY Battery Designer – Streamlit UI")
 st.write("Interface Python completa para gerar configurações de bateria usando o teu backend FastAPI.")
@@ -36,6 +40,11 @@ target_price = st.sidebar.number_input("Target Price (€)", value=0.0)
 ambient_temp = st.sidebar.number_input("Ambient Temp (°C)", value=25)
 debug = st.sidebar.checkbox("Debug mode", value=False)
 
+
+def reset_highlight():
+    st.session_state.highlight_index = None
+
+
 generate = st.sidebar.button("🚀 Generate Design")
 
 
@@ -43,7 +52,8 @@ clear_cache = st.sidebar.button("🧹 Clear Cached Data")
 
 if clear_cache:
     st.session_state.df = None
-
+    st.session_state.highlight_index = None
+    st.session_state.raw_data = None
 # -------------------------------------------------------------------
 # WHEN USER CLICKS GENERATE
 # -------------------------------------------------------------------
@@ -74,6 +84,7 @@ if generate:
             st.stop()
 
         data = r.json()
+        st.session_state.raw_data = data.get("results", [])
 
     except Exception as e:
         st.error("❌ Could not connect to backend.")
@@ -180,7 +191,7 @@ if generate:
             #    columns=[c for c in financial_cols if c in df.columns])
 
             # financial_df = pd.DataFrame(expanded_financial)
-            # df = pd.concat([df, financial_df], axis=1)
+            # d  f = pd.concat([df, financial_df], axis=1)
 
         # 3. Remover colunas complexas originais
         cols_to_drop = ["multiChemistry", "subpacks"]
@@ -234,7 +245,8 @@ if df.empty:
 if "energy_density" not in df.columns:
     df["energy_density"] = df["battery_energy"] / df["battery_weight"]
 if "price_per_kWh" not in df.columns:
-    df["price_per_kWh"] = (df["total_price"] / df["battery_energy"]) * 1e3
+    df["price_per_kWh"] = (
+        df["total_price"] / (df["battery_energy"] * 1e-3*0.8*(df["durability_score"])*0.9)).round(3)
 
 st.header("🏆 Best Configurations")
 
@@ -266,6 +278,7 @@ available_numeric_cols = [
     "energy_density",
     "total_price",
     "continuous_power",
+    "price_per_kWh",
     "safety_score",
     "durability_score",
     "Split Energy (%)",
@@ -274,7 +287,7 @@ available_numeric_cols = [
 
 valid_cols = [c for c in available_numeric_cols if c in df.columns]
 
-c1, c2, c3 = st.columns(3)
+c1, c2, c3, c4 = st.columns(4)
 
 with c1:
     x_axis = st.selectbox("X Axis", valid_cols, index=0)
@@ -286,8 +299,8 @@ with c2:
     y_axis = st.selectbox("Y Axis", valid_cols, index=default_y)
 
 with c3:
-    color_options = ["safety_score", "total_price",
-                     "durability_score", "Split Energy (%)", "energy_density"]
+    color_options = ["durability_score", "total_price", "safety_score",
+                     "Split Energy (%)", "energy_density", "price_per_kWh"]
     valid_color_options = [c for c in color_options if c in df.columns]
 
     color_col = st.selectbox(
@@ -296,6 +309,14 @@ with c3:
         index=0,
         help="Quanto menor o valor, azul mais claro. Quanto maior, azul mais escuro."
     )
+
+with c4:
+    if st.button("✨ Highlight Best/First Config"):
+        if not df.empty:
+            # Índice 0 é a solução de custo mínimo da otimização
+            st.session_state.highlight_index = df.index[0]
+        else:
+            st.session_state.highlight_index = None
 
 highlight_single = st.checkbox(
     "Highlight One Chemistry Configurations (Red)",
@@ -330,6 +351,32 @@ if not df.empty:
 
     fig.update_traces(marker=dict(size=8, opacity=0.8))
 
+    if st.session_state.highlight_index is not None and st.session_state.highlight_index in df.index:
+        highlight_row = df.loc[[st.session_state.highlight_index]]
+
+        show_legend = True
+        if highlight_single:
+            is_single_chem = (highlight_row["Split Energy (%)"].iloc[0] >= 99.9) or (
+                highlight_row["Split Energy (%)"].iloc[0] <= 0.1)
+            if is_single_chem:
+                show_legend = False
+
+        fig.add_trace(
+            go.Scatter(
+                x=highlight_row[x_axis],
+                y=highlight_row[y_axis],
+                mode='markers',
+                marker=dict(
+                    color='orange',  # Cor de destaque
+                    size=14,  # Tamanho maior
+                    symbol='star',  # Símbolo de estrela
+                    line=dict(width=3, color='DarkOrange')
+                ),
+                name='Best/First Configuration (Otimizada)',
+                showlegend=show_legend
+            )
+        )
+
     if highlight_single and "Split Energy (%)" in df.columns:
         mask = (df["Split Energy (%)"] >= 99.9) & (
             df["Split Power (%)"] >= 99.9) | (df["Split Energy (%)"] <= 0.1) & (
@@ -354,6 +401,7 @@ if not df.empty:
             )
 
     st.plotly_chart(fig, use_container_width=True)
+    df = df.drop(columns=['_index'], errors='ignore')
 
 # -------------------------------------------------------------------
 # FULL TABLE
@@ -378,3 +426,16 @@ st.download_button(
     file_name='battery_configurations.csv',
     mime='text/csv',
 )
+
+
+# -------------------------------------------------------------------
+# DEBUG: RAW DATA SECTION (NOVA SECÇÃO ADICIONADA)
+# -------------------------------------------------------------------
+st.divider()
+st.header("🔍 Debug: Raw Data (Optimized Configuration)")
+st.write("Esta secção mostra exatamente como a primeira configuração (normalmente a otimizada) foi recebida do backend.")
+
+if st.session_state.raw_data and len(st.session_state.raw_data) > 0:
+    st.json(st.session_state.raw_data[0])
+else:
+    st.info("⚠️ Nenhuma informação disponível. Gera um design primeiro.")
