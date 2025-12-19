@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight, Battery, Zap, Calculator, Sparkles, Loader2, BarChart3, ExternalLink, AlertTriangle, CheckCircle, Flame } from "lucide-react";
+import { ArrowRight, Battery, Zap, Calculator, Sparkles, Loader2, BarChart3, ExternalLink, AlertTriangle, CheckCircle, Flame, CircuitBoard, ChevronDown, ChevronUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +14,7 @@ import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { WiringDiagram } from "@/components/WiringDiagram";
 
 // --- IMPORTS CUSTOMIZADOS ---
 import { InfoTooltip } from "@/components/ui/InfoTooltip"; // Certifica-te que este ficheiro existe
@@ -598,6 +599,7 @@ const DIYTool = () => {
 const SolutionDetailModal = ({ solution, isOpen, onClose }: { solution: Configuration, isOpen: boolean, onClose: () => void }) => {
   if (!solution) return null;
 
+  const [showDiagram, setShowDiagram] = useState(false);
   const nominalCurrent = (solution.cell.Capacity / 1000) * solution.cell.MaxContinuousDischargeRate * solution.parallel_cells;
   const nominalPower = solution.battery_voltage * nominalCurrent;
 
@@ -758,6 +760,31 @@ const SolutionDetailModal = ({ solution, isOpen, onClose }: { solution: Configur
               </Card>
             )}
           </div>
+        </div>
+
+        {/* --- Wiring Diagram --- */}
+        <div className="mb-6">
+          <Button
+            variant="outline"
+            // Alterado: Cor do botão, borda e hover para tons neutros
+            className="w-full flex items-center justify-between border-slate-300 text-slate-700 hover:bg-slate-50"
+            onClick={() => setShowDiagram(!showDiagram)}
+          >
+            <span className="flex items-center gap-2">
+              {/* Alterado: Apenas este ícone é agora text-amber-600 */}
+              <CircuitBoard className="w-4 h-4 text-amber-600" />
+              {showDiagram ? "Hide Wiring Diagram" : "Show Wiring Diagram"}
+            </span>
+            {/* Alterado: As setas voltam a ser cinzentas/neutras */}
+            {showDiagram ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+          </Button>
+
+          {/* Renderização Condicional */}
+          {showDiagram && (
+            <div className="mt-4 animate-in fade-in zoom-in-95 duration-300">
+              <WiringDiagram config={solution} />
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
