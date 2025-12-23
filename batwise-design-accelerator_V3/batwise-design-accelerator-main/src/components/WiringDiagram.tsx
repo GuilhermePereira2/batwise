@@ -73,6 +73,9 @@ export const WiringDiagram = ({ config }: WiringDiagramProps) => {
         },
     };
 
+    const hasShunt = !!config.shunt;
+    const hasFuse = !!config.fuse;
+    const hasRelay = !!config.relay;
 
     // --- RENDERIZAR PACK DE BATERIAS ---
     const renderBatteryPack = () => {
@@ -159,46 +162,51 @@ export const WiringDiagram = ({ config }: WiringDiagramProps) => {
                         </g>
 
                         {/* 2. SHUNT (ESQUERDA) */}
-                        <g transform={`translate(${pos.shunt.x}, ${pos.shunt.y})rotate(-90, ${pos.shunt.w / 2}, ${pos.shunt.h / 2})`}>
-                            <rect width={pos.shunt.w} height={pos.shunt.h} fill="#f1f5f9" stroke="#0f172a" strokeWidth="2" />
-                            <text x={pos.shunt.w / 2} y="25" textAnchor="middle" fontSize="12" fontWeight="bold">SHUNT</text>
-                            <circle cx="5" cy={pos.shunt.h / 2} r="4" fill="black" /> <text x="5" y="-5" fontSize="10" textAnchor="middle">Bat</text>
-                            <circle cx={pos.shunt.w - 5} cy={pos.shunt.h / 2} r="4" fill="black" /> <text x={pos.shunt.w - 5} y="-5" fontSize="10" textAnchor="middle">Load</text>
-                        </g>
+                        {hasShunt && (
+                            <g transform={`translate(${pos.shunt.x}, ${pos.shunt.y})rotate(-90, ${pos.shunt.w / 2}, ${pos.shunt.h / 2})`}>
+                                <rect width={pos.shunt.w} height={pos.shunt.h} fill="#f1f5f9" stroke="#0f172a" strokeWidth="2" />
+                                <text x={pos.shunt.w / 2} y="25" textAnchor="middle" fontSize="12" fontWeight="bold">SHUNT</text>
+                                <circle cx="5" cy={pos.shunt.h / 2} r="4" fill="black" /> <text x="5" y="-5" fontSize="10" textAnchor="middle">Bat</text>
+                                <circle cx={pos.shunt.w - 5} cy={pos.shunt.h / 2} r="4" fill="black" /> <text x={pos.shunt.w - 5} y="-5" fontSize="10" textAnchor="middle">Load</text>
+                            </g>
+                        )}
 
                         {/* 3. FUSE (DIREITA CIMA) */}
-                        <g
-                            transform={`translate(${pos.fuse.x}, ${pos.fuse.y})rotate(90, ${pos.fuse.w / 2}, ${pos.fuse.h / 2})`}
-                        >
-                            <rect
-                                x={0}
-                                y={0}
-                                width={pos.fuse.w}
-                                height={pos.fuse.h}
-                                rx="4"
-                                fill="#fef3c7"
-                                stroke="#d97706"
-                                strokeWidth="2"
-                            />
-                            <text
-                                x={pos.fuse.w / 2}
-                                y={pos.fuse.h / 2 + 4}
-                                textAnchor="middle"
-                                fontSize="10"
-                                fontWeight="bold"
+                        {hasFuse && (
+                            <g
+                                transform={`translate(${pos.fuse.x}, ${pos.fuse.y})rotate(90, ${pos.fuse.w / 2}, ${pos.fuse.h / 2})`}
                             >
-                                FUSE
-                            </text>
-                        </g>
-
+                                <rect
+                                    x={0}
+                                    y={0}
+                                    width={pos.fuse.w}
+                                    height={pos.fuse.h}
+                                    rx="4"
+                                    fill="#fef3c7"
+                                    stroke="#d97706"
+                                    strokeWidth="2"
+                                />
+                                <text
+                                    x={pos.fuse.w / 2}
+                                    y={pos.fuse.h / 2 + 4}
+                                    textAnchor="middle"
+                                    fontSize="10"
+                                    fontWeight="bold"
+                                >
+                                    FUSE
+                                </text>
+                            </g>
+                        )}
 
                         {/* 4. RELAY (DIREITA BAIXO) */}
-                        <g transform={`translate(${pos.relay.x}, ${pos.relay.y})`}>
-                            <rect width={pos.relay.w} height={pos.relay.h} rx="4" fill="#f3f4f6" stroke="#4b5563" strokeWidth="2" />
-                            <text x={pos.relay.w / 2} y="35" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#374151">RELAY</text>
-                            <circle cx="5" cy={pos.relay.h / 2} r="4" fill="#dc2626" />
-                            <circle cx={pos.relay.w - 5} cy={pos.relay.h / 2} r="4" fill="#dc2626" />
-                        </g>
+                        {hasRelay && (
+                            <g transform={`translate(${pos.relay.x}, ${pos.relay.y})`}>
+                                <rect width={pos.relay.w} height={pos.relay.h} rx="4" fill="#f3f4f6" stroke="#4b5563" strokeWidth="2" />
+                                <text x={pos.relay.w / 2} y="35" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#374151">RELAY</text>
+                                <circle cx="5" cy={pos.relay.h / 2} r="4" fill="#dc2626" />
+                                <circle cx={pos.relay.w - 5} cy={pos.relay.h / 2} r="4" fill="#dc2626" />
+                            </g>
+                        )}
 
                         {/* 5. LOAD (FUNDO) */}
                         <g transform={`translate(${pos.load.x}, ${pos.load.y})`}>
@@ -207,105 +215,92 @@ export const WiringDiagram = ({ config }: WiringDiagramProps) => {
                         </g>
 
 
-                        {/* ================= CABLAGEM (WIRE PATHS) ================= */}
+                        {/* ================= CABLAGEM DINÂMICA ================= */}
 
-                        {/* --- NEGATIVO (PRETO) ESQUERDA --- */}
-                        {/* 1. Battery(-) -> Shunt (Bat Side) */}
+                        {/* --- NEGATIVO (PRETO) --- */}
+                        {hasShunt ? (
+                            <>
+                                {/* Bat -> Shunt */}
+                                <path d={`M ${packNegX} ${packNegY} L ${shuntAnchors.bat.x} ${packNegY} L ${shuntAnchors.bat.x} ${shuntAnchors.bat.y}`} fill="none" stroke="black" strokeWidth="5" />
+                                {/* Shunt -> Load */}
+                                <path d={`M ${shuntAnchors.load.x} ${shuntAnchors.load.y} L ${shuntAnchors.load.x} ${pos.load.y + 20} L ${pos.load.x} ${pos.load.y + 20}`} fill="none" stroke="black" strokeWidth="5" />
+                                {/* BMS Sense (Shunt Side) */}
+                                <path d={`M ${shuntAnchors.bat.x} ${shuntAnchors.bat.y} L ${shuntAnchors.bat.x} ${pos.bms.y + 40} L ${pos.bms.x + 10} ${pos.bms.y + 40}`} fill="none" stroke="black" strokeWidth="2" strokeDasharray="3,2" />
+                            </>
+                        ) : (
+                            <>
+                                {/* Direct: Bat -> Load */}
+                                <path d={`M ${packNegX} ${packNegY} L ${pos.shunt.x} ${packNegY} L ${pos.shunt.x} ${pos.load.y + 20} L ${pos.load.x} ${pos.load.y + 20}`} fill="none" stroke="black" strokeWidth="5" />
+                                {/* BMS Sense (Direct Bat Side) */}
+                                <path d={`M ${packNegX + 20} ${packNegY} L ${packNegX + 20} ${pos.bms.y + 40} L ${pos.bms.x + 10} ${pos.bms.y + 40}`} fill="none" stroke="black" strokeWidth="2" strokeDasharray="3,2" />
+                            </>
+                        )}
+
+                        {/* --- POSITIVO (VERMELHO) --- */}
+                        {/* Lógica: Bat -> (Fuse?) -> (Relay?) -> Load */}
+
+                        {/* 1. Bat -> Primeiro Componente */}
                         <path
-                            d={`M ${packNegX} ${packNegY}
-                            L ${shuntAnchors.bat.x} ${packNegY}
-                            L ${shuntAnchors.bat.x} ${shuntAnchors.bat.y}`}
-                            fill="none"
-                            stroke="black"
-                            strokeWidth="5"
-                        />
-
-
-                        {/* 2. Shunt (Load Side) -> Load(-) */}
-                        <path
-                            d={`M ${shuntAnchors.load.x} ${shuntAnchors.load.y}
-                            L ${shuntAnchors.load.x} ${pos.load.y + 20}
-                            L ${pos.load.x} ${pos.load.y + 20}`}
-                            fill="none"
-                            stroke="black"
-                            strokeWidth="5"
-                        />
-
-
-                        {/* 3. BMS Power B- (Shunt Bat Side -> BMS) */}
-                        <path
-                            d={`M ${shuntAnchors.bat.x} ${shuntAnchors.bat.y} 
-                    L ${shuntAnchors.bat.x} ${pos.bms.y + 40}
-                    L ${pos.bms.x + 10} ${pos.bms.y + 40}`}
-                            fill="none" stroke="black" strokeWidth="2" strokeDasharray="3,2"
-                        />
-
-
-                        {/* --- POSITIVO (VERMELHO) DIREITA --- */}
-                        {/* 1. Battery(+) -> Fuse */}
-                        <path
-                            d={`M ${packPosX} ${packPosY}
-                            L ${fuseAnchors.in.x} ${packPosY}
-                            L ${fuseAnchors.in.x} ${fuseAnchors.in.y}`}
-                            fill="none"
-                            stroke="#dc2626"
-                            strokeWidth="5"
-                        />
-
-
-                        {/* 2. Fuse -> Relay */}
-                        <path
-                            d={`M ${fuseAnchors.out.x} ${fuseAnchors.out.y}
-                    L ${fuseAnchors.out.x} ${pos.relay.y + pos.relay.h / 2}
-                    L ${pos.relay.x + pos.relay.w} ${pos.relay.y + pos.relay.h / 2}`}
-                            fill="none"
-                            stroke="#dc2626"
-                            strokeWidth="5"
-                        />
-
-
-
-                        {/* 3. Relay -> Load(+) */}
-                        <path
-                            d={`M ${pos.relay.x} ${pos.relay.y + pos.relay.h / 2} 
-                    L ${pos.relay.x - 20} ${pos.relay.y + pos.relay.h / 2}
-                    L ${pos.relay.x - 20} ${pos.load.y + 20}
-                    L ${pos.load.x + pos.load.w} ${pos.load.y + 20}`}
+                            d={`M ${packPosX} ${packPosY} 
+                    L ${hasFuse ? fuseAnchors.in.x : (hasRelay ? pos.relay.x + 20 : pos.load.x + pos.load.w)} ${packPosY}
+                    ${hasFuse ? `L ${fuseAnchors.in.x} ${fuseAnchors.in.y}` : (hasRelay ? `L ${pos.relay.x + 20} ${pos.relay.y}` : `L ${pos.load.x + pos.load.w} ${pos.load.y + 20}`)}`}
                             fill="none" stroke="#dc2626" strokeWidth="5"
                         />
 
-                        {/* 4. BMS Power B+ (Battery+ -> BMS) */}
-                        <path
-                            d={`M ${packPosX + 3} ${packPosY} 
-                    L ${fuseAnchors.in.x} ${packPosY}
-                    L ${fuseAnchors.in.x} ${pos.bms.y + 40}
-                    L ${pos.bms.x + pos.bms.w} ${pos.bms.y + 40}`}
-                            fill="none" stroke="#dc2626" strokeWidth="2" strokeDasharray="3,2"
-                        />
+                        {/* 2. Ligação Fuse -> Próximo (se Fuse existir) */}
+                        {hasFuse && (
+                            <path
+                                d={`M ${fuseAnchors.out.x} ${fuseAnchors.out.y} 
+                    L ${fuseAnchors.out.x} ${hasRelay ? pos.relay.y + pos.relay.h / 2 : pos.load.y + 20}
+                    L ${hasRelay ? pos.relay.x + pos.relay.w : pos.load.x + pos.load.w} ${hasRelay ? pos.relay.y + pos.relay.h / 2 : pos.load.y + 20}`}
+                                fill="none" stroke="#dc2626" strokeWidth="5"
+                            />
+                        )}
+
+                        {/* 3. Ligação Relay -> Load (se Relay existir) */}
+                        {hasRelay && (
+                            <path
+                                d={`M ${pos.relay.x} ${pos.relay.y + pos.relay.h / 2} 
+                    L ${pos.relay.x - 20} ${pos.relay.y + pos.relay.h / 2}
+                    L ${pos.relay.x - 20} ${pos.load.y + 20}
+                    L ${pos.load.x + pos.load.w} ${pos.load.y + 20}`}
+                                fill="none" stroke="#dc2626" strokeWidth="5"
+                            />
+                        )}
+
+                        {/* 4. BMS Power B+ (Ligado sempre antes do Fuse/Relay) */}
+                        <path d={`M ${packPosX + 5} ${packPosY} L ${packPosX + 5} ${pos.bms.y + 40} L ${pos.bms.x + pos.bms.w} ${pos.bms.y + 40}`} fill="none" stroke="#dc2626" strokeWidth="2" strokeDasharray="3,2" />
 
 
                         {/* --- CONTROL / DATA LINES --- */}
 
                         {/* Shunt Data (Orange) */}
-                        <path
-                            d={`M ${pos.shunt.x + 85} ${pos.shunt.y + 20} 
-                    C ${pos.shunt.x - 50} ${pos.shunt.y + 50}, 
-                    ${pos.bms.x + 30} ${pos.bms.y + 100}, 
-                    ${pos.bms.x + 30} ${pos.bms.y + pos.bms.h}`}
-                            fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="3,3"
-                        />
-                        <text x={pos.shunt.x + 10} y={pos.shunt.y + 30} fontSize="14" fill="#f59e0b" transform="rotate(-15)">Current Reading</text>
+                        {hasShunt && (
+                            <>  {/* <--- ADICIONAR ESTE FRAGMENTO */}
+                                <path
+                                    d={`M ${pos.shunt.x + 85} ${pos.shunt.y + 20} 
+                                    C ${pos.shunt.x - 50} ${pos.shunt.y + 50}, 
+                                    ${pos.bms.x + 30} ${pos.bms.y + 100}, 
+                                    ${pos.bms.x + 30} ${pos.bms.y + pos.bms.h}`}
+                                    fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="3,3"
+                                />
+                                <text x={pos.shunt.x + 10} y={pos.shunt.y + 30} fontSize="14" fill="#f59e0b" transform="rotate(-15)">Current Reading</text>
+                            </> {/* <--- FECHAR O FRAGMENTO */}
+                        )}
 
                         {/* Relay Control (Blue) */}
-                        <path
-                            d={`M ${pos.bms.x + pos.bms.w - 30} ${pos.bms.y + pos.bms.h} 
-                    C ${pos.bms.x + pos.bms.w - 30} ${pos.bms.y + 100}, 
-                    ${pos.relay.x + 20} ${pos.relay.y - 30}, 
-                    ${pos.relay.x + 20} ${pos.relay.y}`}
-                            fill="none" stroke="#2563eb" strokeWidth="2" strokeDasharray="3,3"
-                        />
-                        <text x={pos.relay.x} y={pos.relay.y - 10} fontSize="14" fill="#2563eb">Cutoff Signal</text>
-
+                        {hasRelay && (
+                            <> {/* <--- ADICIONAR ESTE FRAGMENTO */}
+                                <path
+                                    d={`M ${pos.bms.x + pos.bms.w - 30} ${pos.bms.y + pos.bms.h} 
+                                    C ${pos.bms.x + pos.bms.w - 30} ${pos.bms.y + 100}, 
+                                    ${pos.relay.x + 20} ${pos.relay.y - 30}, 
+                                    ${pos.relay.x + 20} ${pos.relay.y}`}
+                                    fill="none" stroke="#2563eb" strokeWidth="2" strokeDasharray="3,3"
+                                />
+                                <text x={pos.relay.x} y={pos.relay.y - 10} fontSize="14" fill="#2563eb">Cutoff Signal</text>
+                            </> {/* <--- FECHAR O FRAGMENTO */}
+                        )}
                     </svg>
                 </div>
 
@@ -313,32 +308,35 @@ export const WiringDiagram = ({ config }: WiringDiagramProps) => {
                 <div className="px-8 pb-8 bg-white text-slate-700">
                     <h4 className="font-bold mb-3 text-lg border-b pb-2">Layout & Wiring Guide</h4>
                     <div className="grid md:grid-cols-2 gap-6 text-sm">
+                        {/* Secção Negativa */}
                         <div>
-                            <p className="font-semibold text-emerald-700 mb-1">1. Cell & Pack Configuration</p>
+                            <p className="font-semibold text-emerald-700 mb-1">
+                                2. Negative Path {hasShunt ? "(With Shunt)" : "(Integrated)"}
+                            </p>
                             <ul className="list-disc pl-4 space-y-1 text-slate-600">
-                                <li><strong>Structure:</strong> Cells are horizontal. Connected vertically for Parallel, and left-to-right for Series.</li>
-                                <li><strong>Center:</strong> The battery pack is the heart of the system. Build it first.</li>
+                                {hasShunt ? (
+                                    <>
+                                        <li><strong>Shunt:</strong> Connects between Battery (-) and Load (-).</li>
+                                        <li><strong>Current:</strong> Return current is measured here.</li>
+                                    </>
+                                ) : (
+                                    <li><strong>Direct:</strong> Connect Battery (-) directly to Load (-). Current sensing is internal to BMS.</li>
+                                )}
                             </ul>
                         </div>
+
+                        {/* Secção Positiva */}
                         <div>
-                            <p className="font-semibold text-emerald-700 mb-1">2. Left Side: Negative Path</p>
+                            <p className="font-semibold text-emerald-700 mb-1">
+                                3. Positive Path {hasRelay ? "(With Relay)" : "(Solid State)"}
+                            </p>
                             <ul className="list-disc pl-4 space-y-1 text-slate-600">
-                                <li><strong>Shunt:</strong> Connects between Battery (-) and Load (-).</li>
-                                <li><strong>Current Flow:</strong> All return current must pass through the Shunt to be measured.</li>
-                            </ul>
-                        </div>
-                        <div>
-                            <p className="font-semibold text-emerald-700 mb-1">3. Right Side: Positive Path</p>
-                            <ul className="list-disc pl-4 space-y-1 text-slate-600">
-                                <li><strong>Fuse:</strong> First line of defense. Connected directly to Battery (+).</li>
-                                <li><strong>Relay:</strong> Acts as a switch. Connected between Fuse and Load (+).</li>
-                            </ul>
-                        </div>
-                        <div>
-                            <p className="font-semibold text-emerald-700 mb-1">4. Top: BMS Control</p>
-                            <ul className="list-disc pl-4 space-y-1 text-slate-600">
-                                <li><strong>Power:</strong> Connected to Bat (+) and Bat (-) via thin wires.</li>
-                                <li><strong>Control:</strong> Reads current from Shunt (Orange line) and cuts the Relay (Blue line) if unsafe.</li>
+                                {hasFuse && <li><strong>Fuse:</strong> Connects to Battery (+).</li>}
+                                {hasRelay ? (
+                                    <li><strong>Relay:</strong> Controlled switch between {hasFuse ? "Fuse" : "Battery"} and Load.</li>
+                                ) : (
+                                    <li><strong>Direct:</strong> Connect {hasFuse ? "Fuse output" : "Battery (+)"} to Load (+). Protection is internal.</li>
+                                )}
                             </ul>
                         </div>
                     </div>

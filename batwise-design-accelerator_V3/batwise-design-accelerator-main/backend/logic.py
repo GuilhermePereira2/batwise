@@ -19,6 +19,27 @@ RELAY_CURRENT_FACTOR = 2.0
 # --- FUNÇÕES AUXILIARES ---
 
 
+def get_hardware_requirements(voltage: float, current: float) -> dict:
+    """
+    Define se a bateria precisa de componentes externos baseando-se em
+    limites físicos de segurança e eletrónica comum.
+    """
+    return {
+        # Acima de 60V ou 80A, MOSFETs de BMS comuns falham. Precisa de Relay/Contactor externo.
+        "needs_relay": voltage > 60 or current > 80,
+
+        # Sistemas < 24V e < 20A podem usar fusíveis inline simples ou proteção do BMS.
+        # Acima disso, um fusível de alta capacidade (Bolt-on) é obrigatório.
+        "needs_fuse": voltage > 24 or current > 30,
+
+        # Shunts externos são para correntes altas onde o sensor interno do BMS não é preciso.
+        "needs_shunt": current > 60,
+
+        # Se for baixa voltagem e corrente, é um "Integrated System"
+        "is_integrated": voltage <= 48 and current <= 60
+    }
+
+
 def get_integer_factors(n: int) -> List[Tuple[int, int]]:
     """Retorna pares de fatores (x, y) tal que x * y = n. Otimizado."""
     factors = []
@@ -235,6 +256,9 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 cont_current_pack = max(cont_current, cell.Capacity * 1e-3 *
                                         cell.MaxContinuousDischargeRate*parallel)
 
+                tech = get_hardware_requirements(
+                    bat_voltage, cont_current_pack)
+
                 safety = assess_safety(req, cell, {
                     'continuous_current': cont_current,
                     'parallel_cells': parallel,
@@ -260,15 +284,38 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 peak_current = (cell.Capacity * 1e-3 *
                                 cell.MaxContinuousDischargeRate) * parallel * 5
 
-                fuse = select_component_fast(
-                    sorted_fuses, max_voltage, cont_current_pack * FUSE_CURRENT_FACTOR)
-                if not fuse:
-                    continue
+                # 2. Seleção Condicional de FUSE
+                fuse_obj = None
+                fuse_price = 0
+                if tech["needs_fuse"]:
+                    fuse_data = select_component_fast(
+                        sorted_fuses, max_voltage, cont_current_pack * FUSE_CURRENT_FACTOR)
+                    if not fuse_data:
+                        continue  # Se precisa e não existe no DB, configuração inválida
+                    fuse_obj = Fuse(**fuse_data)
+                    fuse_price = fuse_data['price']
 
-                relay = select_component_fast(
-                    sorted_relays, max_voltage * RELAY_VOLTAGE_FACTOR, cont_current_pack * RELAY_CURRENT_FACTOR)
-                if not relay:
-                    continue
+                # 3. Seleção Condicional de RELAY
+                relay_obj = None
+                relay_price = 0
+                if tech["needs_relay"]:
+                    relay_data = select_component_fast(
+                        sorted_relays, max_voltage * RELAY_VOLTAGE_FACTOR, cont_current_pack * RELAY_CURRENT_FACTOR)
+                    if not relay_data:
+                        continue  # Se precisa e não existe no DB, configuração inválida
+                    relay_obj = Relay(**relay_data)
+                    relay_price = relay_data['price']
+
+                # 4. Seleção Condicional de SHUNT
+                shunt_obj = None
+                shunt_price = 0
+                if tech["needs_shunt"]:
+                    shunt_data = select_component_fast(
+                        sorted_shunts, max_voltage, peak_current)
+                    if not shunt_data:
+                        continue
+                    shunt_obj = Shunt(**shunt_data)
+                    shunt_price = shunt_data['price']
 
                 cable = select_cable_fast(
                     sorted_cables, cont_current_pack, max_voltage, req.ambient_temp)
@@ -279,15 +326,10 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 if not bms:
                     continue
 
-                shunt = select_component_fast(
-                    sorted_shunts, max_voltage, peak_current)
-                if not shunt:
-                    continue
-
                 # Preço
                 cells_cost = cell.Price * total_cells
                 total_price = cells_cost + \
-                    fuse['price'] + relay['price'] + cable['price'] + \
+                    fuse_obj.price + relay_obj.price + cable['price'] + \
                     bms['master_price'] + shunt['price']
 
                 if total_price > req.max_price:
@@ -309,8 +351,8 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                     continuous_power=round(bat_voltage * cont_current),
                     peak_power=round(bat_voltage * peak_current),
                     cell_price=round(cells_cost, 2),
-                    fuse=Fuse(**fuse),
-                    relay=Relay(**relay),
+                    fuse=fuse_obj,
+                    relay=relay_obj,
                     cable=Cable(**cable),
                     bms=Bms(
                         brand=bms.get('brand', 'Generic'),
@@ -327,7 +369,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                         slave_price=bms.get('slave_price', 0),
                         link=bms.get('link', '')
                     ),
-                    shunt=Shunt(**shunt),
+                    shunt=shunt_obj,
                     total_price=round(total_price, 2),
                     dimensions=Dimensions(
                         length=round((cell.Cell_Width + SPACING_WIDTH_MM)
