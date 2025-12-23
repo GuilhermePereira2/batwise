@@ -15,10 +15,16 @@ from database import db
 
 app = FastAPI(title="BatteryApp Calculator API")
 
-# Configuração CORS (Essencial para o React funcionar)
+# Configurar CORS (Para o teu frontend no Vercel conseguir falar com este backend)
+origins = [
+    "http://localhost:5173",  # Localhost
+    # O teu URL do Vercel (ajusta se for diferente)
+    "https://www.watt-builder.com"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permite pedidos do localhost:5173
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
