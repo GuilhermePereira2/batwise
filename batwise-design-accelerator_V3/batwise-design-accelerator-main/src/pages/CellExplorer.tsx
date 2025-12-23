@@ -21,6 +21,7 @@ import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, ResponsiveContainer
 import { Search, Loader2, Database, X, ExternalLink, RefreshCw, LayoutGrid, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { getApiUrl } from "@/lib/config";
 
 // --- Types ---
 interface Cell {
@@ -147,15 +148,13 @@ const CellExplorer = () => {
     useEffect(() => {
         const fetchCellCatalogue = async () => {
             setIsLoading(true);
-            // Define a base do URL (ex: http://localhost:8000)
-            const BASE_URL = import.meta.env.VITE_BATTERY_DESIGN_URL
-                ? import.meta.env.VITE_BATTERY_DESIGN_URL
-                : "http://127.0.0.1:8000";
             try {
-                console.log(`📡 A conectar a: ${BASE_URL}/cells`); // Debug Log
-                // ALTERAÇÃO AQUI: Adicionar '/cells' ao final do URL
-                const res = await fetch(`${BASE_URL}/cells`, {
-                    method: 'GET', headers: {
+                const url = getApiUrl("cells");
+                console.log(`📡 A conectar a: ${url}`);
+
+                const res = await fetch(url, { // <--- Usa a variável url aqui
+                    method: 'GET',
+                    headers: {
                         'Content-Type': 'application/json',
                     }
                 });

@@ -15,6 +15,7 @@ import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, ResponsiveContainer
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { WiringDiagram } from "@/components/WiringDiagram";
+import { getApiUrl } from "@/lib/config";
 
 // --- IMPORTS CUSTOMIZADOS ---
 import { InfoTooltip } from "@/components/ui/InfoTooltip"; // Certifica-te que este ficheiro existe
@@ -172,13 +173,7 @@ const DIYTool = () => {
     setShowResults(false);
     setResults([]);
 
-    // URL do teu backend Python
-
-    const API_URL = import.meta.env.VITE_API_URL
-      ? import.meta.env.VITE_API_URL
-      : "http://127.0.0.1:8000";
     try {
-      console.log(`📡 A enviar pedido para: ${API_URL}/calculate`); // Debug Log
       // Conversão e defaults para mm (inputs assumem-se em mm ou valores brutos)
       const payload = {
         min_voltage: Number(minVoltage) || 70,
@@ -195,9 +190,10 @@ const DIYTool = () => {
         debug: true,
       };
 
-      console.log("Sending to Python:", payload);
+      const url = getApiUrl("calculate");
+      console.log(`📡 A enviar pedido para: ${url}`);
 
-      const response = await fetch(`${API_URL}/calculate`, {
+      const response = await fetch(url, { // <--- Usa a variável url aqui
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
