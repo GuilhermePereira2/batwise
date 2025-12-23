@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, MessageSquare, MapPin } from "lucide-react";
+import { Mail, MessageSquare, MapPin, Loader2 } from "lucide-react"; // Adicionei Loader2
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { getApiUrl } from "@/lib/config"; // <--- IMPORTANTE: Usa o helper que criámos
 
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
@@ -25,23 +26,48 @@ const Contact = () => {
     e.preventDefault();
 
     try {
+      // 1. Validação local
       contactSchema.parse(formData);
       setIsSubmitting(true);
 
-      // Simulate form submission
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // 2. Definir URL do Backend
+      const url = getApiUrl("send-contact-email");
 
+      // 3. Enviar para o Python
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send message via server");
+      }
+
+      // 4. Sucesso
       toast({
         title: "Message sent!",
-        description: "We'll get back to you as soon as possible.",
+        description: "We have received your email and will reply shortly.",
+        variant: "default", // Verde/Positivo
       });
 
       setFormData({ name: "", email: "", message: "" });
+
     } catch (error) {
+      // Tratamento de erros
       if (error instanceof z.ZodError) {
         toast({
           title: "Validation error",
           description: error.errors[0].message,
+          variant: "destructive",
+        });
+      } else {
+        console.error("Submission error:", error);
+        toast({
+          title: "Error sending message",
+          description: "Something went wrong. Please try again later or email us directly.",
           variant: "destructive",
         });
       }
@@ -91,6 +117,7 @@ const Contact = () => {
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
+                      disabled={isSubmitting}
                     />
                   </div>
 
@@ -103,6 +130,7 @@ const Contact = () => {
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       required
+                      disabled={isSubmitting}
                     />
                   </div>
 
@@ -115,17 +143,24 @@ const Contact = () => {
                       value={formData.message}
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                       required
+                      disabled={isSubmitting}
                     />
                   </div>
 
                   <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
-                    {isSubmitting ? "Sending..." : "Send Message"}
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...
+                      </>
+                    ) : (
+                      "Send Message"
+                    )}
                   </Button>
                 </form>
               </CardContent>
             </Card>
 
-            {/* Contact Info */}
+            {/* Contact Info (Mantém-se igual ao teu código original) */}
             <div className="space-y-8 animate-slide-up" style={{ animationDelay: "100ms" }}>
               <div>
                 <h2 className="text-3xl font-bold text-foreground mb-4">
@@ -151,7 +186,6 @@ const Contact = () => {
                   </CardContent>
                 </Card>
 
-
                 <Card className="border-l-4 border-l-accent">
                   <CardContent className="pt-6">
                     <div className="flex items-start gap-4">
@@ -169,7 +203,6 @@ const Contact = () => {
                   </CardContent>
                 </Card>
               </div>
-
             </div>
           </div>
         </div>

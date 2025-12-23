@@ -15,6 +15,12 @@ class Fuse(BaseModel):
     link: str
 
 
+class ContactRequest(BaseModel):
+    name: str
+    email: EmailStr
+    message: str
+
+
 class Relay(BaseModel):
     brand: str
     model: str

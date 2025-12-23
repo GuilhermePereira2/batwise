@@ -1,10 +1,12 @@
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Dict, Any
+from typing import List
+from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
+import os
 
 # Importar Modelos (Inputs/Outputs)
-from models import Requirements, Configuration, DesignResponse, CellData
+from models import Requirements, ContactRequest, DesignResponse, CellData
 
 # Importar Lógica de Cálculo
 from logic import compute_cell_configurations
@@ -91,6 +93,53 @@ def reload_data():
         raise HTTPException(
             status_code=500, detail=f"Erro ao recarregar: {str(e)}")
 
+
+# 2. Configuração do Servidor de Email (Lê das variáveis de ambiente)
+# Se usares Gmail, precisas de criar uma "App Password" na conta Google
+conf = ConnectionConfig(
+    MAIL_USERNAME=os.getenv("MAIL_USERNAME"),
+    MAIL_PASSWORD=os.getenv("MAIL_PASSWORD"),
+    MAIL_FROM=os.getenv("MAIL_FROM"),
+    MAIL_PORT=int(os.getenv("MAIL_PORT", 465)),  # Zoho usa 465 para SSL
+    # Ou .com se a tua conta for global
+    MAIL_SERVER=os.getenv("MAIL_SERVER", "smtp.zoho.eu"),
+    MAIL_STARTTLS=False,  # Desativar para Porta 465
+    MAIL_SSL_TLS=True,   # Ativar para Porta 465
+    USE_CREDENTIALS=True,
+    VALIDATE_CERTS=True
+)
+
+# 3. Endpoint para enviar o email
+
+
+@app.post("/send-contact-email")
+async def send_contact_email(contact: ContactRequest):
+    try:
+        # Corpo do email que Vais receber
+        email_body = f"""
+        <h1>Nova Mensagem do Site</h1>
+        <p><strong>Nome:</strong> {contact.name}</p>
+        <p><strong>Email:</strong> {contact.email}</p>
+        <hr>
+        <p><strong>Mensagem:</strong></p>
+        <p>{contact.message}</p>
+        """
+
+        message = MessageSchema(
+            subject=f"WattBuilder Contacto: {contact.name}",
+            recipients=["general@watt-builder.com"],  # O TEU EMAIL AQUI
+            body=email_body,
+            subtype=MessageType.html
+        )
+
+        fm = FastMail(conf)
+        await fm.send_message(message)
+
+        return {"message": "Email enviado com sucesso"}
+
+    except Exception as e:
+        print(f"Erro ao enviar email: {e}")
+        raise HTTPException(status_code=500, detail="Falha ao enviar email")
 
 if __name__ == "__main__":
     # Corre o servidor na porta 8000
