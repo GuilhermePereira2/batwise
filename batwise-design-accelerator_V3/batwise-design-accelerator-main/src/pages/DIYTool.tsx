@@ -173,8 +173,10 @@ const DIYTool = () => {
     setResults([]);
 
     // URL do teu backend Python
-    const API_URL = "http://127.0.0.1:8000";
 
+    const API_URL = import.meta.env.VITE_API_URL
+      ? import.meta.env.VITE_API_URL
+      : "http://127.0.0.1:8000";
     try {
       console.log(`📡 A enviar pedido para: ${API_URL}/calculate`); // Debug Log
       // Conversão e defaults para mm (inputs assumem-se em mm ou valores brutos)
