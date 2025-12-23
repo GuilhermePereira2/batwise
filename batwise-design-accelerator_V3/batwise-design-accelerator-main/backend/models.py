@@ -1,6 +1,5 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import List, Optional
-
 # --- Component Models (minúsculas, como no teu Deno) ---
 
 
