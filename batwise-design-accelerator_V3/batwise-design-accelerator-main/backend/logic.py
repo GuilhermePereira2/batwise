@@ -329,8 +329,8 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 # Preço
                 cells_cost = cell.Price * total_cells
                 total_price = cells_cost + \
-                    fuse_obj.price + relay_obj.price + cable['price'] + \
-                    bms['master_price'] + shunt['price']
+                    fuse_price + relay_price + cable['price'] + \
+                    bms['master_price'] + shunt_price
 
                 if total_price > req.max_price:
                     continue
