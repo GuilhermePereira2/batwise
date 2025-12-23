@@ -176,6 +176,7 @@ const DIYTool = () => {
     const API_URL = "http://127.0.0.1:8000";
 
     try {
+      console.log(`📡 A enviar pedido para: ${API_URL}/calculate`); // Debug Log
       // Conversão e defaults para mm (inputs assumem-se em mm ou valores brutos)
       const payload = {
         min_voltage: Number(minVoltage) || 70,

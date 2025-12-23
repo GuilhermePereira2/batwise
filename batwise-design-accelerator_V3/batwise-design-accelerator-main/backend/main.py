@@ -1,10 +1,10 @@
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List
+from typing import List, Dict, Any
 
 # Importar Modelos (Inputs/Outputs)
-from models import Requirements, Configuration, DesignResponse
+from models import Requirements, Configuration, DesignResponse, CellData
 
 # Importar Lógica de Cálculo
 from logic import compute_cell_configurations
@@ -37,6 +37,18 @@ def read_root():
             "cables": len(db.components.get("cables", []))
         }
     }
+
+
+@app.get("/cells", response_model=List[CellData])
+def get_all_cells():
+    """
+    Retorna a lista completa de células disponíveis na base de dados.
+    O Frontend usa isto para popular a página 'Cell Explorer'.
+    """
+    if not db.cells:
+        # Opcional: Retornar lista vazia ou erro se não houver dados
+        return []
+    return db.cells
 
 
 @app.post("/calculate", response_model=DesignResponse)

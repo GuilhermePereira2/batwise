@@ -20,7 +20,7 @@ import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 import { Search, Loader2, Database, X, ExternalLink, RefreshCw, LayoutGrid, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 // --- Types ---
 interface Cell {
@@ -140,20 +140,35 @@ const CellExplorer = () => {
 
     // Set browser tab title
     useEffect(() => {
-        document.title = "Cell Explorer | BatteryBuilder";
+        document.title = "Cell Explorer | Watt Builder";
     }, []);
 
     // Fetch data from API
     useEffect(() => {
         const fetchCellCatalogue = async () => {
             setIsLoading(true);
-            const API_URL = import.meta.env.VITE_BATTERY_DESIGN_URL || 'http://localhost:8000';
-
+            // Define a base do URL (ex: http://localhost:8000)
+            const BASE_URL = import.meta.env.VITE_BATTERY_DESIGN_URL
+                ? import.meta.env.VITE_BATTERY_DESIGN_URL
+                : "http://127.0.0.1:8000";
             try {
-                const res = await fetch(API_URL, { method: 'GET' });
+                console.log(`📡 A conectar a: ${BASE_URL}/cells`); // Debug Log
+                // ALTERAÇÃO AQUI: Adicionar '/cells' ao final do URL
+                const res = await fetch(`${BASE_URL}/cells`, {
+                    method: 'GET', headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
                 if (!res.ok) throw new Error(`Failed to fetch (status: ${res.status})`);
 
                 const data: Cell[] = await res.json();
+
+                // Validação de segurança básica: garantir que é um array
+                if (!Array.isArray(data)) {
+                    throw new Error("Formato de dados inválido recebido da API");
+                }
+
                 setAllCells(data);
                 setFilteredCells(data);
 
@@ -756,7 +771,7 @@ const CellDetailModal = ({ cell, isOpen, onClose }: { cell: Cell, isOpen: boolea
             <DialogContent className="max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>{cell.Brand || "Unknown"} {cell.CellModelNo}</DialogTitle>
-                    <CardDescription>{cell.Composition}</CardDescription>
+                    <DialogDescription>{cell.Composition}</DialogDescription>
                 </DialogHeader>
 
                 <div className="py-4 max-h-[70vh] overflow-y-auto">
@@ -788,7 +803,7 @@ const CellDetailModal = ({ cell, isOpen, onClose }: { cell: Cell, isOpen: boolea
                                     <AffiliateLink link={cell.Connection} />
                                     <Button
                                         className="w-full mt-3"
-                                        onClick={() => toast({ title: "Not Implemented", description: "This feature is coming soon." })}
+                                        onClick={() => toast({ title: "Not Implemented", description: "Feature coming soon." })}
                                     >
                                         Get Data
                                     </Button>
