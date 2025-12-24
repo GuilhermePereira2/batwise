@@ -33,8 +33,6 @@ export const WiringDiagram = ({ config }: WiringDiagramProps) => {
     const packNegY = batStartY + packHeight / 2;
     const packPosX = batStartX + packWidth;
     const packPosY = batStartY + packHeight / 2;
-    const posLaneY = packPosY + 80;
-
 
     // --- POSIÇÕES DOS COMPONENTES (Centrado) ---
     const pos = {
@@ -243,33 +241,34 @@ export const WiringDiagram = ({ config }: WiringDiagramProps) => {
                         {/* --- POSITIVO (VERMELHO) --- */}
                         {/* Lógica: Bat -> (Fuse?) -> (Relay?) -> Load */}
 
+                        {/* 1. Bat -> Primeiro Componente */}
                         <path
-                            d={`
-                        M ${packPosX} ${packPosY}
-                        L ${packPosX} ${posLaneY}
-                        L ${hasFuse
-                                    ? fuseAnchors.in.x
-                                    : hasRelay
-                                        ? pos.relay.x + pos.relay.w
-                                        : pos.load.x + pos.load.w
-                                } ${posLaneY}
-                                L ${hasFuse
-                                    ? fuseAnchors.in.x
-                                    : hasRelay
-                                        ? pos.relay.x + pos.relay.w
-                                        : pos.load.x + pos.load.w
-                                } ${hasFuse
-                                    ? fuseAnchors.in.y
-                                    : hasRelay
-                                        ? pos.relay.y + pos.relay.h / 2
-                                        : pos.load.y + 20
-                                }
-                            `}
-                            fill="none"
-                            stroke="#dc2626"
-                            strokeWidth="5"
+                            d={`M ${packPosX} ${packPosY} 
+                    L ${hasFuse ? fuseAnchors.in.x : (hasRelay ? pos.relay.x + 20 : pos.load.x + pos.load.w)} ${packPosY}
+                    ${hasFuse ? `L ${fuseAnchors.in.x} ${fuseAnchors.in.y}` : (hasRelay ? `L ${pos.relay.x + 20} ${pos.relay.y}` : `L ${pos.load.x + pos.load.w} ${pos.load.y + 20}`)}`}
+                            fill="none" stroke="#dc2626" strokeWidth="5"
                         />
 
+                        {/* 2. Ligação Fuse -> Próximo (se Fuse existir) */}
+                        {hasFuse && (
+                            <path
+                                d={`M ${fuseAnchors.out.x} ${fuseAnchors.out.y} 
+                    L ${fuseAnchors.out.x} ${hasRelay ? pos.relay.y + pos.relay.h / 2 : pos.load.y + 20}
+                    L ${hasRelay ? pos.relay.x + pos.relay.w : pos.load.x + pos.load.w} ${hasRelay ? pos.relay.y + pos.relay.h / 2 : pos.load.y + 20}`}
+                                fill="none" stroke="#dc2626" strokeWidth="5"
+                            />
+                        )}
+
+                        {/* 3. Ligação Relay -> Load (se Relay existir) */}
+                        {hasRelay && (
+                            <path
+                                d={`M ${pos.relay.x} ${pos.relay.y + pos.relay.h / 2} 
+                    L ${pos.relay.x - 20} ${pos.relay.y + pos.relay.h / 2}
+                    L ${pos.relay.x - 20} ${pos.load.y + 20}
+                    L ${pos.load.x + pos.load.w} ${pos.load.y + 20}`}
+                                fill="none" stroke="#dc2626" strokeWidth="5"
+                            />
+                        )}
 
                         {/* 4. BMS Power B+ (Ligado sempre antes do Fuse/Relay) */}
                         <path d={`M ${packPosX + 5} ${packPosY} L ${packPosX + 5} ${pos.bms.y + 40} L ${pos.bms.x + pos.bms.w} ${pos.bms.y + 40}`} fill="none" stroke="#dc2626" strokeWidth="2" strokeDasharray="3,2" />
@@ -308,41 +307,105 @@ export const WiringDiagram = ({ config }: WiringDiagramProps) => {
                     </svg>
                 </div>
 
-                {/* INSTRUÇÕES (Mantidas em Inglês Técnico) */}
+                {/* --- ASSEMBLY INSTRUCTIONS (STEP-BY-STEP) --- */}
                 <div className="px-8 pb-8 bg-white text-slate-700">
-                    <h4 className="font-bold mb-3 text-lg border-b pb-2">Layout & Wiring Guide</h4>
-                    <div className="grid md:grid-cols-2 gap-6 text-sm">
-                        {/* Secção Negativa */}
-                        <div>
-                            <p className="font-semibold text-emerald-700 mb-1">
-                                2. Negative Path {hasShunt ? "(With Shunt)" : "(Integrated)"}
-                            </p>
-                            <ul className="list-disc pl-4 space-y-1 text-slate-600">
-                                {hasShunt ? (
-                                    <>
-                                        <li><strong>Shunt:</strong> Connects between Battery (-) and Load (-).</li>
-                                        <li><strong>Current:</strong> Return current is measured here.</li>
-                                    </>
-                                ) : (
-                                    <li><strong>Direct:</strong> Connect Battery (-) directly to Load (-). Current sensing is internal to BMS.</li>
-                                )}
-                            </ul>
+                    <h4 className="font-bold mb-4 text-lg border-b pb-2 flex items-center gap-2">
+                        🛠️ Assembly Guide & Connection Order
+                    </h4>
+
+                    <div className="space-y-6">
+
+                        {/* STEP 1: Core Pack */}
+                        <div className="flex gap-4">
+                            <div className="flex-none w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold border border-slate-200">1</div>
+                            <div>
+                                <h5 className="font-semibold text-slate-900">Physical Assembly (The Core)</h5>
+                                <p className="text-sm text-slate-600 mt-1">
+                                    Assemble the {config.series_cells}S {config.parallel_cells}P pack first.
+                                    Connect cells in parallel groups first, then connect those groups in series.
+                                    Ensure all connections are tight and insulated.
+                                </p>
+                            </div>
                         </div>
 
-                        {/* Secção Positiva */}
-                        <div>
-                            <p className="font-semibold text-emerald-700 mb-1">
-                                3. Positive Path {hasRelay ? "(With Relay)" : "(Solid State)"}
-                            </p>
-                            <ul className="list-disc pl-4 space-y-1 text-slate-600">
-                                {hasFuse && <li><strong>Fuse:</strong> Connects to Battery (+).</li>}
-                                {hasRelay ? (
-                                    <li><strong>Relay:</strong> Controlled switch between {hasFuse ? "Fuse" : "Battery"} and Load.</li>
-                                ) : (
-                                    <li><strong>Direct:</strong> Connect {hasFuse ? "Fuse output" : "Battery (+)"} to Load (+). Protection is internal.</li>
-                                )}
-                            </ul>
+                        {/* STEP 2: BMS Sense Wires */}
+                        <div className="flex gap-4">
+                            <div className="flex-none w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold border border-blue-100">2</div>
+                            <div>
+                                <h5 className="font-semibold text-slate-900">BMS Sense Wires (Balance Leads)</h5>
+                                <ul className="text-sm text-slate-600 mt-1 list-disc pl-4 space-y-1">
+                                    <li>Start connecting the thin wires from <strong>B- (Main Negative)</strong>, then B1, B2... up to <strong>B+</strong>.</li>
+                                    <li className="text-amber-600 font-medium">⚠️ IMPORTANT: Do NOT plug the connector into the BMS yet. Check voltages with a multimeter first.</li>
+                                </ul>
+                            </div>
                         </div>
+
+                        {/* STEP 3: Negative Path */}
+                        <div className="flex gap-4">
+                            <div className="flex-none w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold border border-slate-200">3</div>
+                            <div>
+                                <h5 className="font-semibold text-slate-900">Negative Power Path (-)</h5>
+                                <div className="text-sm text-slate-600 mt-1">
+                                    {hasShunt ? (
+                                        <ul className="list-disc pl-4 space-y-1">
+                                            <li>Connect <strong>Battery Pack (-)</strong> to the <strong>Shunt "BAT"</strong> side.</li>
+                                            <li>Connect the BMS B- wire (thick black) to the Battery (-) or Shunt depending on BMS instructions.</li>
+                                            <li>The <strong>Shunt "LOAD"</strong> side becomes your new System Main Negative.</li>
+                                            <li><span className="text-blue-600">Data Wire:</span> Connect the Shunt data cable to the BMS/Monitor.</li>
+                                        </ul>
+                                    ) : (
+                                        <p>
+                                            Connect the <strong>Battery Pack (-)</strong> directly to the BMS "B-" terminal (if separate) or directly to your System/Load (-).
+                                            <span className="italic text-slate-500"> (Current sensing is built-in inside the BMS).</span>
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* STEP 4: Positive Path */}
+                        <div className="flex gap-4">
+                            <div className="flex-none w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold border border-slate-200">4</div>
+                            <div>
+                                <h5 className="font-semibold text-slate-900">Positive Power Path (+)</h5>
+                                <div className="text-sm text-slate-600 mt-1">
+                                    <p className="mb-1">Follow this exact sequence for safety:</p>
+                                    <div className="flex items-center gap-2 text-xs font-mono bg-slate-50 p-2 rounded border border-slate-200 w-fit">
+                                        <span>BAT (+)</span>
+                                        <span>→</span>
+                                        {hasFuse ? <span className="font-bold text-amber-700">FUSE</span> : <span className="text-slate-400 line-through">NO FUSE</span>}
+                                        <span>→</span>
+                                        {hasRelay ? <span className="font-bold text-blue-700">RELAY</span> : <span className="text-slate-400 line-through">NO RELAY</span>}
+                                        <span>→</span>
+                                        <span>LOAD (+)</span>
+                                    </div>
+
+                                    <ul className="list-disc pl-4 space-y-1 mt-2">
+                                        {hasFuse && <li>Mount the <strong>Fuse</strong> as close to the battery terminal as possible.</li>}
+                                        {hasRelay && (
+                                            <li>
+                                                Install the <strong>Relay/Contactor</strong> after the fuse.
+                                                Connect the BMS "Control/Cutoff" wire to the relay's coil trigger.
+                                            </li>
+                                        )}
+                                        {!hasFuse && !hasRelay && <li>Connect Battery (+) directly to your Load/Charger connector.</li>}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* STEP 5: Activation */}
+                        <div className="flex gap-4">
+                            <div className="flex-none w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold border border-emerald-100">5</div>
+                            <div>
+                                <h5 className="font-semibold text-slate-900">Final Activation</h5>
+                                <p className="text-sm text-slate-600 mt-1">
+                                    Double-check all polarities. Plug in the BMS Sense Connector.
+                                    Depending on your BMS model, you might need to apply a charge voltage briefly to "wake up" the system.
+                                </p>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </CardContent>
