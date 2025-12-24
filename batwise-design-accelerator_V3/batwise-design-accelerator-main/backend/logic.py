@@ -30,7 +30,7 @@ def get_hardware_requirements(voltage: float, current: float) -> dict:
 
         # Sistemas < 24V e < 20A podem usar fusíveis inline simples ou proteção do BMS.
         # Acima disso, um fusível de alta capacidade (Bolt-on) é obrigatório.
-        "needs_fuse": voltage > 24 or current > 30,
+        "needs_fuse": voltage > 24 or current > 50,
 
         # Shunts externos são para correntes altas onde o sensor interno do BMS não é preciso.
         "needs_shunt": current > 60,

@@ -33,6 +33,8 @@ export const WiringDiagram = ({ config }: WiringDiagramProps) => {
     const packNegY = batStartY + packHeight / 2;
     const packPosX = batStartX + packWidth;
     const packPosY = batStartY + packHeight / 2;
+    const posLaneY = packPosY + 80;
+
 
     // --- POSIÇÕES DOS COMPONENTES (Centrado) ---
     const pos = {
@@ -241,34 +243,33 @@ export const WiringDiagram = ({ config }: WiringDiagramProps) => {
                         {/* --- POSITIVO (VERMELHO) --- */}
                         {/* Lógica: Bat -> (Fuse?) -> (Relay?) -> Load */}
 
-                        {/* 1. Bat -> Primeiro Componente */}
                         <path
-                            d={`M ${packPosX} ${packPosY} 
-                    L ${hasFuse ? fuseAnchors.in.x : (hasRelay ? pos.relay.x + 20 : pos.load.x + pos.load.w)} ${packPosY}
-                    ${hasFuse ? `L ${fuseAnchors.in.x} ${fuseAnchors.in.y}` : (hasRelay ? `L ${pos.relay.x + 20} ${pos.relay.y}` : `L ${pos.load.x + pos.load.w} ${pos.load.y + 20}`)}`}
-                            fill="none" stroke="#dc2626" strokeWidth="5"
+                            d={`
+                        M ${packPosX} ${packPosY}
+                        L ${packPosX} ${posLaneY}
+                        L ${hasFuse
+                                    ? fuseAnchors.in.x
+                                    : hasRelay
+                                        ? pos.relay.x + pos.relay.w
+                                        : pos.load.x + pos.load.w
+                                } ${posLaneY}
+                                L ${hasFuse
+                                    ? fuseAnchors.in.x
+                                    : hasRelay
+                                        ? pos.relay.x + pos.relay.w
+                                        : pos.load.x + pos.load.w
+                                } ${hasFuse
+                                    ? fuseAnchors.in.y
+                                    : hasRelay
+                                        ? pos.relay.y + pos.relay.h / 2
+                                        : pos.load.y + 20
+                                }
+                            `}
+                            fill="none"
+                            stroke="#dc2626"
+                            strokeWidth="5"
                         />
 
-                        {/* 2. Ligação Fuse -> Próximo (se Fuse existir) */}
-                        {hasFuse && (
-                            <path
-                                d={`M ${fuseAnchors.out.x} ${fuseAnchors.out.y} 
-                    L ${fuseAnchors.out.x} ${hasRelay ? pos.relay.y + pos.relay.h / 2 : pos.load.y + 20}
-                    L ${hasRelay ? pos.relay.x + pos.relay.w : pos.load.x + pos.load.w} ${hasRelay ? pos.relay.y + pos.relay.h / 2 : pos.load.y + 20}`}
-                                fill="none" stroke="#dc2626" strokeWidth="5"
-                            />
-                        )}
-
-                        {/* 3. Ligação Relay -> Load (se Relay existir) */}
-                        {hasRelay && (
-                            <path
-                                d={`M ${pos.relay.x} ${pos.relay.y + pos.relay.h / 2} 
-                    L ${pos.relay.x - 20} ${pos.relay.y + pos.relay.h / 2}
-                    L ${pos.relay.x - 20} ${pos.load.y + 20}
-                    L ${pos.load.x + pos.load.w} ${pos.load.y + 20}`}
-                                fill="none" stroke="#dc2626" strokeWidth="5"
-                            />
-                        )}
 
                         {/* 4. BMS Power B+ (Ligado sempre antes do Fuse/Relay) */}
                         <path d={`M ${packPosX + 5} ${packPosY} L ${packPosX + 5} ${pos.bms.y + 40} L ${pos.bms.x + pos.bms.w} ${pos.bms.y + 40}`} fill="none" stroke="#dc2626" strokeWidth="2" strokeDasharray="3,2" />
