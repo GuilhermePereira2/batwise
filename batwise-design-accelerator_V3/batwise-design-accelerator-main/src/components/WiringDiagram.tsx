@@ -166,8 +166,8 @@ export const WiringDiagram = ({ config }: WiringDiagramProps) => {
                             <g transform={`translate(${pos.shunt.x}, ${pos.shunt.y})rotate(-90, ${pos.shunt.w / 2}, ${pos.shunt.h / 2})`}>
                                 <rect width={pos.shunt.w} height={pos.shunt.h} fill="#f1f5f9" stroke="#0f172a" strokeWidth="2" />
                                 <text x={pos.shunt.w / 2} y="25" textAnchor="middle" fontSize="12" fontWeight="bold">SHUNT</text>
-                                <circle cx="5" cy={pos.shunt.h / 2} r="4" fill="black" /> <text x="5" y="-5" fontSize="10" textAnchor="middle">Bat</text>
-                                <circle cx={pos.shunt.w - 5} cy={pos.shunt.h / 2} r="4" fill="black" /> <text x={pos.shunt.w - 5} y="-5" fontSize="10" textAnchor="middle">Load</text>
+                                <circle cx="5" cy={pos.shunt.h / 2} r="4" fill="black" /> <text x="5" y="-5" fontSize="10" textAnchor="middle">Load</text>
+                                <circle cx={pos.shunt.w - 5} cy={pos.shunt.h / 2} r="4" fill="black" /> <text x={pos.shunt.w - 5} y="-5" fontSize="10" textAnchor="middle">Bat</text>
                             </g>
                         )}
 
@@ -285,7 +285,7 @@ export const WiringDiagram = ({ config }: WiringDiagramProps) => {
                                     fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="3,3"
                                 />
                                 <text x={pos.shunt.x + 10} y={pos.shunt.y + 30} fontSize="14" fill="#f59e0b" transform="rotate(-15)">Current Reading</text>
-                            </> {/* <--- FECHAR O FRAGMENTO */}
+                            </>
                         )}
 
                         {/* Relay Control (Blue) */}
@@ -299,7 +299,7 @@ export const WiringDiagram = ({ config }: WiringDiagramProps) => {
                                     fill="none" stroke="#2563eb" strokeWidth="2" strokeDasharray="3,3"
                                 />
                                 <text x={pos.relay.x} y={pos.relay.y - 10} fontSize="14" fill="#2563eb">Cutoff Signal</text>
-                            </> {/* <--- FECHAR O FRAGMENTO */}
+                            </>
                         )}
                     </svg>
                 </div>

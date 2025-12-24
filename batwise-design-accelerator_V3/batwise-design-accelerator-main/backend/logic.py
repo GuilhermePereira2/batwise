@@ -257,7 +257,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                                         cell.MaxContinuousDischargeRate*parallel)
 
                 tech = get_hardware_requirements(
-                    bat_voltage, cont_current_pack)
+                    bat_voltage, cont_current)
 
                 safety = assess_safety(req, cell, {
                     'continuous_current': cont_current,
