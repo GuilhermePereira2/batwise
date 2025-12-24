@@ -73,9 +73,11 @@ export const WiringDiagram = ({ config }: WiringDiagramProps) => {
         },
     };
 
+
     const hasShunt = !!config.shunt;
     const hasFuse = !!config.fuse;
     const hasRelay = !!config.relay;
+
 
     // --- RENDERIZAR PACK DE BATERIAS ---
     const renderBatteryPack = () => {
@@ -301,6 +303,7 @@ export const WiringDiagram = ({ config }: WiringDiagramProps) => {
                                 <text x={pos.relay.x} y={pos.relay.y - 10} fontSize="14" fill="#2563eb">Cutoff Signal</text>
                             </>
                         )}
+
                     </svg>
                 </div>
 
