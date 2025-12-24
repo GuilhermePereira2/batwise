@@ -44,7 +44,7 @@ export const WiringDiagram = ({ config }: WiringDiagramProps) => {
 
         // Direita (Positivo)
         fuse: { x: packPosX + 80, y: packPosY + 50, w: 80, h: 30 },
-        relay: { x: packPosX + 0, y: packPosY + 100, w: 90, h: 60 },
+        relay: { x: packPosX + 0, y: packPosY + 120, w: 90, h: 60 },
 
         // Fundo
         load: { x: centerX - 50, y: batStartY + packHeight + 100, w: 100, h: 100 }
@@ -234,7 +234,7 @@ export const WiringDiagram = ({ config }: WiringDiagramProps) => {
                                 {/* Direct: Bat -> Load */}
                                 <path d={`M ${packNegX} ${packNegY} L ${pos.shunt.x} ${packNegY} L ${pos.shunt.x} ${pos.load.y + 20} L ${pos.load.x} ${pos.load.y + 20}`} fill="none" stroke="black" strokeWidth="5" />
                                 {/* BMS Sense (Direct Bat Side) */}
-                                <path d={`M ${packNegX + 20} ${packNegY} L ${packNegX + 20} ${pos.bms.y + 40} L ${pos.bms.x + 10} ${pos.bms.y + 40}`} fill="none" stroke="black" strokeWidth="2" strokeDasharray="3,2" />
+                                <path d={`M ${packNegX} ${packNegY} L ${packNegX} ${pos.bms.y + 40} L ${pos.bms.x + 10} ${pos.bms.y + 40}`} fill="none" stroke="black" strokeWidth="2" strokeDasharray="3,2" />
                             </>
                         )}
 
