@@ -310,7 +310,7 @@ export const WiringDiagram = ({ config }: WiringDiagramProps) => {
                 {/* --- ASSEMBLY INSTRUCTIONS (STEP-BY-STEP) --- */}
                 <div className="px-8 pb-8 bg-white text-slate-700">
                     <h4 className="font-bold mb-4 text-lg border-b pb-2 flex items-center gap-2">
-                        🛠️ Assembly Guide & Connection Order
+                        🛠️ Assembly Guide
                     </h4>
 
                     <div className="space-y-6">
