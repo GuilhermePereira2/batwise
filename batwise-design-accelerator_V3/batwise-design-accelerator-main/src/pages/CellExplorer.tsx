@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { SeoHead } from "@/components/SeoHead";
 import {
     Pagination,
     PaginationContent,
@@ -149,9 +150,9 @@ const CellExplorer = () => {
     const [sortKey, setSortKey] = useState("capacity-desc");
 
     // Set browser tab title
-    useEffect(() => {
-        document.title = "Cell Explorer | Watt Builder";
-    }, []);
+    //useEffect(() => {
+    //    document.title = "Cell Explorer | Watt Builder";
+    //}, []);
 
     // Fetch data from API
     useEffect(() => {
@@ -386,6 +387,11 @@ const CellExplorer = () => {
     // --- Main Render ---
     return (
         <div className="min-h-screen flex flex-col">
+            <SeoHead
+                title="Battery Cell Database Explorer | Watt Builder"
+                description="Search and Compare more than 100 cells. Filter by capacity, discharge rate, brand and energy density for your project."
+                canonicalUrl="https://www.watt-builder.com/cell-explorer"
+            />
             <Navigation />
 
             {/* Hero Section */}

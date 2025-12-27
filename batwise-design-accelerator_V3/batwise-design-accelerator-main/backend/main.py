@@ -5,6 +5,7 @@ from typing import List
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 import os
 from dotenv import load_dotenv
+import resend
 
 # Importar Modelos (Inputs/Outputs)
 from models import Requirements, ContactRequest, DesignResponse, CellData

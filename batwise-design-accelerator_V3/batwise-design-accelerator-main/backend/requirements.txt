@@ -7,3 +7,4 @@ scipy
 python-multipart
 fastapi-mail
 email-validator
+resend

@@ -6,11 +6,18 @@ import FeaturesSection from "@/components/FeaturesSection";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { SeoHead } from "@/components/SeoHead";
 
 const Business = () => {
   const navigate = useNavigate();
   return (
     <div className="min-h-screen">
+      <SeoHead
+        title="Battery Engineering and Professional Solutions | Watt Builder"
+        description="Accelerate your electrical project. We offer specialized consulting, custom battery pack design, and certification for commercial fleets and industrial applications."
+        canonicalUrl="https://www.watt-builder.com/business"
+        type="website"
+      />
       <Navigation />
       <div className="mt-16">
         <HeroSection />
@@ -31,7 +38,7 @@ const Business = () => {
             <p className="text-xl text-muted-foreground mb-8 animate-fade-in">
               Let's power the future together.
             </p>
-            <Button 
+            <Button
               size="lg"
               className="bg-foreground text-background hover:bg-foreground/90 animate-scale-in"
               onClick={() => navigate('/contact')}

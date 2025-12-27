@@ -11,6 +11,7 @@ import { z } from "zod";
 import { getApiUrl } from "@/lib/config"; // <--- IMPORTANTE: Usa o helper que criámos
 import { useSearchParams } from "react-router-dom"; // Adiciona esta linha
 import { useState, useEffect } from "react"; // Garante que o useEffect está importado
+import { SeoHead } from "@/components/SeoHead";
 
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
@@ -90,6 +91,12 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <SeoHead
+        title="Contact Watt Builder | Engineering Support & Battery Design Services"
+        description="Need help with your battery project? Contact Watt Builder for engineering support, custom battery cell tests, custom battery pack design quotes, or technical questions about battery builds."
+        canonicalUrl="https://www.watt-builder.com/contact"
+        type="website"
+      />
       <Navigation />
 
       {/* Hero Section */}
@@ -193,23 +200,6 @@ const Contact = () => {
                       <div>
                         <h3 className="font-semibold text-foreground mb-1">Email</h3>
                         <p className="text-muted-foreground">general@watt-builder.com</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-accent">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <MapPin className="w-5 h-5 text-accent" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-foreground mb-1">Location</h3>
-                        <p className="text-muted-foreground">
-                          Rua Alves Redol, 9<br />
-                          1000-029 Lisboa, Portugal
-                        </p>
                       </div>
                     </div>
                   </CardContent>
