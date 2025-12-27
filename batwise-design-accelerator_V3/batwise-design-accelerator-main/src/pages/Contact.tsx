@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, MessageSquare, MapPin, Loader2 } from "lucide-react"; // Adicionei Loader2
-import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { getApiUrl } from "@/lib/config"; // <--- IMPORTANTE: Usa o helper que criámos

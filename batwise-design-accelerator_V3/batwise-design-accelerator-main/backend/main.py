@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 import os
+from dotenv import load_dotenv
 
 # Importar Modelos (Inputs/Outputs)
 from models import Requirements, ContactRequest, DesignResponse, CellData
@@ -94,6 +95,7 @@ def reload_data():
             status_code=500, detail=f"Erro ao recarregar: {str(e)}")
 
 
+load_dotenv()
 # 2. Configuração do Servidor de Email (Lê das variáveis de ambiente)
 # Se usares Gmail, precisas de criar uma "App Password" na conta Google
 conf = ConnectionConfig(
