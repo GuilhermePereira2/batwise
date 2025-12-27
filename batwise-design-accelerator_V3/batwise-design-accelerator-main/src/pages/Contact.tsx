@@ -11,7 +11,6 @@ import { z } from "zod";
 import { getApiUrl } from "@/lib/config"; // <--- IMPORTANTE: Usa o helper que criámos
 import { useSearchParams } from "react-router-dom"; // Adiciona esta linha
 import { useState, useEffect } from "react"; // Garante que o useEffect está importado
-import { SeoHead } from "@/components/SeoHead";
 
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
@@ -91,12 +90,6 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <SeoHead
-        title="Contact Watt Builder | Engineering Support & Battery Design Services"
-        description="Need help with your battery project? Contact Watt Builder for engineering support, custom battery cell tests, custom battery pack design quotes, or technical questions about battery builds."
-        canonicalUrl="https://www.watt-builder.com/contact"
-        type="website"
-      />
       <Navigation />
 
       {/* Hero Section */}
@@ -204,6 +197,7 @@ const Contact = () => {
                     </div>
                   </CardContent>
                 </Card>
+
               </div>
             </div>
           </div>

@@ -16,7 +16,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { WiringDiagram } from "@/components/WiringDiagram";
 import { getApiUrl } from "@/lib/config";
-import { SeoHead } from "@/components/SeoHead";
 
 // --- IMPORTS CUSTOMIZADOS ---
 import { InfoTooltip } from "@/components/ui/InfoTooltip"; // Certifica-te que este ficheiro existe
@@ -278,12 +277,6 @@ const DIYTool = () => {
 
   return (
     <div className="min-h-screen flex flex-col font-sans">
-      <SeoHead
-        title="Battery Pack Design Calculator | Watt Builder"
-        description="Design custom battery packs instantly. Calculate Series/Parallel (S/P) configurations, BMS ratings, fuse sizing, and wiring diagrams for your battery projects."
-        canonicalUrl="https://www.watt-builder.com/diy"
-        type="website"
-      />
       <Navigation />
 
       {/* Hero Section */}
