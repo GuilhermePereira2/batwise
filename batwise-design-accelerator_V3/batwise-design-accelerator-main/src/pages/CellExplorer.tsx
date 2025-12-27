@@ -544,7 +544,7 @@ const CellExplorer = () => {
                                     {/* TAB 1: GRID VIEW */}
                                     <TabsContent value="grid">
                                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                                            {filteredCells.map((cell) => (
+                                            {paginatedCells.map((cell) => (
                                                 <Card
                                                     key={cell.CellModelNo}
                                                     className="shadow-soft hover:shadow-lg transition-shadow cursor-pointer"
