@@ -645,10 +645,10 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
               <InfoTooltip content="Important Disclaimer" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-orange-700 font-medium">
+              <p className="text-sm text-orange-500 font-medium">
                 <strong></strong>Disclaimer: This calculation is a theoretical suggestion.<strong></strong>
               </p>
-              <p className="text-sm text-orange-700 mt-1">
+              <p className="text-sm text-orange-500 mt-1">
                 Building lithium batteries carries significant risks (fire, shock).
                 The results below are automated estimates and may not reflect real-world constraints.
                 <strong>Always consult a professional</strong> before assembling a battery pack.
