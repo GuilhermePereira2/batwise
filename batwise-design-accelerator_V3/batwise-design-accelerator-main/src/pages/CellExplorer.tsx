@@ -123,6 +123,15 @@ const RangeSliderFilter: React.FC<{
     </div>
 );
 
+// Helpers de cálculo para ordenação
+const getEnergy = (c: Cell) => (c.Capacity / 1000) * c.NominalVoltage;
+const getPower = (c: Cell) => getEnergy(c) * c.MaxContinuousDischargeRate;
+const getDensity = (c: Cell) => {
+    const energy = getEnergy(c);
+    const volumeL = (c.Cell_Height * c.Cell_Width * c.Cell_Thickness) / 1_000_000;
+    return volumeL > 0 ? energy / volumeL : 0;
+};
+
 // --- Main Component ---
 const CellExplorer = () => {
     const [allCells, setAllCells] = useState<Cell[]>([]);
@@ -137,8 +146,9 @@ const CellExplorer = () => {
     const [filterValues, setFilterValues] = useState<FilterValues | null>(null);
 
     const [activeTab, setActiveTab] = useState("chart");
-    const [xAxis, setXAxis] = useState("capacityAh");
+    const [xAxis, setXAxis] = useState("energyDensityWhL");
     const [yAxis, setYAxis] = useState("energyWh");
+    const [sortKey, setSortKey] = useState("capacity-desc");
 
     // Set browser tab title
     useEffect(() => {
@@ -240,9 +250,24 @@ const CellExplorer = () => {
             if (cell.Cycles < filterValues.cycles[0] || cell.Cycles > filterValues.cycles[1]) return false;
             return true;
         });
+        cells.sort((a, b) => {
+            switch (sortKey) {
+                case "energy-asc": return getEnergy(a) - getEnergy(b);
+                case "energy-desc": return getEnergy(b) - getEnergy(a);
+                case "power-asc": return getPower(a) - getPower(b);
+                case "power-desc": return getPower(b) - getPower(a);
+                case "weight-asc": return a.Weight - b.Weight;
+                case "weight-desc": return b.Weight - a.Weight;
+                case "density-asc": return getDensity(a) - getDensity(b);
+                case "density-desc": return getDensity(b) - getDensity(a);
+                case "capacity-asc": return a.Capacity - b.Capacity;
+                case "capacity-desc": return b.Capacity - a.Capacity;
+                default: return 0;
+            }
+        });
         setFilteredCells(cells);
         setCurrentPage(1);
-    }, [allCells, filterValues]);
+    }, [allCells, filterValues, sortKey]);
 
     // Pagination Logic
     const pageCount = Math.ceil(filteredCells.length / CELLS_PER_PAGE);
@@ -536,6 +561,27 @@ const CellExplorer = () => {
                                                 Grid View
                                             </TabsTrigger>
                                         </TabsList>
+                                        {/* --- ADIÇÃO: Seletor de Ordenação --- */}
+                                        <div className="flex items-center gap-2 w-full md:w-auto">
+                                            <Label className="text-sm text-muted-foreground whitespace-nowrap">Sort by:</Label>
+                                            <Select value={sortKey} onValueChange={setSortKey}>
+                                                <SelectTrigger className="h-9 w-[220px] bg-background">
+                                                    <SelectValue placeholder="Sort order" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="capacity-desc">Capacity Ah (High to Low)</SelectItem>
+                                                    <SelectItem value="capacity-asc">Capacity Ah (Low to High)</SelectItem>
+                                                    <SelectItem value="energy-desc">Energy Wh (High to Low)</SelectItem>
+                                                    <SelectItem value="energy-asc">Energy Wh (Low to High)</SelectItem>
+                                                    <SelectItem value="power-desc">Power W (High to Low)</SelectItem>
+                                                    <SelectItem value="power-asc">Power W (Low to High)</SelectItem>
+                                                    <SelectItem value="density-desc">Density Wh/L (High to Low)</SelectItem>
+                                                    <SelectItem value="density-asc">Density Wh/L (Low to High)</SelectItem>
+                                                    <SelectItem value="weight-asc">Weight (Lighter first)</SelectItem>
+                                                    <SelectItem value="weight-desc">Weight (Heavier first)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                         <p className="text-sm text-muted-foreground hidden lg:block">
                                             Found {filteredCells.length} matching cells
                                             {activeTab === 'grid' && ` (showing ${paginatedCells.length})`}
@@ -558,6 +604,7 @@ const CellExplorer = () => {
                                                     <CardContent className="text-sm space-y-2">
                                                         <p><strong>Capacity:</strong> {(cell.Capacity / 1000).toFixed(2)} Ah</p>
                                                         <p><strong>Voltage:</strong> {cell.NominalVoltage.toFixed(1)} V</p>
+                                                        <p><strong>Energy:</strong> {getEnergy(cell).toFixed(1)} Wh</p>
                                                         <p><strong>Weight:</strong> {cell.Weight} g</p>
                                                         <p><strong>Discharge:</strong> {cell.MaxContinuousDischargeRate} C</p>
                                                     </CardContent>
@@ -758,7 +805,7 @@ const CellDetailModal = ({ cell, isOpen, onClose }: { cell: Cell, isOpen: boolea
 
     const handleGetData = () => {
         const cellName = `${cell.Brand || "Unknown"} ${cell.CellModelNo}`;
-        const messageTemplate = `Hello,\nI would like to get the following data about "${cellName}" cell:\n\n\nBest regards,\n`;
+        const messageTemplate = `Hello,\nI would like to get the following data about the ${cellName} cell:\n\n\nBest regards,\n`;
 
         // Codifica a mensagem para ser segura num URL
         const encodedMessage = encodeURIComponent(messageTemplate);
