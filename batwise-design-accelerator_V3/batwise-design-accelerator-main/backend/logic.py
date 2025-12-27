@@ -289,7 +289,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 fuse_price = 0
                 if tech["needs_fuse"]:
                     fuse_data = select_component_fast(
-                        sorted_fuses, max_voltage, cont_current_pack * FUSE_CURRENT_FACTOR)
+                        sorted_fuses, max_voltage, cont_current * FUSE_CURRENT_FACTOR)
                     if not fuse_data:
                         continue  # Se precisa e não existe no DB, configuração inválida
                     fuse_obj = Fuse(**fuse_data)
@@ -300,7 +300,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 relay_price = 0
                 if tech["needs_relay"]:
                     relay_data = select_component_fast(
-                        sorted_relays, max_voltage * RELAY_VOLTAGE_FACTOR, cont_current_pack * RELAY_CURRENT_FACTOR)
+                        sorted_relays, max_voltage * RELAY_VOLTAGE_FACTOR, cont_current * RELAY_CURRENT_FACTOR)
                     if not relay_data:
                         continue  # Se precisa e não existe no DB, configuração inválida
                     relay_obj = Relay(**relay_data)
@@ -318,7 +318,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                     shunt_price = shunt_data['price']
 
                 cable = select_cable_fast(
-                    sorted_cables, cont_current_pack, max_voltage, req.ambient_temp)
+                    sorted_cables, cont_current * FUSE_CURRENT_FACTOR, max_voltage, req.ambient_temp)
                 if not cable:
                     continue
 

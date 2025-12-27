@@ -41,6 +41,276 @@
             "link": ""
         },
         {
+            "brand": "KVAEY",
+            "model": "Battery Terminal Fuse 200A",
+            "vdc_max": 58,
+            "a_max": 200,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 12.49,
+            "link": "https://amzn.to/3MSSV5w"
+        },
+        {
+            "brand": "BOJACK",
+            "model": "Marine Rated Battery Fuse 30A 58V DC Max",
+            "vdc_max": 58,
+            "a_max": 30,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 16.99,
+            "link": "https://amzn.to/3KP1ptX"
+        },
+        {
+            "brand": "BOJACK",
+            "model": "MRBF Terminal Fuse Block 40 AMP",
+            "vdc_max": 58,
+            "a_max": 40,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 16.99,
+            "link": "https://amzn.to/4qjMWVQ"
+        },
+        {
+            "brand": "BOJACK",
+            "model": "MRBF 50A, 58V DC Terminal Fuse Block",
+            "vdc_max": 58,
+            "a_max": 50,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 16.99,
+            "link": "https://amzn.to/4s9l605"
+        },
+        {
+            "brand": "BOJACK",
+            "model": "MRBF Terminal Fuse Block 60 AMP",
+            "vdc_max": 58,
+            "a_max": 60,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 16.99,
+            "link": "https://amzn.to/4pWbwfN"
+        },
+        {
+            "brand": "BOJACK",
+            "model": "MRBF Terminal Fuse Block 75 AMP",
+            "vdc_max": 58,
+            "a_max": 75,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 16.99,
+            "link": "https://amzn.to/4sacpmp"
+        },
+        {
+            "brand": "BOJACK",
+            "model": "MRBF Terminal Fuse Block 80 AMP",
+            "vdc_max": 58,
+            "a_max": 80,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 16.99,
+            "link": "https://amzn.to/4p8zJ1b"
+        },
+        {
+            "brand": "BOJACK",
+            "model": "MRBF Terminal Fuse Block 90 AMP",
+            "vdc_max": 58,
+            "a_max": 90,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 16.99,
+            "link": "https://amzn.to/3MR6JO0"
+        },
+        {
+            "brand": "BOJACK",
+            "model": "MRBF Terminal Fuse Block 100 AMP",
+            "vdc_max": 58,
+            "a_max": 100,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 16.99,
+            "link": "https://amzn.to/4b92hnD"
+        },
+        {
+            "brand": "BOJACK",
+            "model": "MRBF Terminal Fuse Block 125 AMP",
+            "vdc_max": 58,
+            "a_max": 125,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 16.99,
+            "link": "https://amzn.to/4jiJ0SX"
+        },
+        {
+            "brand": "BOJACK",
+            "model": "MRBF Terminal Fuse Block 150 AMP",
+            "vdc_max": 58,
+            "a_max": 150,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 16.99,
+            "link": "https://amzn.to/4b59BAD"
+        },
+        {
+            "brand": "BOJACK",
+            "model": "MRBF Terminal Fuse Block 175 AMP",
+            "vdc_max": 58,
+            "a_max": 175,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 16.99,
+            "link": "https://amzn.to/499TTSt"
+        },
+        {
+            "brand": "BOJACK",
+            "model": "MRBF Terminal Fuse Block 200 AMP",
+            "vdc_max": 58,
+            "a_max": 200,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 16.99,
+            "link": "https://amzn.to/4azF2mK"
+        },
+        {
+            "brand": "BOJACK",
+            "model": "MRBF Terminal Fuse Block 250 AMP",
+            "vdc_max": 58,
+            "a_max": 250,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 16.99,
+            "link": "https://amzn.to/49cxtjg"
+        },
+        {
+            "brand": "BOJACK",
+            "model": "MRBF Terminal Fuse Block 300 AMP",
+            "vdc_max": 58,
+            "a_max": 300,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 16.99,
+            "link": "https://amzn.to/4pdi74a"
+        },
+        {
+            "brand": "Joinfworld",
+            "model": "High Current Bolt Mount Automotive 50 Amp",
+            "vdc_max": 32,
+            "a_max": 50,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 4.00,
+            "link": "https://amzn.to/4aRgPbJ"
+        },
+        {
+            "brand": "Joinfworld",
+            "model": "High Current Bolt Mount Automotive 60 Amp",
+            "vdc_max": 32,
+            "a_max": 60,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 4.00,
+            "link": "https://amzn.to/4jcb622"
+        },
+        {
+            "brand": "Joinfworld",
+            "model": "High Current Bolt Mount Automotive 80 Amp",
+            "vdc_max": 32,
+            "a_max": 80,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 4.00,
+            "link": "https://amzn.to/3NhLPrf"
+        },
+        {
+            "brand": "Joinfworld",
+            "model": "High Current Bolt Mount Automotive 100 Amp",
+            "vdc_max": 32,
+            "a_max": 100,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 4.00,
+            "link": "https://amzn.to/3Yx5KVT"
+        },
+        {
+            "brand": "Joinfworld",
+            "model": "High Current Bolt Mount Automotive 150 Amp",
+            "vdc_max": 32,
+            "a_max": 150,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 4.00,
+            "link": "https://amzn.to/3N4xoqx"
+        },
+        {
+            "brand": "Joinfworld",
+            "model": "High Current Bolt Mount Automotive 175 Amp",
+            "vdc_max": 32,
+            "a_max": 175,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 4.00,
+            "link": "https://amzn.to/3YdmqRW"
+        },
+        {
+            "brand": "Joinfworld",
+            "model": "High Current Bolt Mount Automotive 200 Amp",
+            "vdc_max": 32,
+            "a_max": 200,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 4.00,
+            "link": "https://amzn.to/44Je2NK"
+        },
+        {
+            "brand": "Joinfworld",
+            "model": "High Current Bolt Mount Automotive 225 Amp",
+            "vdc_max": 32,
+            "a_max": 225,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 4.00,
+            "link": "https://amzn.to/4pVtleV"
+        },
+        {
+            "brand": "Joinfworld",
+            "model": "High Current Bolt Mount Automotive 250 Amp",
+            "vdc_max": 32,
+            "a_max": 250,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 4.00,
+            "link": "https://amzn.to/4jbN4nS"
+        },
+        {
+            "brand": "Joinfworld",
+            "model": "High Current Bolt Mount Automotive 300 Amp",
+            "vdc_max": 32,
+            "a_max": 300,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 4.00,
+            "link": "https://amzn.to/48UFD0Z"
+        },
+        {
+            "brand": "Joinfworld",
+            "model": "High Current Bolt Mount Automotive 400 Amp",
+            "vdc_max": 32,
+            "a_max": 400,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 4.00,
+            "link": "https://amzn.to/4jbjvmq"
+        },
+        {
+            "brand": "Victron Energy",
+            "model": "MEGA-fuse 100A/80V",
+            "vdc_max": 80,
+            "a_max": 100,
+            "temp_min": -40,
+            "temp_max": 125,
+            "price": 10.20,
+            "link": "https://amzn.to/3Yx6nPf"
+        },
+        {
             "brand": "Littelfuse Inc",
             "model": "142.5631.6102",
             "vdc_max": 58,
@@ -145,103 +415,125 @@
     ],
     "cables": [
         {
-            "brand": "feked",
-            "model": "Single Core Electric Wire Cable",
-            "section": 2,
-            "vdc_max": 12,
+            "brand": "TUELETFU",
+            "model": "4AWG/25mm2 Battery Cable",
+            "section": 25,
+            "vdc_max": 120,
+            "a_max": 100,
+            "temp_min": -40,
+            "temp_max": 120,
+            "price": 7,
+            "link": "https://amzn.to/4jckH96"
+        },
+        {
+            "brand": "Gopayia",
+            "model": "2AWG/35mm2 Battery Cable",
+            "section": 35,
+            "vdc_max": 500,
+            "a_max": 125,
+            "temp_min": -40,
+            "temp_max": 120,
+            "price": 9,
+            "link": "https://amzn.to/45txoGS"
+        },
+        {
+            "brand": "Gopayia",
+            "model": "8AWG/10mm2 Battery Cable",
+            "section": 10,
+            "vdc_max": 500,
+            "a_max": 60,
+            "temp_min": -40,
+            "temp_max": 120,
+            "price": 4,
+            "link": "https://amzn.to/44HmjBY"
+        },
+        {
+            "brand": "Gopayia",
+            "model": "16AWG/1.5mm2 Battery Cable",
+            "section": 1.5,
+            "vdc_max": 70,
             "a_max": 17.5,
             "temp_min": -40,
             "temp_max": 120,
-            "price": 1,
-            "link": ""
+            "price": 4.29,
+            "link": "https://amzn.to/4sgwIyy"
         },
         {
-            "brand": "TLC",
-            "model": "6491X 1.5mm\u00b2",
-            "section": 1.5,
-            "vdc_max": 15,
-            "a_max": 17,
+            "brand": "Gopayia",
+            "model": "17AWG/1mm2 Battery Cable",
+            "section": 1,
+            "vdc_max": 50,
+            "a_max": 14,
             "temp_min": -40,
             "temp_max": 120,
-            "price": 0.19,
-            "link": ""
+            "price": 3.73,
+            "link": "https://amzn.to/49bwJv0"
         },
         {
-            "brand": "TLC",
-            "model": "6491X 2.5mm\u00b2",
-            "section": 2.5,
-            "vdc_max": 24,
-            "a_max": 24,
+            "brand": "Gopayia",
+            "model": "18AWG/0.75mm2 Battery Cable",
+            "section": 0.75,
+            "vdc_max": 40,
+            "a_max": 10,
             "temp_min": -40,
             "temp_max": 120,
-            "price": 0.28,
-            "link": ""
+            "price": 3.53,
+            "link": "https://amzn.to/4b3qkV6"
         },
         {
-            "brand": "TLC",
-            "model": "6491X 4mm\u00b2",
+            "brand": "Gopayia",
+            "model": "20AWG/0.5mm2 Battery Cable",
+            "section": 0.5,
+            "vdc_max": 30,
+            "a_max": 6,
+            "temp_min": -40,
+            "temp_max": 120,
+            "price": 3.14,
+            "link": "https://amzn.to/4poyLhu"
+        },
+        {
+            "brand": "VIABRICO",
+            "model": "10AWG/6mm2 Battery Cable",
+            "section": 6,
+            "vdc_max": 200,
+            "a_max": 41,
+            "temp_min": -40,
+            "temp_max": 120,
+            "price": 0.84,
+            "link": "https://amzn.to/44JK8sG"
+        },
+        {
+            "brand": "VIABRICO",
+            "model": "12AWG/4mm2 Battery Cable",
             "section": 4,
-            "vdc_max": 32,
+            "vdc_max": 200,
             "a_max": 32,
             "temp_min": -40,
             "temp_max": 120,
-            "price": 0.44,
-            "link": ""
+            "price": 0.6,
+            "link": "https://amzn.to/4sg2z2k"
         },
         {
-            "brand": "Solar Shop",
-            "model": "SCBAC00662",
-            "section": 6,
-            "vdc_max": 120,
-            "a_max": 62,
+            "brand": "VIABRICO",
+            "model": "16AWG/1.5mm2 Battery Cable",
+            "section": 1.5,
+            "vdc_max": 80,
+            "a_max": 18,
             "temp_min": -40,
             "temp_max": 120,
-            "price": 1.87,
-            "link": ""
+            "price": 0.5,
+            "link": "https://amzn.to/4b9adW3"
         },
         {
-            "brand": "MidSummer",
-            "model": "Solar PV Cable",
-            "section": 10,
-            "vdc_max": 1000,
-            "a_max": 80,
+            "brand": "VIABRICO",
+            "model": "18AWG/0.75mm2 Battery Cable",
+            "section": 0.75,
+            "vdc_max": 60,
+            "a_max": 12,
             "temp_min": -40,
             "temp_max": 120,
-            "price": 2.18,
-            "link": ""
-        },
-        {
-            "brand": "Split Charge",
-            "model": "Hi-Flex Battery Cable 16mm\u00b2",
-            "section": 16,
-            "vdc_max": 1000,
-            "a_max": 110,
-            "temp_min": -40,
-            "temp_max": 120,
-            "price": 3.3,
-            "link": ""
-        },
-        {
-            "brand": "SplitCharge",
-            "model": "Hi-Flex Battery Cable 20mm\u00b2",
-            "section": 20,
-            "vdc_max": 1000,
-            "a_max": 135,
-            "temp_min": -40,
-            "temp_max": 120,
-            "price": 3.93,
-            "link": ""
-        },
-        {
-            "brand": "SplitCharge",
-            "model": "Placeholder",
-            "section": 100,
-            "vdc_max": 1000,
-            "a_max": 1305,
-            "temp_min": -40,
-            "temp_max": 120,
-            "price": 3.93,
-            "link": "www.link.com"
+            "price": 0.5,
+            "link": "https://amzn.to/49cN7LA"
         }
     ],
     "bms": [
