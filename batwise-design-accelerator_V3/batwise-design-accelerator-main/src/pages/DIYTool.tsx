@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { WiringDiagram } from "@/components/WiringDiagram";
 import { getApiUrl } from "@/lib/config";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // --- IMPORTS CUSTOMIZADOS ---
 import { InfoTooltip } from "@/components/ui/InfoTooltip"; // Certifica-te que este ficheiro existe
@@ -423,12 +424,11 @@ const DIYTool = () => {
                   </div>
 
                   <div className="flex items-center space-x-2 py-4">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       id="includeComponents"
                       checked={includeComponents}
-                      onChange={(e) => setIncludeComponents(e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent"
+                      onCheckedChange={(checked) => setIncludeComponents(checked as boolean)}
+                      className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500 border-gray-300"
                     />
                     <Label htmlFor="includeComponents" className="cursor-pointer">
                       Calculate BMS, Fuse & Accessories
