@@ -249,6 +249,10 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
             start_p = max(min_p_power, 1)
 
             for parallel in range(start_p, 5):  # Limite aumentado para teste
+
+                if parallel * series > 200:
+                    continue
+
                 stats["totalAttempts"] += 1
 
                 # --- SAFETY CHECK ---
@@ -272,8 +276,12 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 total_cells = series * parallel
                 bat_weight = (cell.Weight * 1e-3) * total_cells
 
-                if bat_weight > (req.max_weight*0.7):
-                    continue
+                if req.include_components:
+                    if bat_weight > (req.max_weight*0.7):
+                        continue
+                else:
+                    if bat_weight > req.max_weight:
+                        continue
 
                 layout = config_geometry_validation_fast(
                     cell, series, parallel, req.max_width, req.max_length)
@@ -287,7 +295,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 # 2. Seleção Condicional de FUSE
                 fuse_obj = None
                 fuse_price = 0
-                if tech["needs_fuse"]:
+                if tech["needs_fuse"] & req.include_components:
                     fuse_data = select_component_fast(
                         sorted_fuses, max_voltage, cont_current * FUSE_CURRENT_FACTOR)
                     if not fuse_data:
@@ -298,7 +306,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 # 3. Seleção Condicional de RELAY
                 relay_obj = None
                 relay_price = 0
-                if tech["needs_relay"]:
+                if tech["needs_relay"] & req.include_components:
                     relay_data = select_component_fast(
                         sorted_relays, max_voltage * RELAY_VOLTAGE_FACTOR, cont_current * RELAY_CURRENT_FACTOR)
                     if not relay_data:
@@ -309,7 +317,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 # 4. Seleção Condicional de SHUNT
                 shunt_obj = None
                 shunt_price = 0
-                if tech["needs_shunt"]:
+                if tech["needs_shunt"] & req.include_components:
                     shunt_data = select_component_fast(
                         sorted_shunts, max_voltage, cont_current_pack)
                     if not shunt_data:
@@ -317,14 +325,16 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                     shunt_obj = Shunt(**shunt_data)
                     shunt_price = shunt_data['price']
 
-                cable = select_cable_fast(
-                    sorted_cables, cont_current * FUSE_CURRENT_FACTOR, max_voltage, req.ambient_temp)
-                if not cable:
-                    continue
+                if not req.include_components:
+                    cable = select_cable_fast(
+                        sorted_cables, cont_current * FUSE_CURRENT_FACTOR, max_voltage, req.ambient_temp)
+                    if not cable:
+                        continue
 
-                bms = select_bms_fast(sorted_bms, series, cont_current_pack)
-                if not bms:
-                    continue
+                    bms = select_bms_fast(
+                        sorted_bms, series, cont_current_pack)
+                    if not bms:
+                        continue
 
                 # Preço
                 cells_cost = cell.Price * total_cells
@@ -388,7 +398,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                  x.battery_energy if x.battery_energy > 0 else 0, reverse=True)
 
     return {
-        "results": configs[:30],
+        "results": configs[:100],
         "plotResults": configs[:100],
         "total": len(configs),
         "stats": stats if req.debug else None
