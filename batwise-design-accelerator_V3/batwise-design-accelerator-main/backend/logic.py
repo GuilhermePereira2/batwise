@@ -325,16 +325,15 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                     shunt_obj = Shunt(**shunt_data)
                     shunt_price = shunt_data['price']
 
-                if not req.include_components:
-                    cable = select_cable_fast(
-                        sorted_cables, cont_current * FUSE_CURRENT_FACTOR, max_voltage, req.ambient_temp)
-                    if not cable:
-                        continue
+                cable = select_cable_fast(
+                    sorted_cables, cont_current * FUSE_CURRENT_FACTOR, max_voltage, req.ambient_temp)
+                if not cable:
+                    continue
 
-                    bms = select_bms_fast(
-                        sorted_bms, series, cont_current_pack)
-                    if not bms:
-                        continue
+                bms = select_bms_fast(
+                    sorted_bms, series, cont_current_pack)
+                if not bms:
+                    continue
 
                 # Preço
                 cells_cost = cell.Price * total_cells
