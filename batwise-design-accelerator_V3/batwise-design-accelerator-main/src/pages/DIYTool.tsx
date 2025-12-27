@@ -121,6 +121,7 @@ const findBestConfigurations = (configs: Configuration[], targetPrice: number) =
 
 const DIYTool = () => {
   const [useCase, setUseCase] = useState("custom");
+  const [includeComponents, setIncludeComponents] = useState(true);
   const [minVoltage, setMinVoltage] = useState("");
   const [maxVoltage, setMaxVoltage] = useState("");
   const [minContinuousPower, setMinContinuousPower] = useState("");
@@ -187,6 +188,7 @@ const DIYTool = () => {
         max_height: Number(maxHeight) || 2000,
         target_price: Number(targetPrice) || 0,
         ambient_temp: 25,
+        include_components: includeComponents,
         debug: true,
       };
 
@@ -420,6 +422,19 @@ const DIYTool = () => {
                     </div>
                   </div>
 
+                  <div className="flex items-center space-x-2 py-4">
+                    <input
+                      type="checkbox"
+                      id="includeComponents"
+                      checked={includeComponents}
+                      onChange={(e) => setIncludeComponents(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent"
+                    />
+                    <Label htmlFor="includeComponents" className="cursor-pointer">
+                      Calculate BMS, Fuse & Accessories
+                      <InfoTooltip content="Uncheck this if you only want to calculate the raw cell configuration without the extra components." />
+                    </Label>
+                  </div>
                   <Button onClick={handleGenerate} className="w-full" size="lg" disabled={isLoading}>
                     {isLoading ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Calculating...</> : <><Zap className="mr-2 h-5 w-5" /> Generate Design</>}
                   </Button>
@@ -589,6 +604,7 @@ const DIYTool = () => {
           solution={selectedSolution}
           isOpen={!!selectedSolution}
           onClose={() => setSelectedSolution(null)}
+          showComponents={includeComponents}
         />
       )}
     </div>
@@ -622,6 +638,24 @@ const SolutionDetailModal = ({ solution, isOpen, onClose }: { solution: Configur
             </Badge>
           </DialogTitle>
         </DialogHeader>
+
+        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 my-4 rounded-r-lg">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <InfoTooltip content="Important Disclaimer" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-blue-700 font-medium">
+                Disclaimer: This calculation is a theoretical suggestion.
+              </p>
+              <p className="text-sm text-blue-600 mt-1">
+                Building lithium batteries carries significant risks (fire, shock).
+                The results below are automated estimates and may not reflect real-world constraints.
+                <strong>Always consult a professional engineer</strong> before assembling a battery pack.
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* --- SAFETY WARNINGS SECTION --- */}
         {solution.safety.warnings.length > 0 && (
@@ -673,118 +707,122 @@ const SolutionDetailModal = ({ solution, isOpen, onClose }: { solution: Configur
           </div>
 
           {/* Column 2 & 3: Components */}
-          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
-            {solution.bms && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Zap className="w-4 h-4" /> BMS
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm space-y-1">
-                  <p><strong>Brand:</strong> {solution.bms.brand}</p>
-                  <p><strong>Model:</strong> {solution.bms.model}</p>
-                  <p><strong>Max Cells:</strong> {solution.bms.max_cells}</p>
-                  {/*<p><strong>Voltage Range:</strong> {solution.bms.vdc_min} – {solution.bms.vdc_max} V</p>*/}
-                  <p><strong>Max Current:</strong> {solution.bms.a_max} A</p>
-                  {/*<p><strong>Operating Temp:</strong> {solution.bms.temp_min}°C – {solution.bms.temp_max}°C</p>*/}
-                  <p><strong>Est. Price:</strong> €{solution.bms.master_price?.toFixed(2)} (Master) / €{solution.bms.slave_price?.toFixed(2)} (Slave)</p>
-                  <AffiliateLink link={solution.bms.link} />
-                </CardContent>
-              </Card>
-            )}
+          {showComponents && (
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+              {solution.bms && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Zap className="w-4 h-4" /> BMS
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm space-y-1">
+                    <p><strong>Brand:</strong> {solution.bms.brand}</p>
+                    <p><strong>Model:</strong> {solution.bms.model}</p>
+                    <p><strong>Max Cells:</strong> {solution.bms.max_cells}</p>
+                    {/*<p><strong>Voltage Range:</strong> {solution.bms.vdc_min} – {solution.bms.vdc_max} V</p>*/}
+                    <p><strong>Max Current:</strong> {solution.bms.a_max} A</p>
+                    {/*<p><strong>Operating Temp:</strong> {solution.bms.temp_min}°C – {solution.bms.temp_max}°C</p>*/}
+                    <p><strong>Est. Price:</strong> €{solution.bms.master_price?.toFixed(2)} (Master) / €{solution.bms.slave_price?.toFixed(2)} (Slave)</p>
+                    <AffiliateLink link={solution.bms.link} />
+                  </CardContent>
+                </Card>
+              )}
 
-            {solution.fuse && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" /> Fuse
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm space-y-1">
-                  <p><strong>Brand:</strong> {solution.fuse.brand}</p>
-                  <p><strong>Model:</strong> {solution.fuse.model}</p>
-                  <p><strong>Voltage Rating:</strong> {solution.fuse.vdc_max} V</p>
-                  <p><strong>Current Rating:</strong> {solution.fuse.a_max} A</p>
-                  {/*<p><strong>Operating Temp:</strong> {solution.fuse.temp_min}°C – {solution.fuse.temp_max}°C</p>*/}
-                  <p><strong>Est. Price:</strong> €{solution.fuse.price.toFixed(2)}</p>
-                  <AffiliateLink link={solution.fuse.link} />
-                </CardContent>
-              </Card>
-            )}
+              {solution.fuse && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" /> Fuse
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm space-y-1">
+                    <p><strong>Brand:</strong> {solution.fuse.brand}</p>
+                    <p><strong>Model:</strong> {solution.fuse.model}</p>
+                    <p><strong>Voltage Rating:</strong> {solution.fuse.vdc_max} V</p>
+                    <p><strong>Current Rating:</strong> {solution.fuse.a_max} A</p>
+                    {/*<p><strong>Operating Temp:</strong> {solution.fuse.temp_min}°C – {solution.fuse.temp_max}°C</p>*/}
+                    <p><strong>Est. Price:</strong> €{solution.fuse.price.toFixed(2)}</p>
+                    <AffiliateLink link={solution.fuse.link} />
+                  </CardContent>
+                </Card>
+              )}
 
-            {solution.relay && (
-              <Card>
-                <CardHeader><CardTitle className="text-base">Relay / Contactor</CardTitle></CardHeader>
-                <CardContent className="text-sm space-y-1">
-                  <p><strong>Brand:</strong> {solution.relay.brand}</p>
-                  <p><strong>Model:</strong> {solution.relay.model}</p>
-                  <p><strong>Voltage Rating:</strong> {solution.relay.vdc_max} V</p>
-                  <p><strong>Current Rating:</strong> {solution.relay.a_max} A</p>
-                  {/*<p><strong>Operating Temp:</strong> {solution.relay.temp_min}°C – {solution.relay.temp_max}°C</p>*/}
-                  <p><strong>Est. Price:</strong> €{solution.relay.price.toFixed(2)}</p>
-                  <AffiliateLink link={solution.relay.link} />
-                </CardContent>
-              </Card>
-            )}
+              {solution.relay && (
+                <Card>
+                  <CardHeader><CardTitle className="text-base">Relay / Contactor</CardTitle></CardHeader>
+                  <CardContent className="text-sm space-y-1">
+                    <p><strong>Brand:</strong> {solution.relay.brand}</p>
+                    <p><strong>Model:</strong> {solution.relay.model}</p>
+                    <p><strong>Voltage Rating:</strong> {solution.relay.vdc_max} V</p>
+                    <p><strong>Current Rating:</strong> {solution.relay.a_max} A</p>
+                    {/*<p><strong>Operating Temp:</strong> {solution.relay.temp_min}°C – {solution.relay.temp_max}°C</p>*/}
+                    <p><strong>Est. Price:</strong> €{solution.relay.price.toFixed(2)}</p>
+                    <AffiliateLink link={solution.relay.link} />
+                  </CardContent>
+                </Card>
+              )}
 
-            {solution.cable && (
-              <Card>
-                <CardHeader><CardTitle className="text-base">Cabling</CardTitle></CardHeader>
-                <CardContent className="text-sm space-y-1">
-                  <p><strong>Brand:</strong> {solution.cable.brand}</p>
-                  <p><strong>Model:</strong> {solution.cable.model}</p>
-                  <p><strong>Cross Section:</strong> {solution.cable.section} mm²</p>
-                  <p><strong>Voltage Rating:</strong> {solution.cable.vdc_max} V</p>
-                  <p><strong>Current Rating:</strong> {solution.cable.a_max} A</p>
-                  {/*<p><strong>Operating Temp:</strong> {solution.cable.temp_min}°C – {solution.cable.temp_max}°C</p>*/}
-                  <p><strong>Est. Price (2m):</strong> €{solution.cable.price.toFixed(2)}</p>
-                  <AffiliateLink link={solution.cable.link} />
-                </CardContent>
-              </Card>
-            )}
+              {solution.cable && (
+                <Card>
+                  <CardHeader><CardTitle className="text-base">Cabling</CardTitle></CardHeader>
+                  <CardContent className="text-sm space-y-1">
+                    <p><strong>Brand:</strong> {solution.cable.brand}</p>
+                    <p><strong>Model:</strong> {solution.cable.model}</p>
+                    <p><strong>Cross Section:</strong> {solution.cable.section} mm²</p>
+                    <p><strong>Voltage Rating:</strong> {solution.cable.vdc_max} V</p>
+                    <p><strong>Current Rating:</strong> {solution.cable.a_max} A</p>
+                    {/*<p><strong>Operating Temp:</strong> {solution.cable.temp_min}°C – {solution.cable.temp_max}°C</p>*/}
+                    <p><strong>Est. Price (2m):</strong> €{solution.cable.price.toFixed(2)}</p>
+                    <AffiliateLink link={solution.cable.link} />
+                  </CardContent>
+                </Card>
+              )}
 
-            {solution.shunt && (
-              <Card>
-                <CardHeader><CardTitle className="text-base">Shunt</CardTitle></CardHeader>
-                <CardContent className="text-sm space-y-1">
-                  <p><strong>Brand:</strong> {solution.shunt.brand}</p>
-                  <p><strong>Model:</strong> {solution.shunt.model}</p>
-                  <p><strong>Voltage Rating:</strong> {solution.shunt.vdc_max} V</p>
-                  <p><strong>Current Rating:</strong> {solution.shunt.a_max} A</p>
-                  {/*<p><strong>Operating Temp:</strong> {solution.shunt.temp_min}°C – {solution.shunt.temp_max}°C</p>*/}
-                  <p><strong>Est. Price:</strong> €{solution.shunt.price.toFixed(2)}</p>
-                  <AffiliateLink link={solution.shunt.link} />
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
-
-        {/* --- Wiring Diagram --- */}
-        <div className="mb-6">
-          <Button
-            variant="outline"
-            // Alterado: Cor do botão, borda e hover para tons neutros
-            className="w-full flex items-center justify-between border-slate-300 text-slate-700 hover:bg-slate-50"
-            onClick={() => setShowDiagram(!showDiagram)}
-          >
-            <span className="flex items-center gap-2">
-              {/* Alterado: Apenas este ícone é agora text-amber-600 */}
-              <CircuitBoard className="w-4 h-4 text-amber-600" />
-              {showDiagram ? "Hide Wiring Diagram" : "Show Wiring Diagram"}
-            </span>
-            {/* Alterado: As setas voltam a ser cinzentas/neutras */}
-            {showDiagram ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
-          </Button>
-
-          {/* Renderização Condicional */}
-          {showDiagram && (
-            <div className="mt-4 animate-in fade-in zoom-in-95 duration-300">
-              <WiringDiagram config={solution} />
+              {solution.shunt && (
+                <Card>
+                  <CardHeader><CardTitle className="text-base">Shunt</CardTitle></CardHeader>
+                  <CardContent className="text-sm space-y-1">
+                    <p><strong>Brand:</strong> {solution.shunt.brand}</p>
+                    <p><strong>Model:</strong> {solution.shunt.model}</p>
+                    <p><strong>Voltage Rating:</strong> {solution.shunt.vdc_max} V</p>
+                    <p><strong>Current Rating:</strong> {solution.shunt.a_max} A</p>
+                    {/*<p><strong>Operating Temp:</strong> {solution.shunt.temp_min}°C – {solution.shunt.temp_max}°C</p>*/}
+                    <p><strong>Est. Price:</strong> €{solution.shunt.price.toFixed(2)}</p>
+                    <AffiliateLink link={solution.shunt.link} />
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
         </div>
+
+        {/* --- Wiring Diagram --- */}
+        {showComponents && (
+          <div className="mb-6">
+            <Button
+              variant="outline"
+              // Alterado: Cor do botão, borda e hover para tons neutros
+              className="w-full flex items-center justify-between border-slate-300 text-slate-700 hover:bg-slate-50"
+              onClick={() => setShowDiagram(!showDiagram)}
+            >
+              <span className="flex items-center gap-2">
+                {/* Alterado: Apenas este ícone é agora text-amber-600 */}
+                <CircuitBoard className="w-4 h-4 text-amber-600" />
+                {showDiagram ? "Hide Wiring Diagram" : "Show Wiring Diagram"}
+              </span>
+              {/* Alterado: As setas voltam a ser cinzentas/neutras */}
+              {showDiagram ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+            </Button>
+
+            {/* Renderização Condicional */}
+            {showDiagram && (
+              <div className="mt-4 animate-in fade-in zoom-in-95 duration-300">
+                <WiringDiagram config={solution} />
+              </div>
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
