@@ -311,7 +311,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 shunt_price = 0
                 if tech["needs_shunt"]:
                     shunt_data = select_component_fast(
-                        sorted_shunts, max_voltage, peak_current)
+                        sorted_shunts, max_voltage, cont_current_pack)
                     if not shunt_data:
                         continue
                     shunt_obj = Shunt(**shunt_data)
@@ -322,7 +322,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 if not cable:
                     continue
 
-                bms = select_bms_fast(sorted_bms, series, peak_current)
+                bms = select_bms_fast(sorted_bms, series, cont_current_pack)
                 if not bms:
                     continue
 
