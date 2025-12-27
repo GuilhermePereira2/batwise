@@ -611,7 +611,7 @@ const DIYTool = () => {
   );
 };
 
-const SolutionDetailModal = ({ solution, isOpen, onClose }: { solution: Configuration, isOpen: boolean, onClose: () => void }) => {
+const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { solution: Configuration, isOpen: boolean, onClose: () => void, showComponents: boolean }) => {
   if (!solution) return null;
 
   const [showDiagram, setShowDiagram] = useState(false);
