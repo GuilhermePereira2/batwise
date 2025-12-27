@@ -188,7 +188,7 @@ const DIYTool = () => {
         max_height: Number(maxHeight) || 2000,
         target_price: Number(targetPrice) || 0,
         ambient_temp: 25,
-        include_components: includeComponents,
+        include_components: includeComponents || true,
         debug: true,
       };
 
