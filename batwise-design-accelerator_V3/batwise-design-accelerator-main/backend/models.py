@@ -113,6 +113,7 @@ class Requirements(BaseModel):
     max_height: float = 200.0  # Default alto valor
     ambient_temp: float = 25.0
     debug: bool = False
+    include_components: bool = True
 
 
 class Dimensions(BaseModel):
