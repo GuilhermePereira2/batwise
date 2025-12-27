@@ -10,6 +10,8 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { getApiUrl } from "@/lib/config"; // <--- IMPORTANTE: Usa o helper que criámos
+import { useSearchParams } from "react-router-dom"; // Adiciona esta linha
+import { useState, useEffect } from "react"; // Garante que o useEffect está importado
 
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
@@ -19,8 +21,19 @@ const contactSchema = z.object({
 
 const Contact = () => {
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const prefilledMessage = searchParams.get("message");
+    if (prefilledMessage) {
+      setFormData((prev) => ({
+        ...prev,
+        message: prefilledMessage,
+      }));
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

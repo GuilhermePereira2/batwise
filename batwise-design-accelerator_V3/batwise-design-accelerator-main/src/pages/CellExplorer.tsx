@@ -22,6 +22,7 @@ import { Search, Loader2, Database, X, ExternalLink, RefreshCw, LayoutGrid, BarC
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { getApiUrl } from "@/lib/config";
+import { useNavigate } from "react-router-dom";
 
 // --- Types ---
 interface Cell {
@@ -744,14 +745,26 @@ const CellExplorer = () => {
 // --- Modal de Detalhe da Célula (sem alteração) ---
 const CellDetailModal = ({ cell, isOpen, onClose }: { cell: Cell, isOpen: boolean, onClose: () => void }) => {
     const { toast } = useToast();
+    const navigate = useNavigate();
 
     const AffiliateLink = ({ link }: { link?: string }) => {
-        if (!link || link === "Solder") return null;
+        if (!link || link === "Solder" || link === "") return null;
         return (
             <a href={link} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline flex items-center gap-1 mt-1">
                 Buy from Affiliate <ExternalLink className="inline w-3 h-3" />
             </a>
         );
+    };
+
+    const handleGetData = () => {
+        const cellName = `${cell.Brand || "Unknown"} ${cell.CellModelNo}`;
+        const messageTemplate = `Hello,\nI would like to get the following data about "${cellName}" cell:\n\n\nBest regards,\n`;
+
+        // Codifica a mensagem para ser segura num URL
+        const encodedMessage = encodeURIComponent(messageTemplate);
+
+        // Redireciona para a página de contacto com o parâmetro 'message'
+        navigate(`/contact?message=${encodedMessage}`);
     };
 
     // --- Novos Cálculos ---
@@ -791,10 +804,9 @@ const CellDetailModal = ({ cell, isOpen, onClose }: { cell: Cell, isOpen: boolea
                                 <div className="space-y-2">
                                     <p><strong>Energy:</strong> {energyWh.toFixed(2)} Wh</p>
                                     <p><strong>Continuous Power:</strong> {powerW.toFixed(2)} W</p>
-                                    <p><strong>Volume:</strong> {volumeCm3.toFixed(1)} cm³ ({volumeL.toFixed(3)} L)</p>
                                     <p><strong>Energy Density:</strong> {energyDensityWhL.toFixed(1)} Wh/L</p>
                                     <p><strong>Power Density:</strong> {powerDensityWL.toFixed(1)} W/L</p>
-                                    <p><strong>Discharge/Charge:</strong> {cell.MaxContinuousDischargeRate}C / {cell.MaxContinuousChargeRate}C</p>
+                                    <p><strong>Continuous Discharge/Charge Rate:</strong> {cell.MaxContinuousDischargeRate}C / {cell.MaxContinuousChargeRate}C</p>
                                 </div>
 
                                 {/* Link + Botão */}
@@ -802,7 +814,7 @@ const CellDetailModal = ({ cell, isOpen, onClose }: { cell: Cell, isOpen: boolea
                                     <AffiliateLink link={cell.Connection} />
                                     <Button
                                         className="w-full mt-3"
-                                        onClick={() => toast({ title: "Not Implemented", description: "Feature coming soon." })}
+                                        onClick={handleGetData} // Altera de toast para a nova função
                                     >
                                         Get Data
                                     </Button>
