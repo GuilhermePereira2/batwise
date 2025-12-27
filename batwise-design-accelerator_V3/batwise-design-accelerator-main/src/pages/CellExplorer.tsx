@@ -63,7 +63,6 @@ interface FilterOptions {
 interface FilterBoundaries {
     capacity: [number, number];
     weight: [number, number];
-    price: [number, number];
     dischargeRate: [number, number];
     chargeRate: [number, number];
     impedance: [number, number];
@@ -77,7 +76,6 @@ interface FilterValues {
     cellStack: string;
     capacity: [number, number];
     weight: [number, number];
-    price: [number, number];
     dischargeRate: [number, number];
     chargeRate: [number, number];
     impedance: [number, number];
@@ -204,7 +202,6 @@ const CellExplorer = () => {
                 const boundaries: FilterBoundaries = {
                     capacity: getMinMax('Capacity'),
                     weight: getMinMax('Weight'),
-                    price: getMinMax('Price'),
                     dischargeRate: getMinMax('MaxContinuousDischargeRate'),
                     chargeRate: getMinMax('MaxContinuousChargeRate'),
                     impedance: getMinMax('Impedance'),
@@ -243,7 +240,6 @@ const CellExplorer = () => {
             if (filterValues.cellStack !== "all" && cell.Cell_Stack !== filterValues.cellStack) return false;
             if (cell.Capacity < filterValues.capacity[0] || cell.Capacity > filterValues.capacity[1]) return false;
             if (cell.Weight < filterValues.weight[0] || cell.Weight > filterValues.weight[1]) return false;
-            if (cell.Price < filterValues.price[0] || cell.Price > filterValues.price[1]) return false;
             if (cell.MaxContinuousDischargeRate < filterValues.dischargeRate[0] || cell.MaxContinuousDischargeRate > filterValues.dischargeRate[1]) return false;
             if (cell.MaxContinuousChargeRate < filterValues.chargeRate[0] || cell.MaxContinuousChargeRate > filterValues.chargeRate[1]) return false;
             if (cell.Impedance < filterValues.impedance[0] || cell.Impedance > filterValues.impedance[1]) return false;
@@ -493,14 +489,6 @@ const CellExplorer = () => {
                                                     value={filterValues.weight}
                                                     step={50}
                                                     onChange={(v) => handleFilterChange('weight', v)}
-                                                />
-                                                <RangeSliderFilter
-                                                    label="Price" unit="€"
-                                                    min={filterBoundaries.price[0]}
-                                                    max={filterBoundaries.price[1]}
-                                                    value={filterValues.price}
-                                                    step={1}
-                                                    onChange={(v) => handleFilterChange('price', v)}
                                                 />
                                             </div>
 

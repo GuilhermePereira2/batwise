@@ -8,9 +8,9 @@ const Header = () => {
       <div className="container px-4 mx-auto max-w-6xl">
         <div className="flex items-center justify-between h-16">
           <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="text-2xl font-bold text-foreground">
-            BatteryBuilder
+            Watt Builder
           </button>
-          
+
           <nav className="flex items-center gap-6">
             <button onClick={() => scrollToSection('product')} className="text-foreground hover:text-accent transition-colors">
               Product

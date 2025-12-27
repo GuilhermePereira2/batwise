@@ -41,15 +41,15 @@ export const USE_CASES: Record<string, UseCasePreset> = {
     // 🛴 E-SCOOTERS
     escooter_36v: {
         label: "Electric Scooter (36V Urban)",
-        values: { minVoltage: "28", maxVoltage: "44", minPower: "350", minEnergy: "300", maxWeight: "4" }
+        values: { minVoltage: "28", maxVoltage: "44", minPower: "350", minEnergy: "300", maxWeight: "15" }
     },
     escooter_48v: {
         label: "Electric Scooter (48V Performance)",
-        values: { minVoltage: "38", maxVoltage: "58", minPower: "800", minEnergy: "600", maxWeight: "6" }
+        values: { minVoltage: "38", maxVoltage: "58", minPower: "800", minEnergy: "600", maxWeight: "20" }
     },
     escooter_60v: {
         label: "Electric Scooter (60V High Performance)",
-        values: { minVoltage: "46", maxVoltage: "70", minPower: "2000", minEnergy: "1200", maxWeight: "10" }
+        values: { minVoltage: "46", maxVoltage: "70", minPower: "2000", minEnergy: "1200", maxWeight: "30" }
     },
 
     // 🛹 Electric Skateboards
@@ -89,11 +89,11 @@ export const USE_CASES: Record<string, UseCasePreset> = {
     // 🤖 ROBÓTICA
     robotics_24v: {
         label: "Robotics Platform (24V)",
-        values: { minVoltage: "18", maxVoltage: "32", minPower: "500", minEnergy: "300", maxWeight: "8" }
+        values: { minVoltage: "18", maxVoltage: "32", minPower: "500", minEnergy: "300", maxWeight: "12" }
     },
     robotics_48v: {
         label: "Robotics Heavy Duty (48V)",
-        values: { minVoltage: "38", maxVoltage: "62", minPower: "1500", minEnergy: "800", maxWeight: "15" }
+        values: { minVoltage: "38", maxVoltage: "62", minPower: "1500", minEnergy: "800", maxWeight: "20" }
     },
 
     // 🚗 LIGHT EV (Go-kart, pequenos veículos)
@@ -143,10 +143,10 @@ export const USE_CASES: Record<string, UseCasePreset> = {
     // 🚙 RC & Hobby
     rc_car_3s: {
         label: "RC Car (3S)",
-        values: { minVoltage: "6", maxVoltage: "16", minPower: "300", minEnergy: "50", maxWeight: "0.5" }
+        values: { minVoltage: "6", maxVoltage: "16", minPower: "300", minEnergy: "50", maxWeight: "1" }
     },
     rc_car_4s: {
         label: "RC Car (4S)",
-        values: { minVoltage: "8", maxVoltage: "20", minPower: "600", minEnergy: "80", maxWeight: "0.8" }
+        values: { minVoltage: "8", maxVoltage: "20", minPower: "600", minEnergy: "80", maxWeight: "1.5" }
     }
 };
