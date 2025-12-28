@@ -601,31 +601,6 @@ const DIYTool = () => {
                               </ScatterChart>
                             </ResponsiveContainer>
                           </div>
-
-                          {/* Legenda Lateral de Opacidade/Safety */}
-                          <div className="w-4 flex flex-col items-center justify-center ml-2 py-4 bg-slate-50/30 rounded-r-lg border-l border-slate-200 shrink-0">
-
-                            {/* Título Vertical ou Curto */}
-                            <span className="text-[8px] font-bold text-muted-foreground mb-2 uppercase tracking-tighter [writing-mode:vertical-lr] rotate-180">
-                              Safety
-                            </span>
-
-                            {/* Valor Superior */}
-                            <span className="text-[9px] text-muted-foreground font-medium mb-1">100</span>
-
-                            {/* Barra Gradiente Laranja */}
-                            <div className="relative h-32 w-2 rounded-full border border-slate-300 overflow-hidden bg-white">
-                              <div
-                                className="absolute inset-0 w-full h-full"
-                                style={{
-                                  background: 'linear-gradient(to top, rgba(249, 115, 22, 0.1), rgba(249, 115, 22, 1))'
-                                }}
-                              />
-                            </div>
-
-                            {/* Valor Inferior */}
-                            <span className="text-[9px] text-muted-foreground font-medium mt-1">0</span>
-                          </div>
                         </div>
                       </TabsContent>
                     </Tabs>
