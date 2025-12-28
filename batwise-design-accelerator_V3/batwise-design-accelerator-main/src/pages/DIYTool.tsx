@@ -508,9 +508,9 @@ const DIYTool = () => {
                         </div>
                       </TabsContent>
 
-                      <TabsContent value="plot" className="h-[500px]">
-                        {/* Manter a lógica do gráfico existente */}
-                        <div className="grid grid-cols-2 gap-4 mb-4">
+                      <TabsContent value="plot" className="h-[500px] flex flex-col">
+                        {/* Área de Seleção dos Eixos (Mantida igual) */}
+                        <div className="grid grid-cols-2 gap-4 mb-4 shrink-0">
                           <div>
                             <Label>X Axis</Label>
                             <Select value={xAxis} onValueChange={setXAxis}>
@@ -540,52 +540,88 @@ const DIYTool = () => {
                             </Select>
                           </div>
                         </div>
-                        <ResponsiveContainer width="100%" height="90%">
-                          <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                            <CartesianGrid />
-                            <XAxis
-                              type="number"
-                              dataKey={xAxis}
-                              name={xAxis}
-                              label={{
-                                value: xAxis.replace('_', ' ').toUpperCase(),
-                                position: 'bottom',
-                                offset: 5
-                              }}
-                            />
-                            <YAxis
-                              type="number"
-                              dataKey={yAxis}
-                              name={yAxis}
-                              label={{ value: yAxis.replace('_', ' ').toUpperCase(), angle: -90, position: 'insideLeft', offset: -5, dy: 65 }}
-                            />
-                            <ChartTooltip
-                              content={({ active, payload }) => {
-                                if (active && payload && payload.length) {
-                                  const data = payload[0].payload;
-                                  return (
-                                    <div className="bg-background border border-border p-3 rounded-lg shadow-lg">
-                                      <p className="font-semibold">{data.cell.CellModelNo}</p>
-                                      <p className="text-sm text-muted-foreground">{data.series_cells}S{data.parallel_cells}P</p>
-                                      <p className="text-sm">Energy: {formatUnit(data.battery_energy, "Wh")}</p>
-                                      <p className="text-sm">Price: €{data.total_price.toFixed(2)}</p>
-                                      <p className="text-sm">Weight: {data.battery_weight.toFixed(1)} kg</p>
-                                    </div>
-                                  );
-                                }
-                                return null;
-                              }}
-                            />
-                            <Scatter
-                              name="Batteries"
-                              data={plotResults}
-                              // A cor 'fill' aqui é ignorada pelo 'shape' mas é um prop obrigatório
-                              fill="#8884d8"
-                              shape={CustomScatterDot} // ISTO APLICA A COR INDIVIDUALMENTE
-                              onClick={(d) => setSelectedSolution(d.payload)}
-                            />
-                          </ScatterChart>
-                        </ResponsiveContainer>
+
+                        {/* Container Flex para Gráfico + Legenda Lateral */}
+                        <div className="flex flex-1 min-h-0 w-full">
+
+                          {/* Área do Gráfico */}
+                          <div className="flex-1 h-full w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <ScatterChart margin={{ top: 20, right: 10, bottom: 20, left: 0 }}>
+                                <CartesianGrid />
+                                <XAxis
+                                  type="number"
+                                  dataKey={xAxis}
+                                  name={xAxis}
+                                  label={{
+                                    value: xAxis.replace('_', ' ').toUpperCase(),
+                                    position: 'bottom',
+                                    offset: 0
+                                  }}
+                                />
+                                <YAxis
+                                  type="number"
+                                  dataKey={yAxis}
+                                  name={yAxis}
+                                  label={{
+                                    value: yAxis.replace('_', ' ').toUpperCase(),
+                                    angle: -90,
+                                    position: 'insideLeft',
+                                    style: { textAnchor: 'middle' }
+                                  }}
+                                />
+                                <ChartTooltip
+                                  cursor={{ strokeDasharray: '3 3' }}
+                                  content={({ active, payload }) => {
+                                    if (active && payload && payload.length) {
+                                      const data = payload[0].payload;
+                                      return (
+                                        <div className="bg-background border border-border p-3 rounded-lg shadow-lg z-50">
+                                          <p className="font-semibold">{data.cell.CellModelNo}</p>
+                                          <p className="text-sm text-muted-foreground">{data.series_cells}S{data.parallel_cells}P</p>
+                                          <div className="my-1 h-px bg-border" />
+                                          <p className="text-sm">Energy: {formatUnit(data.battery_energy, "Wh")}</p>
+                                          <p className="text-sm">Price: €{data.total_price.toFixed(2)}</p>
+                                          <p className="text-sm">Weight: {data.battery_weight.toFixed(1)} kg</p>
+                                          <p className="text-xs text-muted-foreground mt-1">Safety Score: {data.safety_score}%</p>
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  }}
+                                />
+                                <Scatter
+                                  name="Batteries"
+                                  data={plotResults}
+                                  fill="#8884d8"
+                                  shape={CustomScatterDot}
+                                  onClick={(d) => setSelectedSolution(d.payload)}
+                                />
+                              </ScatterChart>
+                            </ResponsiveContainer>
+                          </div>
+
+                          {/* Legenda Lateral de Opacidade/Safety */}
+                          <div className="w-16 flex flex-col items-center justify-center ml-2 py-8 bg-slate-50/50 rounded-r-lg border-l border-slate-200">
+                            <span className="text-[10px] font-bold text-muted-foreground mb-2 whitespace-nowrap">Safety</span>
+
+                            <div className="relative h-40 w-3 rounded-full border border-slate-300 overflow-hidden">
+                              {/* Gradiente representando a opacidade (do transparente ao sólido) */}
+                              <div
+                                className="absolute inset-0"
+                                style={{
+                                  background: 'linear-gradient(to top, rgba(136, 132, 216, 0.1), rgba(136, 132, 216, 1))'
+                                }}
+                              />
+                            </div>
+
+                            <div className="flex flex-col justify-between h-40 absolute ml-8 text-[10px] text-muted-foreground font-medium pointer-events-none">
+                              <span>High</span>
+                              <span>Low</span>
+                            </div>
+                          </div>
+
+                        </div>
                       </TabsContent>
                     </Tabs>
                   )}
@@ -653,7 +689,7 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
                 The results below are automated estimates and may not reflect real-world constraints.
               </p>
               <p className="text-sm text-orange-700 mt-1">
-                <strong>Always consult a professional</strong> before assembling a battery pack.
+                <strong>Always consult a professional</strong> before assembling your battery pack.
               </p>
             </div>
           </div>
