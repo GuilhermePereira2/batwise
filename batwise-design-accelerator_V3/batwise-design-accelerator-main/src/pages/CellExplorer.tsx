@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { getApiUrl } from "@/lib/config";
 import { useNavigate } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/next";
 
 // --- Types ---
 interface Cell {

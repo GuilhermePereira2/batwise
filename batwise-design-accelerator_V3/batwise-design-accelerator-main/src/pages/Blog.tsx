@@ -3,6 +3,7 @@ import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Calendar, User } from "lucide-react";
+import { Analytics } from "@vercel/analytics/next";
 
 const blogPosts = [
   {
@@ -111,7 +112,7 @@ const Blog = () => {
                       <span>{post.date}</span>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">{post.readTime}</span>
                     <Button variant="ghost" size="sm" className="group-hover:text-accent">

@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowRight, Wrench, Briefcase, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import homeHeroImage from "@/assets/home-hero-battery.jpg";
+import { Analytics } from "@vercel/analytics/next";
 
 const Home = () => {
   return (

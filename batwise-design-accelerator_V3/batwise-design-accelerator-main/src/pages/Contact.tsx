@@ -11,6 +11,7 @@ import { z } from "zod";
 import { getApiUrl } from "@/lib/config"; // <--- IMPORTANTE: Usa o helper que criámos
 import { useSearchParams } from "react-router-dom"; // Adiciona esta linha
 import { useState, useEffect } from "react"; // Garante que o useEffect está importado
+import { Analytics } from "@vercel/analytics/next";
 
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),

@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { InfoTooltip } from "@/components/ui/InfoTooltip"; // O componente que criaste acima
 import { USE_CASES } from "@/lib/presets";
 import { SeoHead } from '../components/SeoHead';
+import { Analytics } from "@vercel/analytics/next";
 
 // --- TIPAGEM DOS DADOS (Coincide com o teu Python) ---
 interface SafetyAssessment {

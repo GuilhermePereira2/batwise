@@ -6,6 +6,7 @@ import FeaturesSection from "@/components/FeaturesSection";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/next";
 
 const Business = () => {
   const navigate = useNavigate();
