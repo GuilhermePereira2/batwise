@@ -603,25 +603,28 @@ const DIYTool = () => {
                           </div>
 
                           {/* Legenda Lateral de Opacidade/Safety */}
-                          <div className="w-8 flex flex-col items-center justify-center ml-2 py-8 bg-slate-50/50 rounded-r-lg border-l border-slate-200">
-                            <span className="text-[10px] font-bold text-muted-foreground mb-2 whitespace-nowrap">Safety</span>
+                          <div className="w-4 flex flex-col items-center justify-center ml-2 py-4 bg-slate-50/30 rounded-r-lg border-l border-slate-200 shrink-0">
 
-                            <div className="relative flex items-center h-40">
-                              {/* Barra Gradiente Laranja */}
-                              <div className="h-full w-2 rounded-full border border-slate-300 overflow-hidden">
-                                <div
-                                  className="absolute inset-0 w-2"
-                                  style={{
-                                    background: 'linear-gradient(to top, rgba(249, 115, 22, 0.1), rgba(249, 115, 22, 1))' // Gradiente Laranja
-                                  }}
-                                />
-                              </div>
+                            {/* Título Vertical ou Curto */}
+                            <span className="text-[8px] font-bold text-muted-foreground mb-2 uppercase tracking-tighter [writing-mode:vertical-lr] rotate-180">
+                              Safety
+                            </span>
 
-                              <div className="flex flex-col justify-between h-40 absolute ml-8 text-[10px] text-muted-foreground font-medium pointer-events-none">
-                                <span>100</span>
-                                <span>0</span>
-                              </div>
+                            {/* Valor Superior */}
+                            <span className="text-[9px] text-muted-foreground font-medium mb-1">100</span>
+
+                            {/* Barra Gradiente Laranja */}
+                            <div className="relative h-32 w-2 rounded-full border border-slate-300 overflow-hidden bg-white">
+                              <div
+                                className="absolute inset-0 w-full h-full"
+                                style={{
+                                  background: 'linear-gradient(to top, rgba(249, 115, 22, 0.1), rgba(249, 115, 22, 1))'
+                                }}
+                              />
                             </div>
+
+                            {/* Valor Inferior */}
+                            <span className="text-[9px] text-muted-foreground font-medium mt-1">0</span>
                           </div>
                         </div>
                       </TabsContent>
