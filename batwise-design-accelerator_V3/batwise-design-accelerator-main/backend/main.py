@@ -24,7 +24,7 @@ origins = [
     "http://localhost:5173",  # Localhost
     # O teu URL do Vercel (ajusta se for diferente)
     "https://www.watt-builder.com",
-    "batwise.vercel.app"
+    "https://batwise.vercel.app"
 ]
 
 app.add_middleware(
