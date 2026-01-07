@@ -1,4 +1,4 @@
-# Batwise Design Accelerator - AI Development Guide
+# Watt Builder Design Accelerator - AI Development Guide
 
 ## Project Overview
 This is a battery design accelerator application built with React, TypeScript, and Supabase. It helps users design and optimize battery configurations through an interactive web interface.

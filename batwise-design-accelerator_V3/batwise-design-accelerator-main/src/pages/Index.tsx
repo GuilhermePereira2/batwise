@@ -5,6 +5,7 @@ import UsageOptionsSection from "@/components/UsageOptionsSection";
 import FeaturesSection from "@/components/FeaturesSection";
 import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
+import { Analytics } from "@vercel/analytics/next";
 
 const Index = () => {
   return (

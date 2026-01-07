@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowRight, Wrench, Briefcase, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import homeHeroImage from "@/assets/home-hero-battery.jpg";
+import { Analytics } from "@vercel/analytics/next";
 
 const Home = () => {
   return (
@@ -13,7 +14,7 @@ const Home = () => {
 
       {/* Hero Section */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden mt-16">
-        <div 
+        <div
           className="absolute inset-0 z-0"
           style={{
             backgroundImage: `url(${homeHeroImage})`,

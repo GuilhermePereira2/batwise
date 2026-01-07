@@ -6,6 +6,7 @@ import FeaturesSection from "@/components/FeaturesSection";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/next";
 
 const Business = () => {
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ const Business = () => {
             <p className="text-xl text-muted-foreground mb-8 animate-fade-in">
               Let's power the future together.
             </p>
-            <Button 
+            <Button
               size="lg"
               className="bg-foreground text-background hover:bg-foreground/90 animate-scale-in"
               onClick={() => navigate('/contact')}

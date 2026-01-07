@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+
 import {
     Pagination,
     PaginationContent,
@@ -20,7 +21,10 @@ import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 import { Search, Loader2, Database, X, ExternalLink, RefreshCw, LayoutGrid, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { getApiUrl } from "@/lib/config";
+import { useNavigate } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/next";
 
 // --- Types ---
 interface Cell {
@@ -61,7 +65,6 @@ interface FilterOptions {
 interface FilterBoundaries {
     capacity: [number, number];
     weight: [number, number];
-    price: [number, number];
     dischargeRate: [number, number];
     chargeRate: [number, number];
     impedance: [number, number];
@@ -75,7 +78,6 @@ interface FilterValues {
     cellStack: string;
     capacity: [number, number];
     weight: [number, number];
-    price: [number, number];
     dischargeRate: [number, number];
     chargeRate: [number, number];
     impedance: [number, number];
@@ -121,6 +123,15 @@ const RangeSliderFilter: React.FC<{
     </div>
 );
 
+// Helpers de cálculo para ordenação
+const getEnergy = (c: Cell) => (c.Capacity / 1000) * c.NominalVoltage;
+const getPower = (c: Cell) => getEnergy(c) * c.MaxContinuousDischargeRate;
+const getDensity = (c: Cell) => {
+    const energy = getEnergy(c);
+    const volumeL = (c.Cell_Height * c.Cell_Width * c.Cell_Thickness) / 1_000_000;
+    return volumeL > 0 ? energy / volumeL : 0;
+};
+
 // --- Main Component ---
 const CellExplorer = () => {
     const [allCells, setAllCells] = useState<Cell[]>([]);
@@ -135,25 +146,39 @@ const CellExplorer = () => {
     const [filterValues, setFilterValues] = useState<FilterValues | null>(null);
 
     const [activeTab, setActiveTab] = useState("chart");
-    const [xAxis, setXAxis] = useState("capacityAh");
+    const [xAxis, setXAxis] = useState("energyDensityWhL");
     const [yAxis, setYAxis] = useState("energyWh");
+    const [sortKey, setSortKey] = useState("capacity-desc");
 
     // Set browser tab title
     useEffect(() => {
-        document.title = "Cell Explorer | BatteryBuilder";
+        document.title = "Cell Explorer | Watt Builder";
     }, []);
 
     // Fetch data from API
     useEffect(() => {
         const fetchCellCatalogue = async () => {
             setIsLoading(true);
-            const API_URL = import.meta.env.VITE_BATTERY_DESIGN_URL || 'http://localhost:8000';
-
             try {
-                const res = await fetch(API_URL, { method: 'GET' });
+                const url = getApiUrl("cells");
+                console.log(`📡 A conectar a: ${url}`);
+
+                const res = await fetch(url, { // <--- Usa a variável url aqui
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
                 if (!res.ok) throw new Error(`Failed to fetch (status: ${res.status})`);
 
                 const data: Cell[] = await res.json();
+
+                // Validação de segurança básica: garantir que é um array
+                if (!Array.isArray(data)) {
+                    throw new Error("Formato de dados inválido recebido da API");
+                }
+
                 setAllCells(data);
                 setFilteredCells(data);
 
@@ -179,7 +204,6 @@ const CellExplorer = () => {
                 const boundaries: FilterBoundaries = {
                     capacity: getMinMax('Capacity'),
                     weight: getMinMax('Weight'),
-                    price: getMinMax('Price'),
                     dischargeRate: getMinMax('MaxContinuousDischargeRate'),
                     chargeRate: getMinMax('MaxContinuousChargeRate'),
                     impedance: getMinMax('Impedance'),
@@ -218,16 +242,30 @@ const CellExplorer = () => {
             if (filterValues.cellStack !== "all" && cell.Cell_Stack !== filterValues.cellStack) return false;
             if (cell.Capacity < filterValues.capacity[0] || cell.Capacity > filterValues.capacity[1]) return false;
             if (cell.Weight < filterValues.weight[0] || cell.Weight > filterValues.weight[1]) return false;
-            if (cell.Price < filterValues.price[0] || cell.Price > filterValues.price[1]) return false;
             if (cell.MaxContinuousDischargeRate < filterValues.dischargeRate[0] || cell.MaxContinuousDischargeRate > filterValues.dischargeRate[1]) return false;
             if (cell.MaxContinuousChargeRate < filterValues.chargeRate[0] || cell.MaxContinuousChargeRate > filterValues.chargeRate[1]) return false;
             if (cell.Impedance < filterValues.impedance[0] || cell.Impedance > filterValues.impedance[1]) return false;
             if (cell.Cycles < filterValues.cycles[0] || cell.Cycles > filterValues.cycles[1]) return false;
             return true;
         });
+        cells.sort((a, b) => {
+            switch (sortKey) {
+                case "energy-asc": return getEnergy(a) - getEnergy(b);
+                case "energy-desc": return getEnergy(b) - getEnergy(a);
+                case "power-asc": return getPower(a) - getPower(b);
+                case "power-desc": return getPower(b) - getPower(a);
+                case "weight-asc": return a.Weight - b.Weight;
+                case "weight-desc": return b.Weight - a.Weight;
+                case "density-asc": return getDensity(a) - getDensity(b);
+                case "density-desc": return getDensity(b) - getDensity(a);
+                case "capacity-asc": return a.Capacity - b.Capacity;
+                case "capacity-desc": return b.Capacity - a.Capacity;
+                default: return 0;
+            }
+        });
         setFilteredCells(cells);
         setCurrentPage(1);
-    }, [allCells, filterValues]);
+    }, [allCells, filterValues, sortKey]);
 
     // Pagination Logic
     const pageCount = Math.ceil(filteredCells.length / CELLS_PER_PAGE);
@@ -454,14 +492,6 @@ const CellExplorer = () => {
                                                     step={50}
                                                     onChange={(v) => handleFilterChange('weight', v)}
                                                 />
-                                                <RangeSliderFilter
-                                                    label="Price" unit="€"
-                                                    min={filterBoundaries.price[0]}
-                                                    max={filterBoundaries.price[1]}
-                                                    value={filterValues.price}
-                                                    step={1}
-                                                    onChange={(v) => handleFilterChange('price', v)}
-                                                />
                                             </div>
 
                                             {/* Group 3: Sliders */}
@@ -521,6 +551,27 @@ const CellExplorer = () => {
                                                 Grid View
                                             </TabsTrigger>
                                         </TabsList>
+                                        {/* --- ADIÇÃO: Seletor de Ordenação --- */}
+                                        <div className="flex items-center gap-2 w-full md:w-auto">
+                                            <Label className="text-sm text-muted-foreground whitespace-nowrap">Sort by:</Label>
+                                            <Select value={sortKey} onValueChange={setSortKey}>
+                                                <SelectTrigger className="h-9 w-[220px] bg-background">
+                                                    <SelectValue placeholder="Sort order" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="capacity-desc">Capacity Ah (High to Low)</SelectItem>
+                                                    <SelectItem value="capacity-asc">Capacity Ah (Low to High)</SelectItem>
+                                                    <SelectItem value="energy-desc">Energy Wh (High to Low)</SelectItem>
+                                                    <SelectItem value="energy-asc">Energy Wh (Low to High)</SelectItem>
+                                                    <SelectItem value="power-desc">Power W (High to Low)</SelectItem>
+                                                    <SelectItem value="power-asc">Power W (Low to High)</SelectItem>
+                                                    <SelectItem value="density-desc">Density Wh/L (High to Low)</SelectItem>
+                                                    <SelectItem value="density-asc">Density Wh/L (Low to High)</SelectItem>
+                                                    <SelectItem value="weight-asc">Weight (Lighter first)</SelectItem>
+                                                    <SelectItem value="weight-desc">Weight (Heavier first)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                         <p className="text-sm text-muted-foreground hidden lg:block">
                                             Found {filteredCells.length} matching cells
                                             {activeTab === 'grid' && ` (showing ${paginatedCells.length})`}
@@ -543,6 +594,7 @@ const CellExplorer = () => {
                                                     <CardContent className="text-sm space-y-2">
                                                         <p><strong>Capacity:</strong> {(cell.Capacity / 1000).toFixed(2)} Ah</p>
                                                         <p><strong>Voltage:</strong> {cell.NominalVoltage.toFixed(1)} V</p>
+                                                        <p><strong>Energy:</strong> {getEnergy(cell).toFixed(1)} Wh</p>
                                                         <p><strong>Weight:</strong> {cell.Weight} g</p>
                                                         <p><strong>Discharge:</strong> {cell.MaxContinuousDischargeRate} C</p>
                                                     </CardContent>
@@ -730,14 +782,26 @@ const CellExplorer = () => {
 // --- Modal de Detalhe da Célula (sem alteração) ---
 const CellDetailModal = ({ cell, isOpen, onClose }: { cell: Cell, isOpen: boolean, onClose: () => void }) => {
     const { toast } = useToast();
+    const navigate = useNavigate();
 
     const AffiliateLink = ({ link }: { link?: string }) => {
-        if (!link || link === "Solder") return null;
+        if (!link || link === "Solder" || link === "") return null;
         return (
             <a href={link} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline flex items-center gap-1 mt-1">
                 Buy from Affiliate <ExternalLink className="inline w-3 h-3" />
             </a>
         );
+    };
+
+    const handleGetData = () => {
+        const cellName = `${cell.Brand || "Unknown"} ${cell.CellModelNo}`;
+        const messageTemplate = `Hello,\nI would like to get the following data about the ${cellName} cell:\n\n\nBest regards,\n`;
+
+        // Codifica a mensagem para ser segura num URL
+        const encodedMessage = encodeURIComponent(messageTemplate);
+
+        // Redireciona para a página de contacto com o parâmetro 'message'
+        navigate(`/contact?message=${encodedMessage}`);
     };
 
     // --- Novos Cálculos ---
@@ -756,7 +820,7 @@ const CellDetailModal = ({ cell, isOpen, onClose }: { cell: Cell, isOpen: boolea
             <DialogContent className="max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>{cell.Brand || "Unknown"} {cell.CellModelNo}</DialogTitle>
-                    <CardDescription>{cell.Composition}</CardDescription>
+                    <DialogDescription>{cell.Composition}</DialogDescription>
                 </DialogHeader>
 
                 <div className="py-4 max-h-[70vh] overflow-y-auto">
@@ -777,10 +841,9 @@ const CellDetailModal = ({ cell, isOpen, onClose }: { cell: Cell, isOpen: boolea
                                 <div className="space-y-2">
                                     <p><strong>Energy:</strong> {energyWh.toFixed(2)} Wh</p>
                                     <p><strong>Continuous Power:</strong> {powerW.toFixed(2)} W</p>
-                                    <p><strong>Volume:</strong> {volumeCm3.toFixed(1)} cm³ ({volumeL.toFixed(3)} L)</p>
                                     <p><strong>Energy Density:</strong> {energyDensityWhL.toFixed(1)} Wh/L</p>
                                     <p><strong>Power Density:</strong> {powerDensityWL.toFixed(1)} W/L</p>
-                                    <p><strong>Discharge/Charge:</strong> {cell.MaxContinuousDischargeRate}C / {cell.MaxContinuousChargeRate}C</p>
+                                    <p><strong>Continuous Discharge/Charge Rate:</strong> {cell.MaxContinuousDischargeRate}C / {cell.MaxContinuousChargeRate}C</p>
                                 </div>
 
                                 {/* Link + Botão */}
@@ -788,7 +851,7 @@ const CellDetailModal = ({ cell, isOpen, onClose }: { cell: Cell, isOpen: boolea
                                     <AffiliateLink link={cell.Connection} />
                                     <Button
                                         className="w-full mt-3"
-                                        onClick={() => toast({ title: "Not Implemented", description: "This feature is coming soon." })}
+                                        onClick={handleGetData} // Altera de toast para a nova função
                                     >
                                         Get Data
                                     </Button>
