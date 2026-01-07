@@ -23,7 +23,8 @@ app = FastAPI(title="BatteryApp Calculator API")
 origins = [
     "http://localhost:5173",  # Localhost
     # O teu URL do Vercel (ajusta se for diferente)
-    "https://www.watt-builder.com"
+    "https://www.watt-builder.com",
+    "batwise.vercel.app"
 ]
 
 app.add_middleware(
