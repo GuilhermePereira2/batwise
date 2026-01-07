@@ -19,6 +19,7 @@ import { USE_CASES } from "@/lib/presets";
 import { SeoHead } from '../components/SeoHead';
 import { Analytics } from "@vercel/analytics/next";
 
+
 // --- TIPAGEM DOS DADOS (Coincide com o teu Python) ---
 interface SafetyAssessment {
   is_safe: bool;

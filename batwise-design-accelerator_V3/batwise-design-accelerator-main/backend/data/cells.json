@@ -5144,5 +5144,33 @@
         "OriginCountry": "",
         "Connection": "",
         "link": ""
+    },
+    {
+        "Brand": "DMEGC",
+        "CellModelNo": "INR18650-32E",
+        "Composition": "LFP",
+        "Cell_Stack": "C",
+        "MaxContinuousDischargeRate": 1.0,
+        "MaxContinuousChargeRate": 1.0,
+        "NominalVoltage": 3.7,
+        "ChargeVoltage": 4.2,
+        "Capacity": 3200,
+        "TheMaxDischargeCurrentOfTheTabs": 0,
+        "Impedance": 30,
+        "Weight": 47.0,
+        "Cell_Thickness": 18.25,
+        "Cell_Width": 18.25,
+        "Cell_Height": 65.0,
+        "TabsThickness": 0,
+        "TabsWidth": 0,
+        "TabsLength": 0,
+        "DistanceBetweenTwoTabs": 0,
+        "VolumeEnergyDensity": 0.21251275076504592,
+        "PowerEnergyDensity": 111.11111111111111,
+        "Cycles": 4000.0,
+        "Price": 9.5,
+        "OriginCountry": "China",
+        "Connection": "",
+        "link": ""
     }
 ]

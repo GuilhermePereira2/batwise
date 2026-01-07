@@ -112,12 +112,12 @@ const findBestConfigurations = (configs: Configuration[], targetPrice: number) =
   };
 
   return [
-    { title: "Lowest Price", config: findBest(c => c.total_price, 'min'), metric: (c: Configuration) => `€${c.total_price.toFixed(2)}` },
+    { title: "Lowest Price", config: findBest(c => c.total_price, 'min'), metric: (c: Configuration) => `$${c.total_price.toFixed(2)}` },
     { title: "Highest Energy", config: findBest(c => c.battery_energy), metric: (c: Configuration) => formatUnit(c.battery_energy, 'Wh') },
     { title: "Highest Energy Density", config: findBest(c => c.battery_energy / c.battery_weight), metric: (c: Configuration) => `${(c.battery_energy / c.battery_weight).toFixed(1)} Wh/kg` },
-    { title: "Best Value", config: findBest(c => c.total_price / c.battery_energy), metric: (c: Configuration) => `${(c.total_price / c.battery_energy).toFixed(1)} €/Wh` },
+    { title: "Best Value", config: findBest(c => c.total_price / c.battery_energy), metric: (c: Configuration) => `${(c.total_price / c.battery_energy).toFixed(1)} $/Wh` },
     { title: "Lightest", config: findBest(c => c.battery_weight, 'min'), metric: (c: Configuration) => `${c.battery_weight.toFixed(1)} kg` },
-    { title: "Optimal Balance", config: findBest(c => calculateOptimalScore(c)), metric: (c: Configuration) => `${(c.battery_energy / c.battery_weight).toFixed(1)} Wh/kg @ €${c.total_price.toFixed(0)}` }
+    { title: "Optimal Balance", config: findBest(c => calculateOptimalScore(c)), metric: (c: Configuration) => `${(c.battery_energy / c.battery_weight).toFixed(1)} Wh/kg @ $${c.total_price.toFixed(0)}` }
   ];
 };
 
@@ -219,7 +219,7 @@ const DIYTool = () => {
       if (data.total === 0) {
         toast({
           title: "No solutions found",
-          description: "Try relaxing constraints (especially Price, Dimensions or Weight).",
+          description: "Try relaxing constraints.",
           variant: "destructive"
         });
       } else {
@@ -401,7 +401,7 @@ const DIYTool = () => {
                       <Input type="number" value={maxWeight} onChange={(e) => setMaxWeight(e.target.value)} placeholder="Optional" />
                     </div>
                     <div className="space-y-2">
-                      <Label>Max Price (€)
+                      <Label>Max Price ($)
                         <InfoTooltip content="Your maximum budget. The algorithm will prioritize finding the best cells (safety/quality) that fit within this value." />
                       </Label>
                       <Input type="number" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Optional" />
@@ -497,7 +497,7 @@ const DIYTool = () => {
                                 <p><strong>Configuration:</strong> {config.series_cells}S {config.parallel_cells}P</p>
                                 <p><strong>Energy:</strong> {formatUnit(config.battery_energy, 'Wh')}</p>
                                 <p><strong>Cells' Weight:</strong> {config.battery_weight.toFixed(1)} kg</p>
-                                <p><strong>Estimated Price:</strong> €{config.total_price.toFixed(2)}</p>
+                                <p><strong>Estimated Price:</strong> ${config.total_price.toFixed(2)}</p>
                                 {config.safety.warnings.length > 0 && (
                                   <div className="mt-2 text-xs text-amber-600 flex items-center gap-1 font-semibold">
                                     <AlertTriangle className="w-3 h-3" /> Check Warnings
@@ -521,7 +521,7 @@ const DIYTool = () => {
                                 <SelectItem value="battery_weight">Weight (kg)</SelectItem>
                                 <SelectItem value="battery_voltage">Voltage (V)</SelectItem>
                                 <SelectItem value="battery_capacity">Capacity (Ah)</SelectItem>
-                                <SelectItem value="total_price">Price (€)</SelectItem>
+                                <SelectItem value="total_price">Price ($)</SelectItem>
                                 <SelectItem value="peak_power">Power (W)</SelectItem>
                               </SelectContent>
                             </Select>
@@ -535,7 +535,7 @@ const DIYTool = () => {
                                 <SelectItem value="battery_weight">Weight (kg)</SelectItem>
                                 <SelectItem value="battery_voltage">Voltage (V)</SelectItem>
                                 <SelectItem value="battery_capacity">Capacity (Ah)</SelectItem>
-                                <SelectItem value="total_price">Price (€)</SelectItem>
+                                <SelectItem value="total_price">Price ($)</SelectItem>
                                 <SelectItem value="peak_power">Power (W)</SelectItem>
                               </SelectContent>
                             </Select>
@@ -582,7 +582,7 @@ const DIYTool = () => {
                                           <p className="text-sm text-muted-foreground">{data.series_cells}S{data.parallel_cells}P</p>
                                           <div className="my-1 h-px bg-border" />
                                           <p className="text-sm">Energy: {formatUnit(data.battery_energy, "Wh")}</p>
-                                          <p className="text-sm">Price: €{data.total_price.toFixed(2)}</p>
+                                          <p className="text-sm">Price: ${data.total_price.toFixed(2)}</p>
                                           <p className="text-sm">Weight: {data.battery_weight.toFixed(1)} kg</p>
                                           <p className="text-xs text-muted-foreground mt-1">Safety Score: {data.safety_score}%</p>
                                         </div>
@@ -707,7 +707,7 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
                 <p><strong>Energy:</strong> {formatUnit(solution.battery_energy, 'Wh')}</p>
                 <p><strong>Continuous Power:</strong> {formatUnit(solution.continuous_power, 'W')}</p>
                 <p><strong>Cells' Weight:</strong> {solution.battery_weight.toFixed(2)} kg</p>
-                <p className="font-bold mt-2 border-t pt-1">Total Price: €{solution.total_price.toFixed(2)}</p>
+                <p className="font-bold mt-2 border-t pt-1">Total Price: ${solution.total_price.toFixed(2)}</p>
               </CardContent>
             </Card>
             <Card>
@@ -718,7 +718,7 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
                 <p><strong>Nominal Voltage:</strong> {solution.cell.NominalVoltage}</p>
                 <p><strong>Cont. Discharge Rate:</strong> {solution.cell.MaxContinuousDischargeRate}C</p>
                 <p><strong>Capacity:</strong> {solution.cell.Capacity / 1000} Ah</p>
-                <p><strong>Est. Price/Cell:</strong> €{solution.cell.Price.toFixed(2)}</p>
+                <p><strong>Est. Price/Cell:</strong> ${solution.cell.Price.toFixed(2)}</p>
                 <AffiliateLink link={solution.cell.Connection} />
               </CardContent>
             </Card>
@@ -741,7 +741,7 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
                     {/*<p><strong>Voltage Range:</strong> {solution.bms.vdc_min} – {solution.bms.vdc_max} V</p>*/}
                     <p><strong>Max Current:</strong> {solution.bms.a_max} A</p>
                     {/*<p><strong>Operating Temp:</strong> {solution.bms.temp_min}°C – {solution.bms.temp_max}°C</p>*/}
-                    <p><strong>Est. Price:</strong> €{solution.bms.master_price?.toFixed(2)} (Master) / €{solution.bms.slave_price?.toFixed(2)} (Slave)</p>
+                    <p><strong>Est. Price:</strong> ${solution.bms.master_price?.toFixed(2)} (Master) / ${solution.bms.slave_price?.toFixed(2)} (Slave)</p>
                     <AffiliateLink link={solution.bms.link} />
                   </CardContent>
                 </Card>
@@ -760,7 +760,7 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
                     <p><strong>Voltage Rating:</strong> {solution.fuse.vdc_max} V</p>
                     <p><strong>Current Rating:</strong> {solution.fuse.a_max} A</p>
                     {/*<p><strong>Operating Temp:</strong> {solution.fuse.temp_min}°C – {solution.fuse.temp_max}°C</p>*/}
-                    <p><strong>Est. Price:</strong> €{solution.fuse.price.toFixed(2)}</p>
+                    <p><strong>Est. Price:</strong> ${solution.fuse.price.toFixed(2)}</p>
                     <AffiliateLink link={solution.fuse.link} />
                   </CardContent>
                 </Card>
@@ -775,7 +775,7 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
                     <p><strong>Voltage Rating:</strong> {solution.relay.vdc_max} V</p>
                     <p><strong>Current Rating:</strong> {solution.relay.a_max} A</p>
                     {/*<p><strong>Operating Temp:</strong> {solution.relay.temp_min}°C – {solution.relay.temp_max}°C</p>*/}
-                    <p><strong>Est. Price:</strong> €{solution.relay.price.toFixed(2)}</p>
+                    <p><strong>Est. Price:</strong> ${solution.relay.price.toFixed(2)}</p>
                     <AffiliateLink link={solution.relay.link} />
                   </CardContent>
                 </Card>
@@ -791,7 +791,7 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
                     <p><strong>Voltage Rating:</strong> {solution.cable.vdc_max} V</p>
                     <p><strong>Current Rating:</strong> {solution.cable.a_max} A</p>
                     {/*<p><strong>Operating Temp:</strong> {solution.cable.temp_min}°C – {solution.cable.temp_max}°C</p>*/}
-                    <p><strong>Est. Price (2m):</strong> €{solution.cable.price.toFixed(2)}</p>
+                    <p><strong>Est. Price (2m):</strong> ${solution.cable.price.toFixed(2)}</p>
                     <AffiliateLink link={solution.cable.link} />
                   </CardContent>
                 </Card>
@@ -806,7 +806,7 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
                     <p><strong>Voltage Rating:</strong> {solution.shunt.vdc_max} V</p>
                     <p><strong>Current Rating:</strong> {solution.shunt.a_max} A</p>
                     {/*<p><strong>Operating Temp:</strong> {solution.shunt.temp_min}°C – {solution.shunt.temp_max}°C</p>*/}
-                    <p><strong>Est. Price:</strong> €{solution.shunt.price.toFixed(2)}</p>
+                    <p><strong>Est. Price:</strong> ${solution.shunt.price.toFixed(2)}</p>
                     <AffiliateLink link={solution.shunt.link} />
                   </CardContent>
                 </Card>

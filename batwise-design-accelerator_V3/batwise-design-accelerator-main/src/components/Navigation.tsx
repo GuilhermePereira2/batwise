@@ -24,7 +24,7 @@ const Navigation = () => {
       <div className="container px-4 mx-auto max-w-7xl">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="text-2xl font-bold text-foreground">
-            BatteryBuilder
+            Watt Builder
           </Link>
 
           {/* Desktop Navigation */}
