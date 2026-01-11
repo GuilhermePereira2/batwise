@@ -21,7 +21,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
-import { Search, Loader2, Database, X, ExternalLink, RefreshCw, LayoutGrid, BarChart3 } from "lucide-react";
+import { Search, Loader2, Database, X, ExternalLink, RefreshCw, LayoutGrid, BarChart3, Microscope, FlaskConical, ClipboardCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { getApiUrl } from "@/lib/config";
