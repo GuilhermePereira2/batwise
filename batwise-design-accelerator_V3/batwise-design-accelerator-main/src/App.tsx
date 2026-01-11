@@ -12,6 +12,8 @@ import Contact from "./pages/Contact";
 import BatteryForm from "./pages/BatteryForm";
 import NotFound from "./pages/NotFound";
 import CellExplorer from "@/pages/CellExplorer";
+import BlogPost from "./pages/BlogPost";
+import Index from "./pages/Index";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +33,7 @@ const App = () => (
           <Route path="/battery-form" element={<BatteryForm />} />
           <Route path="/auth" element={<BatteryForm />} />
           <Route path="/cell-explorer" element={<CellExplorer />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
