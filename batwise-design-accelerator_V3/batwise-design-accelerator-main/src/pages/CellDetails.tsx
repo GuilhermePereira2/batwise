@@ -226,7 +226,7 @@ const CellDetails = () => {
 
                             <div className="space-y-4">
                                 <Button size="lg" className="w-full text-lg h-12" onClick={handleGetData}>
-                                    Request Full Datasheet
+                                    Request More Data
                                 </Button>
                                 <div className="text-center">
                                     <AffiliateLink link={cell.Connection} />

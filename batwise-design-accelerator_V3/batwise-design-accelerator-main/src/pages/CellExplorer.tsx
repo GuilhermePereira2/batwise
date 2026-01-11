@@ -136,6 +136,7 @@ const getDensity = (c: Cell) => {
 
 // --- Main Component ---
 const CellExplorer = () => {
+    const navigate = useNavigate();
     const [allCells, setAllCells] = useState<Cell[]>([]);
     const [filteredCells, setFilteredCells] = useState<Cell[]>([]);
     const [isLoading, setIsLoading] = useState(true);
