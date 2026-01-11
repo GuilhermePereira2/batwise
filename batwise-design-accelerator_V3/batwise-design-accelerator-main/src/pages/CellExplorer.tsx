@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { Link } from "react-router-dom";
+import { createCellSlug } from "@/lib/utils";
 
 import {
     Pagination,
@@ -137,7 +139,7 @@ const CellExplorer = () => {
     const [allCells, setAllCells] = useState<Cell[]>([]);
     const [filteredCells, setFilteredCells] = useState<Cell[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [selectedCell, setSelectedCell] = useState<Cell | null>(null);
+    // const [selectedCell, setSelectedCell] = useState<Cell | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const { toast } = useToast();
 
@@ -582,23 +584,25 @@ const CellExplorer = () => {
                                     <TabsContent value="grid">
                                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                                             {paginatedCells.map((cell) => (
-                                                <Card
+                                                <Link
                                                     key={cell.CellModelNo}
-                                                    className="shadow-soft hover:shadow-lg transition-shadow cursor-pointer"
-                                                    onClick={() => setSelectedCell(cell)}
+                                                    to={`/cell/${createCellSlug(cell.Brand, cell.CellModelNo)}`}
+                                                    className="block h-full"
                                                 >
-                                                    <CardHeader>
-                                                        <CardTitle className="text-lg">{cell.CellModelNo}</CardTitle>
-                                                        <CardDescription>{cell.Brand || "Unknown"} - {cell.Composition}</CardDescription>
-                                                    </CardHeader>
-                                                    <CardContent className="text-sm space-y-2">
-                                                        <p><strong>Capacity:</strong> {(cell.Capacity / 1000).toFixed(2)} Ah</p>
-                                                        <p><strong>Voltage:</strong> {cell.NominalVoltage.toFixed(1)} V</p>
-                                                        <p><strong>Energy:</strong> {getEnergy(cell).toFixed(1)} Wh</p>
-                                                        <p><strong>Weight:</strong> {cell.Weight} g</p>
-                                                        <p><strong>Discharge:</strong> {cell.MaxContinuousDischargeRate} C</p>
-                                                    </CardContent>
-                                                </Card>
+                                                    <Card className="h-full shadow-soft hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer">
+                                                        <CardHeader>
+                                                            <CardTitle className="text-lg">{cell.CellModelNo}</CardTitle>
+                                                            <CardDescription>{cell.Brand || "Unknown"} - {cell.Composition}</CardDescription>
+                                                        </CardHeader>
+                                                        <CardContent className="text-sm space-y-2">
+                                                            <p><strong>Capacity:</strong> {(cell.Capacity / 1000).toFixed(2)} Ah</p>
+                                                            <p><strong>Voltage:</strong> {cell.NominalVoltage.toFixed(1)} V</p>
+                                                            <p><strong>Energy:</strong> {getEnergy(cell).toFixed(1)} Wh</p>
+                                                            <p><strong>Weight:</strong> {cell.Weight} g</p>
+                                                            <p><strong>Discharge:</strong> {cell.MaxContinuousDischargeRate} C</p>
+                                                        </CardContent>
+                                                    </Card>
+                                                </Link>
                                             ))}
                                         </div>
 
@@ -735,10 +739,15 @@ const CellExplorer = () => {
                                                                 <Scatter
                                                                     key={chemistry}
                                                                     name={chemistry}
-                                                                    data={chartData.filter(cell => cell.Composition === chemistry)} // A data key 'Composition' é usada para filtrar
+                                                                    data={chartData.filter(cell => cell.Composition === chemistry)}
                                                                     fill={chemistryColors[chemistry] || "hsl(var(--muted))"}
                                                                     fillOpacity={0.7}
-                                                                    shape={(props) => <circle {...props} r={5} onClick={() => setSelectedCell(props.payload)} />} // Bolas maiores e com clique
+                                                                    // AQUI: Ao clicar na bola, abre a página nova
+                                                                    onClick={(data) => {
+                                                                        const slug = createCellSlug(data.payload.Brand, data.payload.CellModelNo);
+                                                                        window.location.href = `/cell/${slug}`; // Usando window location para simplificar dentro do recharts
+                                                                    }}
+                                                                    shape={(props) => <circle {...props} r={5} style={{ cursor: 'pointer' }} />}
                                                                 />
                                                             ))}
                                                         </ScatterChart>
@@ -764,16 +773,6 @@ const CellExplorer = () => {
             </section >
 
             <Footer />
-
-            {
-                selectedCell && (
-                    <CellDetailModal
-                        cell={selectedCell}
-                        isOpen={!!selectedCell}
-                        onClose={() => setSelectedCell(null)}
-                    />
-                )
-            }
         </div >
     );
 };
