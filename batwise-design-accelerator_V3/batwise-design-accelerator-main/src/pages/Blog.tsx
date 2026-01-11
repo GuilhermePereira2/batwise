@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Calendar, User } from "lucide-react";
 import { Link } from "react-router-dom"; // ALTERADO: Usar react-router-dom
-import { blogPosts } from "@/data/blogPosts";
+import { blogPost } from "@/data/blogPost";
 
 const Blog = () => {
   return (
@@ -28,7 +28,7 @@ const Blog = () => {
       <section className="py-16 pb-24 bg-background">
         <div className="container px-4 mx-auto max-w-7xl">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {blogPosts.map((post, index) => (
+            {blogPost.map((post, index) => (
               // ALTERADO: Link envolve o Card com a prop 'to'
               <Link key={post.slug} to={`/blog/${post.slug}`} className="block h-full">
                 <Card
