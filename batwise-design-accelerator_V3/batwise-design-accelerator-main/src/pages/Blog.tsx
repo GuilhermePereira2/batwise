@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Calendar, User } from "lucide-react";
 import { Link } from "react-router-dom"; // ALTERADO: Usar react-router-dom
-import { blogPosts } from "@/data/blogPosts";
+import { blogPosts } from "../data/blogPosts";
 
 const Blog = () => {
   return (
