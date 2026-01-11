@@ -1,4 +1,5 @@
 // src/data/blogPosts.ts
+import venezuelaImg from './Venezuela.png';
 
 export interface BlogPost {
     slug: string;
@@ -32,7 +33,7 @@ export const blogPosts: BlogPost[] = [
       <p>Ultimately, the situation in Venezuela is better understood as a risk multiplier rather than a turning point for the battery industry. It does not threaten immediate supply, but it reinforces the strategic importance of diversification, supply chain resilience, and reduced dependence on politically unstable regions. It also strengthens the case for increased recycling, alternative battery chemistries, and regionalized supply networks. The future of batteries will not be shaped by technology alone. It will also be influenced by geopolitics, governance, and the ability of the industry to anticipate and adapt to instability before it turns into disruption.</p>
     `,
         // Imagem relacionada com mineração/indústria
-        image: "https://images.unsplash.com/photo-1595116708453-60032906df07?w=600&h=400&fit=crop",
+        image: venezuelaImg,
         author: "Joaquim Monteiro",
         date: "January 8, 2026",
         readTime: "4 min read",
