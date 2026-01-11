@@ -32,12 +32,12 @@ export const blogPosts: BlogPost[] = [
       <p>Ultimately, the situation in Venezuela is better understood as a risk multiplier rather than a turning point for the battery industry. It does not threaten immediate supply, but it reinforces the strategic importance of diversification, supply chain resilience, and reduced dependence on politically unstable regions. It also strengthens the case for increased recycling, alternative battery chemistries, and regionalized supply networks. The future of batteries will not be shaped by technology alone. It will also be influenced by geopolitics, governance, and the ability of the industry to anticipate and adapt to instability before it turns into disruption.</p>
     `,
         // Imagem relacionada com mineração/indústria
-        image: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&h=400&fit=crop",
+        image: "https://images.unsplash.com/photo-1595116708453-60032906df07?w=600&h=400&fit=crop",
         author: "Joaquim Monteiro",
         date: "January 8, 2026",
         readTime: "4 min read",
     },
-    {
+    /*{
         slug: "what-cell-types-can-i-choose",
         title: "What cell types can I choose?",
         excerpt: "An in-depth comparison of different lithium battery cell types including 18650, 21700, LiFePO4, and LiPo. Learn which cell type is best suited for your specific application.",
@@ -56,5 +56,5 @@ export const blogPosts: BlogPost[] = [
         author: "Lisa Anderson",
         date: "February 20, 2025",
         readTime: "7 min read",
-    },
+    },*/
 ];
