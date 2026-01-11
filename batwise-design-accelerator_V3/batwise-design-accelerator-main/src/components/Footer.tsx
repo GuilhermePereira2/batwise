@@ -9,9 +9,9 @@ const Footer = () => {
           {/* Top Section */}
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="text-center md:text-left">
-              <h3 className="text-2xl font-bold mb-2">BatteryBuilder</h3>
+              <h3 className="text-2xl font-bold mb-2">Watt Builder</h3>
               <p className="text-primary-foreground/80">
-                © 2025 BatteryBuilder. All rights reserved.
+                © 2025 Watt Builder. All rights reserved.
               </p>
             </div>
 
