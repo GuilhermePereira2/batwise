@@ -770,8 +770,58 @@ const CellExplorer = () => {
 
                     </div> {/* Fim do grid 1/4 - 3/4 */}
                 </div>
-            </section >
+            </section>
+            {/* Nova Secção: Serviços de Teste de Células */}
 
+            <section className="py-24 bg-muted/30">
+                <div className="container px-4 mx-auto max-w-5xl text-center">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 rounded-full text-accent font-medium mb-6">
+                        <Microscope size={18} />
+                        <span>Professional Cell Testing</span>
+                    </div>
+                    <h2 className="text-4xl font-bold text-foreground mb-6">
+                        Need Comprehensive Cell Data?
+                    </h2>
+                    <p className="text-xl text-muted-foreground mb-12 max-w-3xl mx-auto">
+                        We have state-of-the-art equipment to perform a wide variety of tests on battery cells.
+                        From capacity verification to rigorous stress testing, we handle everything for you.
+                    </p>
+
+                    <div className="grid md:grid-cols-3 gap-8 mb-12 text-left">
+                        <Card className="bg-background border-border shadow-sm">
+                            <CardHeader>
+                                <FlaskConical className="w-10 h-10 text-accent mb-4" />
+                                <CardTitle>Performance Verification</CardTitle>
+                                <CardDescription>
+                                    Verify capacity, voltage curves, and internal resistance with high precision equipment.
+                                </CardDescription>
+                            </CardHeader>
+                        </Card>
+                        <Card className="bg-background border-border shadow-sm">
+                            <CardHeader>
+                                <ClipboardCheck className="w-10 h-10 text-accent mb-4" />
+                                <CardTitle>Cycle Life Testing</CardTitle>
+                                <CardDescription>
+                                    Long-term cycling tests to determine real-world lifespan and degradation patterns.
+                                </CardDescription>
+                            </CardHeader>
+                        </Card>
+                        <Card className="bg-background border-border shadow-sm">
+                            <CardHeader>
+                                <BarChart3 className="w-10 h-10 text-accent mb-4" />
+                                <CardTitle>Thermal Analysis</CardTitle>
+                                <CardDescription>
+                                    Monitor temperature profiles under heavy load to ensure safety and thermal stability.
+                                </CardDescription>
+                            </CardHeader>
+                        </Card>
+                    </div>
+
+                    <Button size="lg" className="text-lg px-8 py-6 h-auto" onClick={() => navigate("/contact")}>
+                        Contact Us for Custom Testing
+                    </Button>
+                </div>
+            </section>
             <Footer />
         </div >
     );
