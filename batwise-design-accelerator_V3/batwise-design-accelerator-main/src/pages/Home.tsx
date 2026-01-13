@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowRight, Wrench, Briefcase, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import homeHeroImage from "@/assets/home-hero-battery.jpg";
-import { Analytics } from "@vercel/analytics/next";
 
 const Home = () => {
   return (
@@ -39,13 +38,13 @@ const Home = () => {
                 Try DIY Tool
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
-              <Analytics />
+
             </Button>
             <Button size="lg" variant="outline" className="text-lg" asChild>
               <Link to="/business">
                 For Businesses
               </Link>
-              <Analytics />
+
             </Button>
           </div>
         </div>
