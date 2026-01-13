@@ -1,3 +1,5 @@
+import { Analytics } from '@vercel/analytics/next';
+
 const Header = () => {
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
@@ -9,20 +11,25 @@ const Header = () => {
         <div className="flex items-center justify-between h-16">
           <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="text-2xl font-bold text-foreground">
             Watt Builder
+            <Analytics />
           </button>
 
           <nav className="flex items-center gap-6">
             <button onClick={() => scrollToSection('product')} className="text-foreground hover:text-accent transition-colors">
               Product
+              <Analytics />
             </button>
             <button onClick={() => scrollToSection('solutions')} className="text-foreground hover:text-accent transition-colors">
               Solutions
+              <Analytics />
             </button>
             <button onClick={() => scrollToSection('features')} className="text-foreground hover:text-accent transition-colors">
               Features
+              <Analytics />
             </button>
             <button onClick={() => scrollToSection('contact')} className="text-foreground hover:text-accent transition-colors">
               Contact
+              <Analytics />
             </button>
           </nav>
         </div>
