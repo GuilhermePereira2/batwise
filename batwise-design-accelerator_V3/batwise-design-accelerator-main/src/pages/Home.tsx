@@ -2,7 +2,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, Wrench, Briefcase, Zap } from "lucide-react";
+import { ArrowRight, Wrench, Briefcase, Zap, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import homeHeroImage from "@/assets/home-hero-battery.jpg";
 
@@ -56,12 +56,14 @@ const Home = () => {
             <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
               Choose Your Path
             </h2>
+            {/* Frase atualizada para a versão profissional */}
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               From individual prototypes to enterprise-scale production, find the perfect solution for your development needs.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
+          {/* Alterado para grid-cols-3 para acomodar o novo cartão */}
+          <div className="grid md:grid-cols-3 gap-8">
             {/* DIY Card */}
             <Card className="shadow-soft hover:shadow-medium transition-all duration-300 group cursor-pointer animate-slide-up">
               <CardHeader>
@@ -97,8 +99,44 @@ const Home = () => {
               </CardContent>
             </Card>
 
-            {/* Business Card */}
+            {/* NOVO CARTÃO: Cell Explorer (No meio) */}
             <Card className="shadow-soft hover:shadow-medium transition-all duration-300 group cursor-pointer animate-slide-up" style={{ animationDelay: "100ms" }}>
+              <CardHeader>
+                <div className="w-14 h-14 bg-accent/10 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  {/* Importar 'Search' ou 'Microscope' do lucide-react */}
+                  <Search className="w-7 h-7 text-accent" />
+                </div>
+                <CardTitle className="text-2xl">Cell Explorer</CardTitle>
+                <CardDescription className="text-base">
+                  Database & professional testing services
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3 mb-6">
+                  <li className="flex items-start gap-2">
+                    <Zap className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
+                    <span className="text-muted-foreground">Extensive cell database</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Zap className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
+                    <span className="text-muted-foreground">Independent performance data</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Zap className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
+                    <span className="text-muted-foreground">Custom cell testing requests</span>
+                  </li>
+                </ul>
+                <Button className="w-full" size="lg" variant="outline" asChild>
+                  <Link to="/cell-explorer">
+                    Explore Cells
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Business Card (Ajustado delay da animação) */}
+            <Card className="shadow-soft hover:shadow-medium transition-all duration-300 group cursor-pointer animate-slide-up" style={{ animationDelay: "200ms" }}>
               <CardHeader>
                 <div className="w-14 h-14 bg-accent/10 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <Briefcase className="w-7 h-7 text-accent" />
