@@ -283,7 +283,7 @@ const CellDetails = () => {
                         </Card>
                     </div>
 
-                    <Button size="lg" variant="outline" className="text-lg px-8 py-6 h-auto border-accent text-accent hover:bg-accent hover:text-white" onClick={() => navigate("/contact")}>
+                    <Button size="lg" className="text-lg px-8 py-6 h-auto" onClick={() => navigate("/contact")}>
                         Contact Us for Custom Testing
                     </Button>
                 </div>

@@ -36,7 +36,6 @@ const Home = () => {
             <Button size="lg" className="text-lg" asChild>
               <Link to="/diy">
                 Battery Builder
-                <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
 
             </Button>
@@ -58,7 +57,7 @@ const Home = () => {
               Choose Your Path
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Whether you're building a hobby project or developing a commercial product, we've got you covered
+              From individual prototypes to enterprise-scale production, find the perfect solution for your development needs.
             </p>
           </div>
 
