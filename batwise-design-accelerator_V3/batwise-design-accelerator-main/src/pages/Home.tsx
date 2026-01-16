@@ -30,19 +30,19 @@ const Home = () => {
             Battery Design,<br />Simplified.
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto">
-            From DIY enthusiasts to professional engineers — we have the tools and expertise to help you design better batteries.
+            From enthusiasts to professional engineers, we have the tools and expertise to help you design better batteries.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" className="text-lg" asChild>
               <Link to="/diy">
-                Try DIY Tool
+                Try Battery Builder
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
 
             </Button>
             <Button size="lg" variant="outline" className="text-lg" asChild>
               <Link to="/business">
-                For Businesses
+                Our Services
               </Link>
 
             </Button>
@@ -69,9 +69,9 @@ const Home = () => {
                 <div className="w-14 h-14 bg-accent/10 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <Wrench className="w-7 h-7 text-accent" />
                 </div>
-                <CardTitle className="text-2xl">DIY Battery Builder</CardTitle>
+                <CardTitle className="text-2xl">Battery Builder</CardTitle>
                 <CardDescription className="text-base">
-                  Free tool for makers and hobbyists
+                  Free tool to design custom battery packs
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -104,7 +104,7 @@ const Home = () => {
                 <div className="w-14 h-14 bg-accent/10 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <Briefcase className="w-7 h-7 text-accent" />
                 </div>
-                <CardTitle className="text-2xl">Professional Solutions</CardTitle>
+                <CardTitle className="text-2xl">Our Services</CardTitle>
                 <CardDescription className="text-base">
                   Advanced software and consulting services
                 </CardDescription>
@@ -147,7 +147,7 @@ const Home = () => {
           </p>
           <Button size="lg" asChild>
             <Link to="/diy">
-              Try Free Tool Now
+              Try Battery Builder Now
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>

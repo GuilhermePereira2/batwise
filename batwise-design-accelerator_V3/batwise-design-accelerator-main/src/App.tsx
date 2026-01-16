@@ -16,6 +16,7 @@ import BlogPost from "./pages/BlogPost";
 import Index from "./pages/Index";
 import CellDetails from "./pages/CellDetails";
 
+
 const queryClient = new QueryClient();
 
 const App = () => (

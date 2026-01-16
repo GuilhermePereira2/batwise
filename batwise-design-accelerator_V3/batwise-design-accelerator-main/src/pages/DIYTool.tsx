@@ -301,7 +301,7 @@ const DIYTool = () => {
           </h1>
 
           <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto">
-            Enter your specs — we calculate cells, BMS, and safety limits for you.
+            Enter your specs, we calculate cells, BMS, and safety limits for you.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
