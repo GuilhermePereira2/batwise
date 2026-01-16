@@ -100,6 +100,7 @@ const CellDetails = () => {
     const safeVolumeL = volumeL === 0 ? 0.001 : volumeL;
     const energyDensityWhL = energyWh / safeVolumeL;
     const powerDensityWL = powerW / safeVolumeL;
+    const energyDensityWhKg = energyWh / (cell.Weight / 1000);
 
     const handleGetData = () => {
         const cellName = `${cell.Brand || "Unknown"} ${cell.CellModelNo}`;
@@ -220,6 +221,10 @@ const CellDetails = () => {
                                     <div className="pt-2">
                                         <p className="text-sm text-muted-foreground mb-1">Volumetric Energy Density</p>
                                         <p className="text-xl font-semibold">{energyDensityWhL.toFixed(0)} Wh/L</p>
+                                    </div>
+                                    <div className="pt-2">
+                                        <p className="text-sm text-muted-foreground mb-1">Gravimetric Energy Density</p>
+                                        <p className="text-xl font-semibold">{energyDensityWhKg.toFixed(3)} Wh/kg</p>
                                     </div>
                                 </CardContent>
                             </Card>
