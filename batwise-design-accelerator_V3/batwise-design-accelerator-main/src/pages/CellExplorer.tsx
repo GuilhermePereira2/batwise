@@ -314,6 +314,8 @@ const CellExplorer = () => {
             case "volumeL": return "Volume (L)";
             case "energyDensityWhL": return "Energy Density (Wh/L)";
             case "powerDensityWL": return "Power Density (W/L)";
+            case "energyDensityWhKg": return "Energy Density (Wh/Kg)";
+            case "powerDensityWKg": return "Power Density (W/Kg)";
             default: return key.replace(/([A-Z])/g, ' $1').trim().toUpperCase();
         }
     };
@@ -327,6 +329,8 @@ const CellExplorer = () => {
             const safeVolumeL = volumeL === 0 ? 0.001 : volumeL;
             const energyDensityWhL = energyWh / safeVolumeL;
             const powerDensityWL = powerW / safeVolumeL;
+            const energyDensityWhKg = energyWh / (cell.Weight / 1000);
+            const powerDensityWKg = powerW / (cell.Weight / 1000);
             return {
                 ...cell,
                 capacityAh,
@@ -335,6 +339,8 @@ const CellExplorer = () => {
                 volumeL,
                 energyDensityWhL,
                 powerDensityWL,
+                energyDensityWhKg,
+                powerDensityWKg,
             } as ChartCellData;
         });
     }, [filteredCells]);
@@ -350,6 +356,8 @@ const CellExplorer = () => {
         { value: "volumeL", label: "Volume (L)" },
         { value: "energyDensityWhL", label: "Energy Density (Wh/L)" },
         { value: "powerDensityWL", label: "Power Density (W/L)" },
+        { value: "energyDensityWhKg", label: "Energy Density (Wh/Kg)" },
+        { value: "powerDensityWKg", label: "Power Density (W/Kg)" },
     ];
 
     const chemistryColors = useMemo(() => {
@@ -570,6 +578,10 @@ const CellExplorer = () => {
                                                     <SelectItem value="power-asc">Power W (Low to High)</SelectItem>
                                                     <SelectItem value="density-desc">Density Wh/L (High to Low)</SelectItem>
                                                     <SelectItem value="density-asc">Density Wh/L (Low to High)</SelectItem>
+                                                    <SelectItem value="energyDensityWhKg-desc">Energy Density Wh/Kg (High to Low)</SelectItem>
+                                                    <SelectItem value="energyDensityWhKg-asc">Energy Density Wh/Kg (Low to High)</SelectItem>
+                                                    <SelectItem value="powerDensityWKg-desc">Power Density W/Kg (High to Low)</SelectItem>
+                                                    <SelectItem value="powerDensityWKg-asc">Power Density W/Kg (Low to High)</SelectItem>
                                                     <SelectItem value="weight-asc">Weight (Lighter first)</SelectItem>
                                                     <SelectItem value="weight-desc">Weight (Heavier first)</SelectItem>
                                                 </SelectContent>
@@ -598,9 +610,9 @@ const CellExplorer = () => {
                                                         <CardContent className="text-sm space-y-2">
                                                             <p><strong>Capacity:</strong> {(cell.Capacity / 1000).toFixed(2)} Ah</p>
                                                             <p><strong>Voltage:</strong> {cell.NominalVoltage.toFixed(1)} V</p>
-                                                            <p><strong>Energy:</strong> {getEnergy(cell).toFixed(1)} Wh</p>
+                                                            <p><strong>Energy Density:</strong> {(getEnergy(cell) / cell.Weight).toFixed(1)} Wh/kg</p>
                                                             <p><strong>Weight:</strong> {cell.Weight} g</p>
-                                                            <p><strong>Discharge:</strong> {cell.MaxContinuousDischargeRate} C</p>
+                                                            <p><strong>Discharge Rate:</strong> {cell.MaxContinuousDischargeRate} C</p>
                                                         </CardContent>
                                                     </Card>
                                                 </Link>
@@ -688,6 +700,8 @@ const CellExplorer = () => {
                                                                     if (xAxis === "volumeL") return `${value.toFixed(1)} L`;
                                                                     if (xAxis === "energyDensityWhL") return `${value.toFixed(0)} Wh/L`;
                                                                     if (xAxis === "powerDensityWL") return `${value.toFixed(0)} W/L`;
+                                                                    if (xAxis === "energyDensityWhKg") return `${value.toFixed(0)} Wh/kg`;
+                                                                    if (xAxis === "powerDensityWKg") return `${value.toFixed(0)} W/kg`;
                                                                     return String(value);
                                                                 }}
                                                             />
@@ -705,6 +719,8 @@ const CellExplorer = () => {
                                                                     if (yAxis === "volumeL") return `${value.toFixed(1)} L`;
                                                                     if (yAxis === "energyDensityWhL") return `${value.toFixed(0)} Wh/L`;
                                                                     if (yAxis === "powerDensityWL") return `${value.toFixed(0)} W/L`;
+                                                                    if (yAxis === "energyDensityWhKg") return `${value.toFixed(0)} Wh/kg`;
+                                                                    if (yAxis === "powerDensityWKg") return `${value.toFixed(0)} W/kg`;
                                                                     return String(value);
                                                                 }}
                                                             />
@@ -863,6 +879,8 @@ const CellDetailModal = ({ cell, isOpen, onClose }: { cell: Cell, isOpen: boolea
     const safeVolumeL = volumeL === 0 ? 1 : volumeL;
     const energyDensityWhL = energyWh / safeVolumeL;
     const powerDensityWL = powerW / safeVolumeL;
+    const energyDensityWhKg = energyWh / (cell.Weight / 1000);
+    const powerDensityWKg = powerW / (cell.Weight / 1000);
     // --- Fim dos Cálculos ---
 
     return (
@@ -891,8 +909,8 @@ const CellDetailModal = ({ cell, isOpen, onClose }: { cell: Cell, isOpen: boolea
                                 <div className="space-y-2">
                                     <p><strong>Energy:</strong> {energyWh.toFixed(2)} Wh</p>
                                     <p><strong>Continuous Power:</strong> {powerW.toFixed(2)} W</p>
-                                    <p><strong>Energy Density:</strong> {energyDensityWhL.toFixed(1)} Wh/L</p>
-                                    <p><strong>Power Density:</strong> {powerDensityWL.toFixed(1)} W/L</p>
+                                    <p><strong>Energy Density:</strong> {energyDensityWhKg.toFixed(1)} Wh/kg</p>
+                                    <p><strong>Power Density:</strong> {powerDensityWKg.toFixed(1)} W/kg</p>
                                     <p><strong>Continuous Discharge/Charge Rate:</strong> {cell.MaxContinuousDischargeRate}C / {cell.MaxContinuousChargeRate}C</p>
                                 </div>
 
