@@ -64,41 +64,6 @@ const Home = () => {
 
           {/* Alterado para grid-cols-3 para acomodar o novo cartão */}
           <div className="grid md:grid-cols-3 gap-8">
-            {/* DIY Card */}
-            <Card className="shadow-soft hover:shadow-medium transition-all duration-300 group cursor-pointer animate-slide-up">
-              <CardHeader>
-                <div className="w-14 h-14 bg-accent/10 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Wrench className="w-7 h-7 text-accent" />
-                </div>
-                <CardTitle className="text-2xl">Battery Builder</CardTitle>
-                <CardDescription className="text-base">
-                  Free tool to design custom battery packs
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 mb-6">
-                  <li className="flex items-start gap-2">
-                    <Zap className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-                    <span className="text-muted-foreground">Easy-to-use calculator</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Zap className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-                    <span className="text-muted-foreground">Instant configuration suggestions</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Zap className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-                    <span className="text-muted-foreground">Component recommendations</span>
-                  </li>
-                </ul>
-                <Button className="w-full" size="lg" asChild>
-                  <Link to="/diy">
-                    Start Designing
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-
             {/* NOVO CARTÃO: Cell Explorer (No meio) */}
             <Card className="shadow-soft hover:shadow-medium transition-all duration-300 group cursor-pointer animate-slide-up" style={{ animationDelay: "100ms" }}>
               <CardHeader>
@@ -134,6 +99,43 @@ const Home = () => {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* DIY Card */}
+            <Card className="shadow-soft hover:shadow-medium transition-all duration-300 group cursor-pointer animate-slide-up">
+              <CardHeader>
+                <div className="w-14 h-14 bg-accent/10 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <Wrench className="w-7 h-7 text-accent" />
+                </div>
+                <CardTitle className="text-2xl">Battery Builder</CardTitle>
+                <CardDescription className="text-base">
+                  Free tool to design custom battery packs
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3 mb-6">
+                  <li className="flex items-start gap-2">
+                    <Zap className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
+                    <span className="text-muted-foreground">Easy-to-use calculator</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Zap className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
+                    <span className="text-muted-foreground">Instant configuration suggestions</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Zap className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
+                    <span className="text-muted-foreground">Component recommendations</span>
+                  </li>
+                </ul>
+                <Button className="w-full" size="lg" asChild>
+                  <Link to="/diy">
+                    Start Designing
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+
 
             {/* Business Card (Ajustado delay da animação) */}
             <Card className="shadow-soft hover:shadow-medium transition-all duration-300 group cursor-pointer animate-slide-up" style={{ animationDelay: "200ms" }}>
