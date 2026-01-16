@@ -708,8 +708,8 @@ const CellExplorer = () => {
                                                                     if (xAxis === "volumeL") return `${value.toFixed(1)} L`;
                                                                     if (xAxis === "energyDensityWhL") return `${value.toFixed(0)} Wh/L`;
                                                                     if (xAxis === "powerDensityWL") return `${value.toFixed(0)} W/L`;
-                                                                    if (xAxis === "energyDensityWhKg") return `${value.tofixed(1)} Wh/kg`;
-                                                                    if (xAxis === "powerDensityWKg") return `${value.tofixed(1)} W/kg`;
+                                                                    if (xAxis === "energyDensityWhKg") return `${value.toFixed(1)} Wh/kg`;
+                                                                    if (xAxis === "powerDensityWKg") return `${value.toFixed(1)} W/kg`;
                                                                     return String(value);
                                                                 }}
                                                             />
@@ -727,8 +727,8 @@ const CellExplorer = () => {
                                                                     if (yAxis === "volumeL") return `${value.toFixed(1)} L`;
                                                                     if (yAxis === "energyDensityWhL") return `${value.toFixed(0)} Wh/L`;
                                                                     if (yAxis === "powerDensityWL") return `${value.toFixed(0)} W/L`;
-                                                                    if (yAxis === "energyDensityWhKg") return `${value.tofixed(1)} Wh/kg`;
-                                                                    if (yAxis === "powerDensityWKg") return `${value.tofixed(1)} W/kg`;
+                                                                    if (yAxis === "energyDensityWhKg") return `${value.toFixed(1)} Wh/kg`;
+                                                                    if (yAxis === "powerDensityWKg") return `${value.toFixed(1)} W/kg`;
                                                                     return String(value);
                                                                 }}
                                                             />
