@@ -263,6 +263,14 @@ const CellExplorer = () => {
                 case "density-desc": return getDensity(b) - getDensity(a);
                 case "capacity-asc": return a.Capacity - b.Capacity;
                 case "capacity-desc": return b.Capacity - a.Capacity;
+                case "energyDensityWhKg-desc":
+                    return (getEnergy(b) / b.Weight) - (getEnergy(a) / a.Weight);
+                case "energyDensityWhKg-asc":
+                    return (getEnergy(a) / a.Weight) - (getEnergy(b) / b.Weight);
+                case "powerDensityWKg-desc":
+                    return (getPower(b) / b.Weight) - (getPower(a) / a.Weight);
+                case "powerDensityWKg-asc":
+                    return (getPower(a) / a.Weight) - (getPower(b) / b.Weight);
                 default: return 0;
             }
         });
@@ -700,8 +708,8 @@ const CellExplorer = () => {
                                                                     if (xAxis === "volumeL") return `${value.toFixed(1)} L`;
                                                                     if (xAxis === "energyDensityWhL") return `${value.toFixed(0)} Wh/L`;
                                                                     if (xAxis === "powerDensityWL") return `${value.toFixed(0)} W/L`;
-                                                                    if (xAxis === "energyDensityWhKg") return `${value.toFixed(0)} Wh/kg`;
-                                                                    if (xAxis === "powerDensityWKg") return `${value.toFixed(0)} W/kg`;
+                                                                    if (xAxis === "energyDensityWhKg") return `${value.toFixed(3)} Wh/kg`;
+                                                                    if (xAxis === "powerDensityWKg") return `${value.toFixed(3)} W/kg`;
                                                                     return String(value);
                                                                 }}
                                                             />
@@ -719,8 +727,8 @@ const CellExplorer = () => {
                                                                     if (yAxis === "volumeL") return `${value.toFixed(1)} L`;
                                                                     if (yAxis === "energyDensityWhL") return `${value.toFixed(0)} Wh/L`;
                                                                     if (yAxis === "powerDensityWL") return `${value.toFixed(0)} W/L`;
-                                                                    if (yAxis === "energyDensityWhKg") return `${value.toFixed(0)} Wh/kg`;
-                                                                    if (yAxis === "powerDensityWKg") return `${value.toFixed(0)} W/kg`;
+                                                                    if (yAxis === "energyDensityWhKg") return `${value.toFixed(3)} Wh/kg`;
+                                                                    if (yAxis === "powerDensityWKg") return `${value.toFixed(3)} W/kg`;
                                                                     return String(value);
                                                                 }}
                                                             />
