@@ -91,7 +91,7 @@ const Home = () => {
                     <span className="text-muted-foreground">Custom cell testing requests</span>
                   </li>
                 </ul>
-                <Button className="w-full" size="lg" variant="outline" asChild>
+                <Button className="w-full" size="lg" asChild>
                   <Link to="/cell-explorer">
                     Explore Cells
                     <ArrowRight className="ml-2 h-5 w-5" />
@@ -135,8 +135,6 @@ const Home = () => {
               </CardContent>
             </Card>
 
-
-
             {/* Business Card (Ajustado delay da animação) */}
             <Card className="shadow-soft hover:shadow-medium transition-all duration-300 group cursor-pointer animate-slide-up" style={{ animationDelay: "200ms" }}>
               <CardHeader>
@@ -163,7 +161,7 @@ const Home = () => {
                     <span className="text-muted-foreground">Production-ready designs</span>
                   </li>
                 </ul>
-                <Button className="w-full" size="lg" variant="outline" asChild>
+                <Button className="w-full" size="lg" asChild>
                   <Link to="/business">
                     Learn More
                     <ArrowRight className="ml-2 h-5 w-5" />
