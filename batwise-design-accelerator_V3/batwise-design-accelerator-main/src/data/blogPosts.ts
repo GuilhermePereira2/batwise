@@ -1,5 +1,6 @@
 // src/data/blogPosts.ts
 import venezuelaImg from './Venezuela.png';
+import TeslaImg from './TeslaBat.png';
 
 export interface BlogPost {
     slug: string;
@@ -37,6 +38,46 @@ export const blogPosts: BlogPost[] = [
         author: "Joaquim Monteiro",
         date: "January 8, 2026",
         readTime: "4 min read",
+    },
+    {
+        slug: "tesla-battery-strategy-breakdown",
+        title: "Tesla Battery Strategy Breakdown",
+        excerpt: "Tesla’s battery strategy is built around system-level engineering decisions that prioritize scalability, cost reduction, and performance across the entire vehicle architecture.",
+        content: `
+      <p>Tesla’s battery strategy goes far beyond building electric vehicles. The company treats the battery as a central engineering system, not just a component. Every major decision, from cell design to pack integration, is made with scalability, cost reduction, and performance in mind. This system-level approach is what differentiates Tesla from most traditional manufacturers.</p>
+      
+      <h3>Cell Format Evolution</h3>
+      <p>Tesla’s progression from 18650 cells to 2170 and now 4680 cylindrical cells reflects a clear engineering logic. Larger cells reduce the total number of cells required per pack, which immediately lowers the number of welds, interconnections, and potential failure points. Fewer cells also simplify manufacturing and reduce overall electrical resistance inside the pack. The move to the 4680 format was not driven solely by energy density gains. Instead, it was about simplifying the pack architecture while enabling better thermal behavior and lower cost per kilowatt-hour at scale.</p>
+      
+      <h3>Tabless Cell Design</h3>
+      <p>One of the most important innovations in Tesla’s 4680 cells is the tabless design. Traditional cylindrical cells rely on tabs to collect current, creating longer current paths and localized heating. By distributing the current collection around the entire circumference of the cell, Tesla significantly reduced internal resistance. This design leads to more uniform current flow and lower heat generation, especially during fast charging and high-power operation. The result is improved efficiency, better thermal stability, and longer cycle life.</p>
+      
+      <h3>Structural Battery Packs</h3>
+      <p>Tesla’s structural battery pack represents a major shift in how battery systems are integrated into vehicles. Instead of using a conventional module-based architecture, Tesla eliminated modules entirely and made the battery pack part of the vehicle’s structural frame. This approach reduces weight and increases vehicle stiffness while allowing more energy to be stored within the same footprint. More importantly, it forces mechanical, thermal, and electrical design to be addressed simultaneously, rather than as separate problems.</p>
+      
+      <h3>Battery Chemistry Strategy</h3>
+      <p>Rather than relying on a single chemistry, Tesla uses different battery chemistries depending on the application. Lithium iron phosphate cells are typically used in standard-range vehicles due to their lower cost, higher safety, and longer cycle life. Nickel-based chemistries are reserved for long-range and performance models where higher energy density is essential.</p>
+      
+      <p>This flexible chemistry strategy allows Tesla to balance performance and cost while reducing exposure to supply chain constraints.</p>
+      
+      <h3>Thermal Management Philosophy</h3>
+      <p>Thermal management is not treated as an add-on in Tesla’s battery design. By reducing internal heat generation at the cell level and combining it with efficient cooling layouts, Tesla minimizes temperature gradients across the pack.</p>
+      
+      <p>Better thermal uniformity enables faster charging, improves reliability, and extends battery lifespan. Heat is addressed early in the design process, not after the pack is assembled.</p>
+      
+      <h3>Vertical Integration and System Control</h3>
+      <p>Tesla’s high level of vertical integration gives it control over cell design, pack architecture, manufacturing processes, and battery management software. This allows for faster iteration and tighter optimization across the entire battery system.</p>
+      
+      <p>While many manufacturers focus on improving individual components, Tesla focuses on optimizing how all components work together.</p>
+      
+      <h3>Key Takeaways</h3>
+      <p>Tesla’s battery strategy shows that meaningful improvements in performance and cost do not come from a single breakthrough. They come from consistent system-level engineering decisions. For anyone designing or building battery packs, the lesson is clear: strong battery performance starts with design, not assembly.</p>
+    `,
+        // Imagem relacionada com baterias/veículos elétricos
+        image: TeslaImg,
+        author: "Joaquim Monteiro",
+        date: "January 15, 2026",
+        readTime: "5 min read",
     },
     /*{
         slug: "what-cell-types-can-i-choose",

@@ -9,10 +9,9 @@ const Navigation = () => {
 
   const menuItems = [
     { label: "Home", path: "/" },
-    { label: "DIY Tool", path: "/diy" },
     { label: "Cell Explorer", path: "/cell-explorer" },
-    { label: "Professional Solutions", path: "/business" },
-    { label: "Pricing", path: "/pricing" },
+    { label: "Battery Builder", path: "/diy" },
+    { label: "Services", path: "/business" },
     { label: "Blog", path: "/blog" },
     { label: "Contact", path: "/contact" },
   ];
@@ -34,8 +33,8 @@ const Navigation = () => {
                 key={item.path}
                 to={item.path}
                 className={`transition-colors ${isActive(item.path)
-                    ? "text-accent font-medium"
-                    : "text-foreground hover:text-accent"
+                  ? "text-accent font-medium"
+                  : "text-foreground hover:text-accent"
                   }`}
               >
                 {item.label}
@@ -70,8 +69,8 @@ const Navigation = () => {
                   to={item.path}
                   onClick={() => setIsOpen(false)}
                   className={`py-2 transition-colors ${isActive(item.path)
-                      ? "text-accent font-medium"
-                      : "text-foreground hover:text-accent"
+                    ? "text-accent font-medium"
+                    : "text-foreground hover:text-accent"
                     }`}
                 >
                   {item.label}

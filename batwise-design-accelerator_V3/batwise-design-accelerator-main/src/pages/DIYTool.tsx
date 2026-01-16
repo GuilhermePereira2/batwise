@@ -297,7 +297,7 @@ const DIYTool = () => {
           </div>
 
           <h1 className="text-5xl md:text-7xl font-bold text-foreground mb-6 leading-tight">
-            Design your own battery<br />in minutes.
+            Design your own battery<br />in seconds.
           </h1>
 
           <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto">
