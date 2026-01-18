@@ -616,7 +616,7 @@ const CellExplorer = () => {
                                                             <CardDescription>{cell.Brand || "Unknown"} - {cell.Composition}</CardDescription>
                                                         </CardHeader>
                                                         <CardContent className="text-sm space-y-2">
-                                                            <p><strong>Capacity:</strong> {(cell.Capacity / 1000).toFixed(2)} Ah</p>
+                                                            <p><strong>Capacity:</strong> {(cell.Capacity / 1000).toFixed(1)} Ah</p>
                                                             <p><strong>Voltage:</strong> {cell.NominalVoltage.toFixed(1)} V</p>
                                                             <p><strong>Energy Density:</strong> {(getEnergy(cell) / (cell.Weight / 1000)).toFixed(1)} Wh/kg</p>
                                                             <p><strong>Weight:</strong> {cell.Weight} g</p>
