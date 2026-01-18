@@ -292,7 +292,7 @@ const DIYTool = () => {
           <div className="flex justify-center mb-6">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 rounded-full text-accent font-medium">
               <Sparkles size={18} />
-              <span>Free DIY Battery Designer</span>
+              <span>Free Battery Designer</span>
             </div>
           </div>
 
