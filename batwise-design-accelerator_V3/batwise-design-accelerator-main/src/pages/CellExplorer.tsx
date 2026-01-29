@@ -21,7 +21,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
-import { Search, Loader2, Database, X, ExternalLink, RefreshCw, LayoutGrid, BarChart3, Microscope, FlaskConical, ClipboardCheck } from "lucide-react";
+import { Search, Loader2, Database, X, ExternalLink, RefreshCw, LayoutGrid, BarChart3, Microscope, FlaskConical, ClipboardCheck, ArrowUp, ArrowDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { getApiUrl } from "@/lib/config";
@@ -151,7 +151,8 @@ const CellExplorer = () => {
     const [activeTab, setActiveTab] = useState("chart");
     const [xAxis, setXAxis] = useState("energyDensityWhL");
     const [yAxis, setYAxis] = useState("energyWh");
-    const [sortKey, setSortKey] = useState("capacity-desc");
+    const [sortParam, setSortParam] = useState("capacity"); // Parâmetro
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
     // Set browser tab title
     useEffect(() => {
@@ -252,31 +253,27 @@ const CellExplorer = () => {
             return true;
         });
         cells.sort((a, b) => {
-            switch (sortKey) {
-                case "energy-asc": return getEnergy(a) - getEnergy(b);
-                case "energy-desc": return getEnergy(b) - getEnergy(a);
-                case "power-asc": return getPower(a) - getPower(b);
-                case "power-desc": return getPower(b) - getPower(a);
-                case "weight-asc": return a.Weight - b.Weight;
-                case "weight-desc": return b.Weight - a.Weight;
-                case "density-asc": return getDensity(a) - getDensity(b);
-                case "density-desc": return getDensity(b) - getDensity(a);
-                case "capacity-asc": return a.Capacity - b.Capacity;
-                case "capacity-desc": return b.Capacity - a.Capacity;
-                case "energyDensityWhKg-desc":
-                    return (getEnergy(b) / b.Weight) - (getEnergy(a) / a.Weight);
-                case "energyDensityWhKg-asc":
-                    return (getEnergy(a) / a.Weight) - (getEnergy(b) / b.Weight);
-                case "powerDensityWKg-desc":
-                    return (getPower(b) / b.Weight) - (getPower(a) / a.Weight);
-                case "powerDensityWKg-asc":
-                    return (getPower(a) / a.Weight) - (getPower(b) / b.Weight);
-                default: return 0;
-            }
+            const getValue = (c: Cell) => {
+                switch (sortParam) {
+                    case "energy": return getEnergy(c);
+                    case "power": return getPower(c);
+                    case "weight": return c.Weight;
+                    case "density": return getDensity(c);
+                    case "capacity": return c.Capacity;
+                    case "energyDensityWhKg": return c.Weight > 0 ? getEnergy(c) / c.Weight : 0;
+                    case "powerDensityWKg": return c.Weight > 0 ? getPower(c) / c.Weight : 0;
+                    default: return 0;
+                }
+            };
+
+            const valA = getValue(a);
+            const valB = getValue(b);
+
+            return sortOrder === 'asc' ? valA - valB : valB - valA;
         });
         setFilteredCells(cells);
         setCurrentPage(1);
-    }, [allCells, filterValues, sortKey]);
+    }, [allCells, filterValues, sortParam, sortOrder]);
 
     // Pagination Logic
     const pageCount = Math.ceil(filteredCells.length / CELLS_PER_PAGE);
@@ -571,30 +568,37 @@ const CellExplorer = () => {
                                             </TabsTrigger>
                                         </TabsList>
                                         {/* --- ADIÇÃO: Seletor de Ordenação --- */}
-                                        <div className="flex items-center gap-2 w-full md:w-auto">
-                                            <Label className="text-sm text-muted-foreground whitespace-nowrap">Sort by:</Label>
-                                            <Select value={sortKey} onValueChange={setSortKey}>
-                                                <SelectTrigger className="h-9 w-[220px] bg-background">
-                                                    <SelectValue placeholder="Sort order" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="capacity-desc">Capacity Ah (High to Low)</SelectItem>
-                                                    <SelectItem value="capacity-asc">Capacity Ah (Low to High)</SelectItem>
-                                                    <SelectItem value="energy-desc">Energy Wh (High to Low)</SelectItem>
-                                                    <SelectItem value="energy-asc">Energy Wh (Low to High)</SelectItem>
-                                                    <SelectItem value="power-desc">Power W (High to Low)</SelectItem>
-                                                    <SelectItem value="power-asc">Power W (Low to High)</SelectItem>
-                                                    <SelectItem value="density-desc">Density Wh/L (High to Low)</SelectItem>
-                                                    <SelectItem value="density-asc">Density Wh/L (Low to High)</SelectItem>
-                                                    <SelectItem value="energyDensityWhKg-desc">Energy Density Wh/Kg (High to Low)</SelectItem>
-                                                    <SelectItem value="energyDensityWhKg-asc">Energy Density Wh/Kg (Low to High)</SelectItem>
-                                                    <SelectItem value="powerDensityWKg-desc">Power Density W/Kg (High to Low)</SelectItem>
-                                                    <SelectItem value="powerDensityWKg-asc">Power Density W/Kg (Low to High)</SelectItem>
-                                                    <SelectItem value="weight-asc">Weight (Lighter first)</SelectItem>
-                                                    <SelectItem value="weight-desc">Weight (Heavier first)</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
+                                        {activeTab === 'grid' && (
+                                            <div className="flex items-center gap-2 w-full md:w-auto animate-fade-in">
+                                                <Label className="text-sm text-muted-foreground whitespace-nowrap">Sort by:</Label>
+                                                <div className="flex items-center gap-1">
+                                                    <Select value={sortParam} onValueChange={setSortParam}>
+                                                        <SelectTrigger className="h-9 w-[180px] bg-background">
+                                                            <SelectValue placeholder="Parameter" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="capacity">Capacity (Ah)</SelectItem>
+                                                            <SelectItem value="energy">Energy (Wh)</SelectItem>
+                                                            <SelectItem value="power">Power (W)</SelectItem>
+                                                            <SelectItem value="weight">Weight (g)</SelectItem>
+                                                            <SelectItem value="density">Vol. Density (Wh/L)</SelectItem>
+                                                            <SelectItem value="energyDensityWhKg">Grav. Density (Wh/Kg)</SelectItem>
+                                                            <SelectItem value="powerDensityWKg">Grav. Power (W/Kg)</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-9 w-9"
+                                                        onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                                                        title={sortOrder === 'asc' ? "Ascending" : "Descending"}
+                                                    >
+                                                        {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
                                         <p className="text-sm text-muted-foreground hidden lg:block">
                                             Found {filteredCells.length} matching cells
                                             {activeTab === 'grid' && ` (showing ${paginatedCells.length})`}
