@@ -238,7 +238,7 @@ const DIYTool = () => {
         min_voltage: Number(minVoltage) || 70,
         max_voltage: Number(maxVoltage) || 80,
         min_continuous_power: Number(minContinuousPower) || 2000,
-        peak_power: Number(peakPower) || (Number(minContinuousPower) * 2),
+        peak_power: Number(peakPower) || (Number(minContinuousPower) * 1),
         min_energy: Number(minEnergy) || 3000,
         max_weight: Number(maxWeight) || 100,
         max_price: Number(maxPrice) || 100000,
@@ -496,11 +496,11 @@ const DIYTool = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="minContinuousPower">
-                        Continuous Power (W)
-                        <InfoTooltip content="Average power consumption. Used for thermal safety calculations." />
+                      <Label htmlFor="minEnergy">
+                        Min Energy (Wh)
+                        <InfoTooltip content="Defines autonomy (range/runtime). Nominal Voltage x Ah = Wh." />
                       </Label>
-                      <Input id="minContinuousPower" type="number" value={minContinuousPower} onChange={(e) => setMinContinuousPower(e.target.value)} placeholder="e.g., 3000" />
+                      <Input id="minEnergy" type="number" value={minEnergy} onChange={(e) => setMinEnergy(e.target.value)} placeholder="e.g., 2000" />
                     </div>
 
                     <div className="space-y-2">
@@ -513,16 +513,16 @@ const DIYTool = () => {
                         type="number"
                         value={peakPower}
                         onChange={(e) => setPeakPower(e.target.value)}
-                        placeholder="e.g. 5000"
+                        placeholder="Optional"
                       />
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="minEnergy">
-                        Min Energy (Wh)
-                        <InfoTooltip content="Defines autonomy (range/runtime). Voltage x Ah = Wh." />
+                      <Label htmlFor="minContinuousPower">
+                        Continuous Power (W)
+                        <InfoTooltip content="Average power consumption. Used for thermal safety calculations." />
                       </Label>
-                      <Input id="minEnergy" type="number" value={minEnergy} onChange={(e) => setMinEnergy(e.target.value)} placeholder="e.g., 2000" />
+                      <Input id="minContinuousPower" type="number" value={minContinuousPower} onChange={(e) => setMinContinuousPower(e.target.value)} placeholder="e.g., 3000" />
                     </div>
 
                     {/* Opcionais */}
