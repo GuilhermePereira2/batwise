@@ -6,25 +6,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight, Battery, Zap, Calculator, Sparkles, Loader2, BarChart3, ExternalLink, AlertTriangle, CheckCircle, Flame, CircuitBoard, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowRight, Battery, Zap, Calculator, Sparkles, Loader2, ExternalLink, AlertTriangle, CheckCircle, CircuitBoard, ChevronDown, ChevronUp, Upload, FileDown, Database } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
+import { ChartTooltip } from "@/components/ui/chart";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { WiringDiagram } from "@/components/WiringDiagram";
 import { getApiUrl } from "@/lib/config";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Analytics } from "@vercel/analytics/next"
 
 // --- IMPORTS CUSTOMIZADOS ---
-import { InfoTooltip } from "@/components/ui/InfoTooltip"; // Certifica-te que este ficheiro existe
-import { USE_CASES } from "@/lib/presets"; // O ficheiro que mostraste acima
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import { USE_CASES } from "@/lib/presets";
 // ----------------------------
 
-// --- TIPAGEM LOCAL (Para garantir compatibilidade com o teu Backend Python) ---
+// --- TIPAGEM LOCAL ---
 interface SafetyAssessment {
   is_safe: boolean;
   safety_score: number;
@@ -68,7 +67,7 @@ interface Configuration {
   continuous_power: number;
   peak_power: number;
   total_price: number;
-  safety: SafetyAssessment; // O campo novo vindo do Python
+  safety: SafetyAssessment;
   fuse?: ComponentData;
   relay?: ComponentData;
   bms?: ComponentData;
@@ -84,7 +83,7 @@ const formatUnit = (value: number, unit: 'W' | 'Wh') => {
   return `${value.toFixed(0)} ${unit}`;
 };
 
-// Função auxiliar para encontrar melhores configs (mantida, mas ajustada para os novos tipos se necessário)
+// Função auxiliar para encontrar melhores configs
 const findBestConfigurations = (configs: Configuration[], targetPrice: number) => {
   if (!configs.length) return [];
 
@@ -97,17 +96,13 @@ const findBestConfigurations = (configs: Configuration[], targetPrice: number) =
   };
 
   const calculateOptimalScore = (config: Configuration) => {
-    // Penalizar configurações inseguras no score ótimo
     if (!config.safety.is_safe) return 0;
-
     const energyDensity = config.battery_energy / config.battery_weight;
     const maxEnergyDensity = Math.max(...configs.map(c => c.battery_energy / c.battery_weight));
     const normalizedDensity = energyDensity / maxEnergyDensity;
-
     const priceDifference = Math.abs(config.total_price - targetPrice);
     const maxPriceDiff = Math.max(...configs.map(c => Math.abs(c.total_price - targetPrice)));
     const normalizedPrice = 1 - (priceDifference / maxPriceDiff);
-
     return (normalizedDensity + normalizedPrice + (config.safety.safety_score / 100)) / 3;
   };
 
@@ -121,23 +116,76 @@ const findBestConfigurations = (configs: Configuration[], targetPrice: number) =
   ];
 };
 
+// --- HELPER PARA DOWNLOAD DE TEMPLATES CSV ---
+const downloadCsvTemplate = (type: string) => {
+  let headers = "";
+  let filename = `${type}_template.csv`;
+
+  switch (type) {
+    case 'cells':
+      headers = "Brand,CellModelNo,NominalVoltage,Capacity,MaxContinuousDischargeRate,MaxContinuousChargeRate,Weight,Price,Cell_Height,Cell_Width,Cell_Thickness,Connection";
+      break;
+    case 'bms':
+      headers = "brand,model,price,vdc_max,a_max,max_cells,link";
+      break;
+    case 'relays':
+      headers = "brand,model,price,vdc_max,a_max,link";
+      break;
+    case 'fuses':
+      headers = "brand,model,price,vdc_max,a_max,link";
+      break;
+    case 'cables':
+      headers = "brand,model,price,section,vdc_max,a_max,link";
+      break;
+    case 'shunts':
+      headers = "brand,model,price,vdc_max,a_max,link";
+      break;
+    default:
+      headers = "col1,col2";
+  }
+
+  const blob = new Blob([headers], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  window.URL.revokeObjectURL(url);
+};
+
+
 const DIYTool = () => {
+  // Config States
   const [useCase, setUseCase] = useState("custom");
   const [includeComponents, setIncludeComponents] = useState(true);
+  const [dataSource, setDataSource] = useState<'default' | 'custom'>('default');
+
+  // Electrical Specs
   const [minVoltage, setMinVoltage] = useState("");
   const [maxVoltage, setMaxVoltage] = useState("");
   const [minContinuousPower, setMinContinuousPower] = useState("");
+  const [peakPower, setPeakPower] = useState(""); // NOVO CAMPO
   const [minEnergy, setMinEnergy] = useState("");
-  const [maxEnergy, setMaxEnergy] = useState("");
+
+  // Limits
   const [targetPrice, setTargetPrice] = useState("");
   const [maxWeight, setMaxWeight] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [maxWidth, setMaxWidth] = useState("");
   const [maxLength, setMaxLength] = useState("");
   const [maxHeight, setMaxHeight] = useState("");
-  const [inverter, setInverter] = useState("");
-  const [outputVoltage, setOutputVoltage] = useState("");
 
+  // File Upload States
+  const [customFiles, setCustomFiles] = useState<{ [key: string]: File | null }>({
+    cells: null,
+    relays: null,
+    cables: null,
+    shunts: null,
+    bms: null,
+    fuses: null
+  });
+
+  // Results States
   const [showResults, setShowResults] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<Configuration[]>([]);
@@ -150,18 +198,18 @@ const DIYTool = () => {
 
   const { toast } = useToast();
 
-  // --- LÓGICA DE PRESETS ---
   const handlePresetChange = (value: string) => {
     setUseCase(value);
     const preset = USE_CASES[value];
 
     if (preset && preset.values) {
-      // Apenas preenchemos os campos. NÃO chamamos o backend.
       if (preset.values.minVoltage) setMinVoltage(preset.values.minVoltage);
       if (preset.values.maxVoltage) setMaxVoltage(preset.values.maxVoltage);
       if (preset.values.minPower) setMinContinuousPower(preset.values.minPower);
       if (preset.values.minEnergy) setMinEnergy(preset.values.minEnergy);
       if (preset.values.maxWeight) setMaxWeight(preset.values.maxWeight || "");
+      // Resetar peak power no preset ou definir um valor padrão
+      setPeakPower("");
 
       toast({
         title: "Settings Updated",
@@ -170,20 +218,29 @@ const DIYTool = () => {
     }
   };
 
-  // --- LÓGICA DE GERAÇÃO (BACKEND) ---
+  const handleFileChange = (type: string, file: File | null) => {
+    setCustomFiles(prev => ({ ...prev, [type]: file }));
+    if (file) {
+      toast({
+        title: "File Attached",
+        description: `${file.name} loaded for ${type}.`,
+      });
+    }
+  };
+
   const handleGenerate = async () => {
     setIsLoading(true);
     setShowResults(false);
     setResults([]);
 
     try {
-      // Conversão e defaults para mm (inputs assumem-se em mm ou valores brutos)
-      const payload = {
+      const configData = {
         min_voltage: Number(minVoltage) || 70,
         max_voltage: Number(maxVoltage) || 80,
         min_continuous_power: Number(minContinuousPower) || 2000,
+        peak_power: Number(peakPower) || (Number(minContinuousPower) * 1.5), // Fallback lógico se vazio
         min_energy: Number(minEnergy) || 3000,
-        max_weight: Number(maxWeight) || 100, // Default alto se vazio
+        max_weight: Number(maxWeight) || 100,
         max_price: Number(maxPrice) || 100000,
         max_width: Number(maxWidth) || 2000,
         max_length: Number(maxLength) || 10000,
@@ -195,12 +252,33 @@ const DIYTool = () => {
       };
 
       const url = getApiUrl("calculate");
-      console.log(`📡 A enviar pedido para: ${url}`);
+      let body;
+      let headers: HeadersInit = {};
 
-      const response = await fetch(url, { // <--- Usa a variável url aqui
+      if (dataSource === 'custom') {
+        // Modo Custom: Envia FormData
+        const formData = new FormData();
+        formData.append('config', JSON.stringify(configData));
+        formData.append('use_custom_db', 'true');
+
+        Object.entries(customFiles).forEach(([key, file]) => {
+          if (file) formData.append(key, file);
+        });
+
+        body = formData;
+        // Não definir Content-Type para multipart/form-data, o browser define o boundary
+      } else {
+        // Modo Default: Envia JSON
+        body = JSON.stringify(configData);
+        headers = { 'Content-Type': 'application/json' };
+      }
+
+      console.log(`📡 A enviar pedido para: ${url} (Mode: ${dataSource})`);
+
+      const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        headers,
+        body,
       });
 
       if (!response.ok) {
@@ -219,7 +297,7 @@ const DIYTool = () => {
       if (data.total === 0) {
         toast({
           title: "No solutions found",
-          description: "Try relaxing constraints.",
+          description: "Try relaxing constraints or checking your custom CSVs.",
           variant: "destructive"
         });
       } else {
@@ -228,7 +306,6 @@ const DIYTool = () => {
           description: `Showing ${data.plotResults.length} configurations out of ${data.total} safe configurations.`,
         });
 
-        // Scroll suave para os resultados
         setTimeout(() => {
           document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" });
         }, 100);
@@ -238,7 +315,7 @@ const DIYTool = () => {
       console.error('Error:', error);
       toast({
         title: "Connection Failed",
-        description: "Ensure the Python backend is running (uvicorn main:app).",
+        description: error.message || "Ensure the Python backend is running.",
         variant: "destructive"
       });
     } finally {
@@ -248,30 +325,25 @@ const DIYTool = () => {
 
   const interpolateColor = (score: number) => {
     const opacity = Math.max(0.05, score / 100);
-    return `rgba(249, 115, 22, ${opacity})`; // laranja do site
+    return `rgba(249, 115, 22, ${opacity})`;
   };
-
 
   const CustomScatterDot = (props: any) => {
     const { cx, cy, payload } = props;
-
-    // O safety score vem do objeto Configuration
     const score = payload?.safety?.safety_score ?? 0;
-
     const color = interpolateColor(score);
 
     return (
       <circle
         cx={cx}
         cy={cy}
-        r={6}           // tamanho dos pontos
-        fill={color}    // cor interpolada
+        r={6}
+        fill={color}
         strokeWidth={1}
         style={{ cursor: "pointer" }}
       />
     );
   };
-
 
   const scrollToCalculator = () => {
     document.getElementById("calculator")?.scrollIntoView({ behavior: "smooth" });
@@ -354,17 +426,66 @@ const DIYTool = () => {
 
               {/* 2. FORMULARIO PRINCIPAL */}
               <Card className="shadow-soft animate-slide-up w-full">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 mb-2">
                     <Calculator className="w-5 h-5 text-accent" /> Configuration Inputs
                   </CardTitle>
+
+                  {/* --- FEATURE 1: DB SWITCH BUTTON/TABS --- */}
+                  <Tabs value={dataSource} onValueChange={(v) => setDataSource(v as 'default' | 'custom')} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="default" className="text-xs">BatWise Database</TabsTrigger>
+                      <TabsTrigger value="custom" className="text-xs">My Components</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
                 </CardHeader>
+
                 <CardContent className="space-y-6">
+
+                  {/* --- FEATURE 2: CUSTOM DB UPLOAD FIELDS --- */}
+                  {dataSource === 'custom' && (
+                    <div className="space-y-4 p-4 border border-dashed rounded-lg bg-slate-50">
+                      <Label className="text-xs font-bold uppercase text-slate-500 mb-2 block">Upload Component CSVs</Label>
+
+                      {[
+                        { id: 'cells', label: 'Cells' },
+                        { id: 'bms', label: 'BMS' },
+                        { id: 'relays', label: 'Relays' },
+                        { id: 'cables', label: 'Cables' },
+                        { id: 'shunts', label: 'Shunt' },
+                        { id: 'fuses', label: 'Fuses' }
+                      ].map((item) => (
+                        <div key={item.id} className="grid grid-cols-[1fr_auto] gap-2 items-end">
+                          <div className="space-y-1">
+                            <Label htmlFor={item.id} className="text-xs">{item.label} CSV</Label>
+                            <Input
+                              id={item.id}
+                              type="file"
+                              accept=".csv"
+                              className="h-8 text-xs file:text-xs"
+                              onChange={(e) => handleFileChange(item.id, e.target.files?.[0] || null)}
+                            />
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title={`Download ${item.label} Template`}
+                            onClick={() => downloadCsvTemplate(item.id)}
+                          >
+                            <FileDown className="h-4 w-4 text-slate-500" />
+                          </Button>
+                        </div>
+                      ))}
+                      <p className="text-[10px] text-slate-500 mt-2 italic">*Upload at least the Cells CSV to proceed.</p>
+                    </div>
+                  )}
+
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="minVoltage">
                         Min Voltage (V)
-                        <InfoTooltip content="The minimum voltage where your system shuts down (Low Voltage Cutoff of the controller/inverter). Setting this correctly prevents the battery from shutting down before it is fully depleted and helps us calculate the real runtime/range." />
+                        <InfoTooltip content="The minimum voltage where your system shuts down (Low Voltage Cutoff)." />
                       </Label>
                       <Input id="minVoltage" type="number" value={minVoltage} onChange={(e) => setMinVoltage(e.target.value)} placeholder="e.g., 36" />
                     </div>
@@ -372,7 +493,7 @@ const DIYTool = () => {
                     <div className="space-y-2">
                       <Label htmlFor="maxVoltage">
                         Max Voltage (V)
-                        <InfoTooltip content="The battery voltage at 100% capacity. This MUST exactly match the output voltage of your charger or controller/inverter. E.g.: If your charger specifies 54.6V, enter 54.6V. Errors here can be dangerous." />
+                        <InfoTooltip content="The battery voltage at 100% capacity. MUST match charger voltage." />
                       </Label>
                       <Input id="maxVoltage" type="number" value={maxVoltage} onChange={(e) => setMaxVoltage(e.target.value)} placeholder="e.g., 54.6" />
                     </div>
@@ -380,15 +501,31 @@ const DIYTool = () => {
                     <div className="space-y-2">
                       <Label htmlFor="minContinuousPower">
                         Continuous Power (W)
-                        <InfoTooltip content="The average power your motor/equipment consumes constantly. We use this value to calculate thermal dissipation and prevent cell overheating (ensuring a safe C-rate)." />
+                        <InfoTooltip content="Average power consumption. Used for thermal safety calculations." />
                       </Label>
                       <Input id="minContinuousPower" type="number" value={minContinuousPower} onChange={(e) => setMinContinuousPower(e.target.value)} placeholder="e.g., 3000" />
                     </div>
 
+                    {/* --- FEATURE 3: PEAK POWER INPUT --- */}
                     <div className="space-y-2">
+                      <Label htmlFor="peakPower" className="text-orange-600 font-medium">
+                        Peak Power (W) (30s)
+                        <InfoTooltip content="Potência que a bateria tem de ser capaz de aguentar durante 30 segundos." />
+                      </Label>
+                      <Input
+                        id="peakPower"
+                        type="number"
+                        value={peakPower}
+                        onChange={(e) => setPeakPower(e.target.value)}
+                        placeholder="e.g. 5000"
+                        className="border-orange-200 focus:border-orange-500"
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
                       <Label htmlFor="minEnergy">
                         Min Energy (Wh)
-                        <InfoTooltip content="Defines your autonomy (range or runtime). Higher values will increase the cell count, weight, and cost. (Nominal Voltage x Ah = Wh)." />
+                        <InfoTooltip content="Defines autonomy (range/runtime). Voltage x Ah = Wh." />
                       </Label>
                       <Input id="minEnergy" type="number" value={minEnergy} onChange={(e) => setMinEnergy(e.target.value)} placeholder="e.g., 2000" />
                     </div>
@@ -396,13 +533,13 @@ const DIYTool = () => {
                     {/* Opcionais */}
                     <div className="space-y-2">
                       <Label>Max Weight (kg)
-                        <InfoTooltip content="Maximum weight limit of the final battery pack (including cells, BMS, and structural supports). Crucial for applications like drones or electric bicycles." />
+                        <InfoTooltip content="Maximum weight limit of the final battery pack." />
                       </Label>
                       <Input type="number" value={maxWeight} onChange={(e) => setMaxWeight(e.target.value)} placeholder="Optional" />
                     </div>
                     <div className="space-y-2">
                       <Label>Max Price ($)
-                        <InfoTooltip content="Your maximum budget. The algorithm will prioritize finding the best cells (safety/quality) that fit within this value." />
+                        <InfoTooltip content="Maximum budget." />
                       </Label>
                       <Input type="number" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Optional" />
                     </div>
@@ -433,7 +570,7 @@ const DIYTool = () => {
                     />
                     <Label htmlFor="includeComponents" className="cursor-pointer">
                       Calculate BMS, Fuse & Accessories
-                      <InfoTooltip content="Uncheck this if you only want to calculate the raw cell configuration without the extra components." />
+                      <InfoTooltip content="Uncheck to calculate only raw cell configuration." />
                     </Label>
                   </div>
                   <Button onClick={handleGenerate} className="w-full" size="lg" disabled={isLoading}>
@@ -472,12 +609,10 @@ const DIYTool = () => {
                       </TabsList>
 
                       <TabsContent value="best-solutions">
-                        {/* Adicionei esta DIV para criar a grelha */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {findBestConfigurations(results, Number(targetPrice) || 0).map(({ title, config, metric }, idx) => (
                             <Card
                               key={title + idx}
-                              // Removi classes desnecessárias, mantive as visuais
                               className={`cursor-pointer hover:shadow-lg transition-all border-l-4 ${config.safety.is_safe ? 'border-l-[#f97316]' : 'border-l-red-500'}`}
                               onClick={() => setSelectedSolution(config)}
                             >
@@ -510,7 +645,6 @@ const DIYTool = () => {
                       </TabsContent>
 
                       <TabsContent value="plot" className="h-[500px] flex flex-col">
-                        {/* Área de Seleção dos Eixos (Mantida igual) */}
                         <div className="grid grid-cols-2 gap-4 mb-4 shrink-0">
                           <div>
                             <Label>X Axis</Label>
@@ -542,10 +676,7 @@ const DIYTool = () => {
                           </div>
                         </div>
 
-                        {/* Container Flex para Gráfico + Legenda Lateral */}
                         <div className="flex flex-1 min-h-0 w-full">
-
-                          {/* Área do Gráfico */}
                           <div className="flex-1 h-full w-full">
                             <ResponsiveContainer width="100%" height="100%">
                               <ScatterChart margin={{ top: 20, right: 10, bottom: 20, left: 0 }}>
@@ -614,7 +745,6 @@ const DIYTool = () => {
 
       <Footer />
 
-      {/* DETAILS MODAL - UPDATED WITH SAFETY INFO */}
       {selectedSolution && (
         <SolutionDetailModal
           solution={selectedSolution}
@@ -627,12 +757,14 @@ const DIYTool = () => {
   );
 };
 
+// ... O componente SolutionDetailModal mantém-se igual ... 
+// (Mantive-o fora deste bloco para não repetir código desnecessário, 
+//  mas certifica-te de incluir a definição do SolutionDetailModal no final do teu ficheiro)
+
 const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { solution: Configuration, isOpen: boolean, onClose: () => void, showComponents: boolean }) => {
   if (!solution) return null;
 
   const [showDiagram, setShowDiagram] = useState(false);
-  const nominalCurrent = (solution.cell.Capacity / 1000) * solution.cell.MaxContinuousDischargeRate * solution.parallel_cells;
-  const nominalPower = solution.battery_voltage * nominalCurrent;
 
   const AffiliateLink = ({ link }: { link?: string }) => {
     if (!link) return null;
@@ -662,7 +794,7 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
             </div>
             <div className="ml-3">
               <p className="text-sm text-orange-700 font-medium">
-                <strong></strong>Disclaimer: This calculation is a theoretical suggestion.<strong></strong>
+                <strong>Disclaimer: This calculation is a theoretical suggestion.</strong>
               </p>
               <p className="text-sm text-orange-700 mt-1">
                 Building lithium batteries carries significant risks (fire, shock).
@@ -675,7 +807,6 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
           </div>
         </div>
 
-        {/* --- SAFETY WARNINGS SECTION --- */}
         {solution.safety.warnings.length > 0 && (
           <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg mb-4">
             <h4 className="font-bold text-amber-800 flex items-center gap-2 mb-2">
@@ -696,7 +827,6 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-          {/* Column 1: Battery Specs */}
           <div className="space-y-4">
             <Card>
               <CardHeader><CardTitle className="text-base">Battery Specs</CardTitle></CardHeader>
@@ -706,6 +836,7 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
                 <p><strong>Capacity:</strong> {solution.battery_capacity.toFixed(1)} Ah</p>
                 <p><strong>Energy:</strong> {formatUnit(solution.battery_energy, 'Wh')}</p>
                 <p><strong>Continuous Power:</strong> {formatUnit(solution.continuous_power, 'W')}</p>
+                <p><strong>Peak Power:</strong> {formatUnit(solution.peak_power, 'W')}</p>
                 <p><strong>Cells' Weight:</strong> {solution.battery_weight.toFixed(2)} kg</p>
                 <p className="font-bold mt-2 border-t pt-1">Total Price: ${solution.total_price.toFixed(2)}</p>
               </CardContent>
@@ -724,7 +855,6 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
             </Card>
           </div>
 
-          {/* Column 2 & 3: Components */}
           {showComponents && (
             <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
               {solution.bms && (
@@ -738,10 +868,8 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
                     <p><strong>Brand:</strong> {solution.bms.brand}</p>
                     <p><strong>Model:</strong> {solution.bms.model}</p>
                     <p><strong>Max Cells:</strong> {solution.bms.max_cells}</p>
-                    {/*<p><strong>Voltage Range:</strong> {solution.bms.vdc_min} – {solution.bms.vdc_max} V</p>*/}
                     <p><strong>Max Current:</strong> {solution.bms.a_max} A</p>
-                    {/*<p><strong>Operating Temp:</strong> {solution.bms.temp_min}°C – {solution.bms.temp_max}°C</p>*/}
-                    <p><strong>Est. Price:</strong> ${solution.bms.master_price?.toFixed(2)} (Master) / ${solution.bms.slave_price?.toFixed(2)} (Slave)</p>
+                    <p><strong>Est. Price:</strong> ${solution.bms.master_price?.toFixed(2) || solution.bms.price.toFixed(2)}</p>
                     <AffiliateLink link={solution.bms.link} />
                   </CardContent>
                 </Card>
@@ -759,7 +887,6 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
                     <p><strong>Model:</strong> {solution.fuse.model}</p>
                     <p><strong>Voltage Rating:</strong> {solution.fuse.vdc_max} V</p>
                     <p><strong>Current Rating:</strong> {solution.fuse.a_max} A</p>
-                    {/*<p><strong>Operating Temp:</strong> {solution.fuse.temp_min}°C – {solution.fuse.temp_max}°C</p>*/}
                     <p><strong>Est. Price:</strong> ${solution.fuse.price.toFixed(2)}</p>
                     <AffiliateLink link={solution.fuse.link} />
                   </CardContent>
@@ -768,13 +895,12 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
 
               {solution.relay && (
                 <Card>
-                  <CardHeader><CardTitle className="text-base">Relay / Contactor</CardTitle></CardHeader>
+                  <CardHeader><CardTitle className="text-base">Relay</CardTitle></CardHeader>
                   <CardContent className="text-sm space-y-1">
                     <p><strong>Brand:</strong> {solution.relay.brand}</p>
                     <p><strong>Model:</strong> {solution.relay.model}</p>
                     <p><strong>Voltage Rating:</strong> {solution.relay.vdc_max} V</p>
                     <p><strong>Current Rating:</strong> {solution.relay.a_max} A</p>
-                    {/*<p><strong>Operating Temp:</strong> {solution.relay.temp_min}°C – {solution.relay.temp_max}°C</p>*/}
                     <p><strong>Est. Price:</strong> ${solution.relay.price.toFixed(2)}</p>
                     <AffiliateLink link={solution.relay.link} />
                   </CardContent>
@@ -790,7 +916,6 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
                     <p><strong>Cross Section:</strong> {solution.cable.section} mm²</p>
                     <p><strong>Voltage Rating:</strong> {solution.cable.vdc_max} V</p>
                     <p><strong>Current Rating:</strong> {solution.cable.a_max} A</p>
-                    {/*<p><strong>Operating Temp:</strong> {solution.cable.temp_min}°C – {solution.cable.temp_max}°C</p>*/}
                     <p><strong>Est. Price (2m):</strong> ${solution.cable.price.toFixed(2)}</p>
                     <AffiliateLink link={solution.cable.link} />
                   </CardContent>
@@ -805,7 +930,6 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
                     <p><strong>Model:</strong> {solution.shunt.model}</p>
                     <p><strong>Voltage Rating:</strong> {solution.shunt.vdc_max} V</p>
                     <p><strong>Current Rating:</strong> {solution.shunt.a_max} A</p>
-                    {/*<p><strong>Operating Temp:</strong> {solution.shunt.temp_min}°C – {solution.shunt.temp_max}°C</p>*/}
                     <p><strong>Est. Price:</strong> ${solution.shunt.price.toFixed(2)}</p>
                     <AffiliateLink link={solution.shunt.link} />
                   </CardContent>
@@ -815,25 +939,20 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
           )}
         </div>
 
-        {/* --- Wiring Diagram --- */}
         {showComponents && (
           <div className="mb-6">
             <Button
               variant="outline"
-              // Alterado: Cor do botão, borda e hover para tons neutros
               className="w-full flex items-center justify-between border-slate-300 text-slate-700 hover:bg-slate-50"
               onClick={() => setShowDiagram(!showDiagram)}
             >
               <span className="flex items-center gap-2">
-                {/* Alterado: Apenas este ícone é agora text-amber-600 */}
                 <CircuitBoard className="w-4 h-4 text-amber-600" />
                 {showDiagram ? "Hide Wiring Diagram" : "Show Wiring Diagram"}
               </span>
-              {/* Alterado: As setas voltam a ser cinzentas/neutras */}
               {showDiagram ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
             </Button>
 
-            {/* Renderização Condicional */}
             {showDiagram && (
               <div className="mt-4 animate-in fade-in zoom-in-95 duration-300">
                 <WiringDiagram config={solution} />
@@ -842,7 +961,7 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
           </div>
         )}
       </DialogContent>
-    </Dialog >
+    </Dialog>
   );
 };
 
