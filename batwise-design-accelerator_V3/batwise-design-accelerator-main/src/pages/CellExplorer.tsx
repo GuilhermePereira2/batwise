@@ -134,6 +134,25 @@ const getDensity = (c: Cell) => {
     return volumeL > 0 ? energy / volumeL : 0;
 };
 
+// Helper Component: Chart Legend
+const ChartLegend = ({ colors }: { colors: { [key: string]: string } }) => {
+    return (
+        <div className="flex flex-wrap justify-center gap-4 mt-4 p-4 bg-muted/20 rounded-lg border border-border/50">
+            {Object.entries(colors).map(([chemistry, color]) => (
+                <div key={chemistry} className="flex items-center gap-2">
+                    <span
+                        className="w-3 h-3 rounded-full shadow-sm"
+                        style={{ backgroundColor: color }}
+                    />
+                    <span className="text-xs font-medium text-muted-foreground">
+                        {chemistry}
+                    </span>
+                </div>
+            ))}
+        </div>
+    );
+};
+
 // --- Main Component ---
 const CellExplorer = () => {
     const navigate = useNavigate();
@@ -782,7 +801,9 @@ const CellExplorer = () => {
                                                         </ScatterChart>
                                                     </ResponsiveContainer>
                                                 </ChartContainer>
+                                                <ChartLegend colors={chemistryColors} />
                                             </div>
+
                                         </div>
                                     </TabsContent>
                                 </Tabs>
