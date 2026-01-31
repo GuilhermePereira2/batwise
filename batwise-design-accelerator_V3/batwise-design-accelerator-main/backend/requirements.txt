@@ -8,3 +8,4 @@ python-multipart
 fastapi-mail
 email-validator
 resend
+python-multipart

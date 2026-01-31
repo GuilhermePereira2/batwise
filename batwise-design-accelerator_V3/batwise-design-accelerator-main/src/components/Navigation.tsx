@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogIn } from "lucide-react"; // Opcional: Importei o ícone LogIn
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -42,8 +42,14 @@ const Navigation = () => {
             ))}
           </nav>
 
-          {/* Desktop Auth Buttons */}
-          <div className="hidden lg:flex items-center gap-4">
+          {/* Desktop Auth Buttons (ALTERADO AQUI) */}
+          <div className="hidden lg:flex items-center gap-3">
+            {/* Botão de Login Secundário */}
+            <Button variant="ghost" asChild>
+              <Link to="/login">Log In</Link>
+            </Button>
+
+            {/* Botão Principal de Ação */}
             <Button asChild>
               <Link to="/diy">Try for Free</Link>
             </Button>
@@ -76,7 +82,14 @@ const Navigation = () => {
                   {item.label}
                 </Link>
               ))}
+
+              {/* Botões Mobile (ALTERADO AQUI) */}
               <div className="flex flex-col gap-3 pt-4 border-t border-border">
+                <Button variant="ghost" asChild className="w-full justify-start">
+                  <Link to="/login" onClick={() => setIsOpen(false)}>
+                    <LogIn className="w-4 h-4 mr-2" /> Log In
+                  </Link>
+                </Button>
                 <Button asChild className="w-full">
                   <Link to="/diy" onClick={() => setIsOpen(false)}>
                     Try for Free

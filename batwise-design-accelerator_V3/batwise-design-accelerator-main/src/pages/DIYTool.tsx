@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { WiringDiagram } from "@/components/WiringDiagram";
 import { getApiUrl } from "@/lib/config";
 import { Checkbox } from "@/components/ui/checkbox";
+import { jsPDF } from "jspdf";
 
 // --- IMPORTS CUSTOMIZADOS ---
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
@@ -75,6 +76,8 @@ interface Configuration {
   shunt?: ComponentData;
   cable?: ComponentData;
 }
+
+
 
 // Helper function to format W/Wh to kW/kWh
 const formatUnit = (value: number, unit: 'W' | 'Wh') => {
@@ -252,36 +255,37 @@ const DIYTool = () => {
       };
 
       const url = getApiUrl("calculate");
-      let body;
-      let headers: HeadersInit = {};
+
+      // --- ALTERAÇÃO AQUI: USAR SEMPRE FORMDATA ---
+      const formData = new FormData();
+
+      // Envia a configuração como uma string JSON dentro do formulário
+      formData.append('config', JSON.stringify(configData));
 
       if (dataSource === 'custom') {
-        const formData = new FormData();
-        formData.append('config', JSON.stringify(configData));
         formData.append('use_custom_db', 'true');
-
+        // Anexar ficheiros apenas se existirem
         Object.entries(customFiles).forEach(([key, file]) => {
           if (file) formData.append(key, file);
         });
-
-        body = formData;
       } else {
-        body = JSON.stringify(configData);
-        headers = { 'Content-Type': 'application/json' };
+        formData.append('use_custom_db', 'false');
       }
 
       console.log(`📡 A enviar pedido para: ${url} (Mode: ${dataSource})`);
 
       const response = await fetch(url, {
         method: 'POST',
-        headers,
-        body,
+        // Nota: NÃO definir 'Content-Type': 'application/json'
+        // O browser define automaticamente o Content-Type correto para multipart/form-data com o boundary
+        body: formData,
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Server Error: ${errorText}`);
       }
+      // ---------------------------------------------
 
       const data = await response.json();
 
@@ -828,8 +832,117 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { so
     document.body.removeChild(link);
   };
 
+  // --- FUNÇÃO PARA GERAR PDF ---
+  const downloadDatasheet_pdf = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    let y = 20;
+
+    // Helper para adicionar linhas de texto
+    const addLine = (label: string, value: string, isBold: boolean = false) => {
+      doc.setFont("helvetica", isBold ? "bold" : "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text(label, margin, y);
+
+      doc.setFont("helvetica", "normal");
+      doc.text(value, margin + 60, y);
+      y += 7;
+    };
+
+    // Helper para Títulos de Secção
+    const addSectionTitle = (title: string) => {
+      y += 5;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(249, 115, 22); // Laranja da marca
+      doc.text(title.toUpperCase(), margin, y);
+      doc.setDrawColor(249, 115, 22);
+      doc.line(margin, y + 2, pageWidth - margin, y + 2);
+      y += 10;
+    };
+
+    // --- HEADER ---
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(40, 40, 40);
+    doc.text("Watt Builder", margin, y);
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 100, 100);
+    doc.text("Technical Datasheet", margin, y + 6);
+
+    const dateStr = new Date().toLocaleDateString();
+    doc.text(dateStr, pageWidth - margin - 20, y);
+
+    y += 20;
+
+    // --- PROJECT SUMMARY ---
+    addSectionTitle("Project Summary");
+    addLine("Configuration:", `${solution.series_cells}S ${solution.parallel_cells}P`, true);
+    addLine("Cell Model:", `${solution.cell.Brand} ${solution.cell.CellModelNo}`);
+    addLine("Total Cells:", `${solution.series_cells * solution.parallel_cells} units`);
+
+    // --- ELECTRICAL SPECS ---
+    addSectionTitle("Electrical Specifications");
+    addLine("Nominal Voltage:", `${solution.battery_voltage.toFixed(1)} V`);
+    addLine("Capacity:", `${solution.battery_capacity.toFixed(1)} Ah`);
+    addLine("Total Energy:", formatUnit(solution.battery_energy, 'Wh'));
+    addLine("Max Cont. Power:", formatUnit(solution.continuous_power, 'W'));
+    addLine("Peak Power (30s):", formatUnit(solution.peak_power, 'W'));
+
+    // --- MECHANICAL SPECS ---
+    addSectionTitle("Mechanical Specifications");
+    addLine("Total Weight (Cells):", `${solution.battery_weight.toFixed(2)} kg`);
+    addLine("Cell Dimensions:", `${solution.cell.Cell_Width} x ${solution.cell.Cell_Height} mm`);
+
+    // --- COMPONENTS ---
+    addSectionTitle("Key Components");
+    addLine("BMS:", solution.bms ? `${solution.bms.brand} ${solution.bms.model} (${solution.bms.a_max}A)` : "N/A");
+    addLine("Fuse:", solution.fuse ? `${solution.fuse.brand} (${solution.fuse.a_max}A)` : "N/A");
+    addLine("Relay:", solution.relay ? `${solution.relay.brand} (${solution.relay.a_max}A)` : "N/A");
+    addLine("Cable:", solution.cable ? `${solution.cable.brand} (${solution.cable.section}mm²)` : "N/A");
+
+    // --- SAFETY ---
+    addSectionTitle("Safety Assessment");
+    const scoreColor = solution.safety.is_safe ? [34, 197, 94] : [239, 68, 68];
+    doc.setTextColor(scoreColor[0], scoreColor[1], scoreColor[2]);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Safety Score: ${solution.safety.safety_score}/100`, margin, y);
+    y += 7;
+
+    if (solution.safety.warnings.length > 0) {
+      doc.setTextColor(200, 50, 50);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      solution.safety.warnings.forEach(warn => {
+        const splitText = doc.splitTextToSize(`- ${warn}`, pageWidth - (margin * 2));
+        doc.text(splitText, margin, y);
+        y += (splitText.length * 5);
+      });
+    } else {
+      doc.setTextColor(0, 0, 0);
+      doc.text("No critical warnings detected.", margin, y);
+      y += 7;
+    }
+
+    // --- DISCLAIMER (Footer) ---
+    y = 270;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 5;
+    doc.setFontSize(8);
+    doc.setTextColor(120, 120, 120);
+    doc.text("Disclaimer: This datasheet is generated automatically by Watt Builder algorithms.", margin, y);
+    doc.text("Values are theoretical estimates. Always consult a professional before assembly.", margin, y + 4);
+
+    doc.save(`Datasheet_${solution.series_cells}S${solution.parallel_cells}P_${solution.cell.CellModelNo}.pdf`);
+  };
+
   // --- DATASHEET GENERATOR ---
-  const downloadDatasheet = () => {
+  const downloadDatasheet_txt = () => {
     const content = `
 TECHNICAL DATASHEET
 Generated by Watt Builder
@@ -1027,9 +1140,13 @@ Always verify specifications with component manufacturers.
                   <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" />
                   Download BOM (Excel/CSV)
                 </Button>
-                <Button variant="outline" className="w-full justify-start h-9" onClick={downloadDatasheet}>
+                <Button variant="outline" className="w-full justify-start h-9" onClick={downloadDatasheet_txt}>
                   <FileText className="w-4 h-4 mr-2 text-blue-600" />
-                  Download Technical Datasheet
+                  Download Technical Datasheet (txt)
+                </Button>
+                <Button variant="outline" className="w-full justify-start h-9" onClick={downloadDatasheet_pdf}>
+                  <FileText className="w-4 h-4 mr-2 text-red-600" />
+                  Download Technical Datasheet (PDF)
                 </Button>
               </CardContent>
             </Card>
@@ -1057,6 +1174,7 @@ Always verify specifications with component manufacturers.
                     <p><strong>Model:</strong> {solution.fuse.brand} {solution.fuse.model}</p>
                     <p><strong>Rating:</strong> {solution.fuse.a_max}A / {solution.fuse.vdc_max}V</p>
                     <p><strong>Price:</strong> ${solution.fuse.price.toFixed(2)}</p>
+                    <AffiliateLink link={solution.fuse.link} />
                   </CardContent>
                 </Card>
               )}
@@ -1065,8 +1183,31 @@ Always verify specifications with component manufacturers.
                   <CardHeader><CardTitle className="text-base">Relay</CardTitle></CardHeader>
                   <CardContent className="text-sm space-y-1">
                     <p><strong>Model:</strong> {solution.relay.brand} {solution.relay.model}</p>
-                    <p><strong>Rating:</strong> {solution.relay.a_max}A</p>
+                    <p><strong>Rating:</strong> {solution.relay.a_max}A / {solution.relay.vdc_max}V</p>
                     <p><strong>Price:</strong> ${solution.relay.price.toFixed(2)}</p>
+                    <AffiliateLink link={solution.relay.link} />
+                  </CardContent>
+                </Card>
+              )}
+              {solution.cable && (
+                <Card>
+                  <CardHeader><CardTitle className="text-base">Cabling</CardTitle></CardHeader>
+                  <CardContent className="text-sm space-y-1">
+                    <p><strong>Model:</strong> {solution.cable.brand} {solution.cable.model}</p>
+                    <p><strong>Cross Section:</strong> {solution.cable.section} mm²</p>
+                    <p><strong>Rating:</strong> {solution.cable.a_max} A / {solution.cable.vdc_max} V</p>
+                    <AffiliateLink link={solution.cable.link} />
+                  </CardContent>
+                </Card>
+              )}
+
+              {solution.shunt && (
+                <Card>
+                  <CardHeader><CardTitle className="text-base">Shunt</CardTitle></CardHeader>
+                  <CardContent className="text-sm space-y-1">
+                    <p><strong>Model:</strong> {solution.shunt.brand} {solution.shunt.model}</p>
+                    <p><strong>Rating:</strong> {solution.shunt.a_max} A / {solution.shunt.vdc_max} V</p>
+                    <AffiliateLink link={solution.shunt.link} />
                   </CardContent>
                 </Card>
               )}

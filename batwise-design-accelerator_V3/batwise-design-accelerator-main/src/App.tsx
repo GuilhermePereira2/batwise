@@ -15,6 +15,9 @@ import CellExplorer from "@/pages/CellExplorer";
 import BlogPost from "./pages/BlogPost";
 import Index from "./pages/Index";
 import CellDetails from "./pages/CellDetails";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
 
 
 const queryClient = new QueryClient();
@@ -39,6 +42,9 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
           <Route path="/cell/:slug" element={<CellDetails />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
