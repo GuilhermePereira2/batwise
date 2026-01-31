@@ -21,12 +21,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
-import { Search, Loader2, Database, X, ExternalLink, RefreshCw, LayoutGrid, BarChart3, Microscope, FlaskConical, ClipboardCheck, ArrowUp, ArrowDown } from "lucide-react";
+import { Search, Loader2, Database, X, ExternalLink, RefreshCw, LayoutGrid, BarChart3, Microscope, FlaskConical, ClipboardCheck, ArrowUp, ArrowDown, Check, ChevronsUpDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { getApiUrl } from "@/lib/config";
 import { useNavigate } from "react-router-dom";
-import { Analytics } from "@vercel/analytics/next";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 // --- Types ---
 interface Cell {
@@ -75,9 +75,9 @@ interface FilterBoundaries {
 // Renamed to 'chemistry'
 interface FilterValues {
     searchQuery: string;
-    brand: string;
-    chemistry: string;
-    cellStack: string;
+    brand: string[];
+    chemistry: string[];
+    cellStack: string[];
     capacity: [number, number];
     weight: [number, number];
     dischargeRate: [number, number];
@@ -153,6 +153,13 @@ const ChartLegend = ({ colors }: { colors: { [key: string]: string } }) => {
     );
 };
 
+const getFormatFromStack = (stack: string) => {
+    if (!stack) return "Unknown";
+    const parts = stack.split('-');
+    // Retorna a parte depois do hifen, ou a string original se não houver hifen
+    return parts.length > 1 ? parts[1] : stack;
+};
+
 // --- Main Component ---
 const CellExplorer = () => {
     const navigate = useNavigate();
@@ -172,6 +179,7 @@ const CellExplorer = () => {
     const [yAxis, setYAxis] = useState("energyWh");
     const [sortParam, setSortParam] = useState("capacity"); // Parâmetro
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+    const [formatCounts, setFormatCounts] = useState<Record<string, number>>({});
 
     // Set browser tab title
     useEffect(() => {
@@ -205,6 +213,22 @@ const CellExplorer = () => {
                 setAllCells(data);
                 setFilteredCells(data);
 
+                const counts: Record<string, number> = {};
+                data.forEach(cell => {
+                    const fmt = getFormatFromStack(cell.Cell_Stack);
+                    counts[fmt] = (counts[fmt] || 0) + 1;
+                });
+                setFormatCounts(counts);
+
+                const cellStackOptions = new Set<string>();
+                Object.entries(counts).forEach(([fmt, count]) => {
+                    if (count > 5) {
+                        cellStackOptions.add(fmt);
+                    } else {
+                        cellStackOptions.add("Cylindrical");
+                    }
+                });
+
                 const getOptions = (key: keyof Cell) => [
                     ...new Set(data.map(c => c[key] as string).filter(Boolean))
                 ].sort();
@@ -212,7 +236,7 @@ const CellExplorer = () => {
                 const options: FilterOptions = {
                     brands: getOptions('Brand'),
                     chemistries: getOptions('Composition'), // Data key 'Composition' maps to state 'chemistries'
-                    cellStacks: getOptions('Cell_Stack'),
+                    cellStacks: Array.from(cellStackOptions).sort(),
                     connections: getOptions('Connection'),
                 };
                 setFilterOptions(options);
@@ -236,9 +260,9 @@ const CellExplorer = () => {
 
                 setFilterValues({
                     searchQuery: "",
-                    brand: "all",
-                    chemistry: "all", // Renamed from 'composition'
-                    cellStack: "all",
+                    brand: [],
+                    chemistry: [],
+                    cellStack: [],
                     ...boundaries
                 });
 
@@ -259,10 +283,16 @@ const CellExplorer = () => {
 
         const cells = allCells.filter(cell => {
             if (query && !cell.CellModelNo.toLowerCase().includes(query) && !cell.Brand.toLowerCase().includes(query)) return false;
-            if (filterValues.brand !== "all" && cell.Brand !== filterValues.brand) return false;
-            // Compare data 'Composition' with state 'chemistry'
-            if (filterValues.chemistry !== "all" && cell.Composition !== filterValues.chemistry) return false;
-            if (filterValues.cellStack !== "all" && cell.Cell_Stack !== filterValues.cellStack) return false;
+            if (filterValues.brand.length > 0 && !filterValues.brand.includes(cell.Brand)) return false;
+
+            if (filterValues.chemistry.length > 0 && !filterValues.chemistry.includes(cell.Composition)) return false;
+
+            if (filterValues.cellStack.length > 0) {
+                const rawFormat = getFormatFromStack(cell.Cell_Stack);
+                // Se a contagem deste formato for <= 5, ele é considerado "Others"
+                const category = (formatCounts[rawFormat] || 0) > 5 ? rawFormat : "Cylindrical";
+                if (!filterValues.cellStack.includes(category)) return false;
+            }
             if (cell.Capacity < filterValues.capacity[0] || cell.Capacity > filterValues.capacity[1]) return false;
             if (cell.Weight < filterValues.weight[0] || cell.Weight > filterValues.weight[1]) return false;
             if (cell.MaxContinuousDischargeRate < filterValues.dischargeRate[0] || cell.MaxContinuousDischargeRate > filterValues.dischargeRate[1]) return false;
@@ -310,9 +340,9 @@ const CellExplorer = () => {
         if (filterBoundaries) {
             setFilterValues({
                 searchQuery: "",
-                brand: "all",
-                chemistry: "all", // Renamed
-                cellStack: "all",
+                brand: [],
+                chemistry: [],
+                cellStack: [],
                 ...filterBoundaries
             });
         }
@@ -489,23 +519,31 @@ const CellExplorer = () => {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label>Brand</Label>
-                                                    <Select value={filterValues.brand} onValueChange={(v) => handleFilterChange('brand', v)}>
-                                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="all">All Brands</SelectItem>
-                                                            {filterOptions.brands.map(opt => <SelectItem key={opt} value={opt}>{opt || "Unknown"}</SelectItem>)}
-                                                        </SelectContent>
-                                                    </Select>
+                                                    <MultiSelect
+                                                        options={filterOptions.brands}
+                                                        selected={filterValues.brand}
+                                                        onChange={(v) => handleFilterChange('brand', v)}
+                                                        placeholder="Select Brands"
+                                                    />
                                                 </div>
+                                                {/* Chemistry Filter */}
                                                 <div className="space-y-2">
                                                     <Label>Chemistry</Label>
-                                                    <Select value={filterValues.chemistry} onValueChange={(v) => handleFilterChange('chemistry', v)}>
-                                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="all">All Chemistries</SelectItem>
-                                                            {filterOptions.chemistries.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                                                        </SelectContent>
-                                                    </Select>
+                                                    <MultiSelect
+                                                        options={filterOptions.chemistries}
+                                                        selected={filterValues.chemistry}
+                                                        onChange={(v) => handleFilterChange('chemistry', v)}
+                                                        placeholder="Select Chemistries"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Cell Format</Label>
+                                                    <MultiSelect
+                                                        options={filterOptions.cellStacks}
+                                                        selected={filterValues.cellStack}
+                                                        onChange={(v) => handleFilterChange('cellStack', v)}
+                                                        placeholder="Select Formats"
+                                                    />
                                                 </div>
                                             </div>
 
@@ -803,7 +841,6 @@ const CellExplorer = () => {
                                                 </ChartContainer>
                                                 <ChartLegend colors={chemistryColors} />
                                             </div>
-
                                         </div>
                                     </TabsContent>
                                 </Tabs>
