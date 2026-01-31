@@ -114,6 +114,7 @@ async def calculate_endpoint(
     shunts: Optional[UploadFile] = File(None),
     cables: Optional[UploadFile] = File(None)
 ):
+
     try:
         # 1. Converter a string JSON de volta para o objeto Requirements
         config_dict = json.loads(config)
@@ -127,7 +128,7 @@ async def calculate_endpoint(
         if use_custom_db.lower() == 'true':
             # --- MODO CUSTOM: Ler ficheiros enviados ---
             print("📂 Modo Custom DB detetado. A processar ficheiros...")
-
+            req.use_custom_db = True
             # Processar Células (Obrigatório segundo o frontend)
             if cells:
                 cells_raw = parse_csv_file(await cells.read())

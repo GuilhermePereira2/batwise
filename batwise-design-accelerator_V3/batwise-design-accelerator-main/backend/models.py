@@ -74,27 +74,27 @@ class CellData(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     # Identificadores (CellModelNo é o único estritamente obrigatório)
     CellModelNo: str = Field(..., alias="Model")
-    Brand: str = "Generic"
+    Brand: str
     Composition: str = "Li-ion"
-    Cell_Stack: str = "Cylindrical"
+    Cell_Stack: str = "Unknown"
     OriginCountry: str = "Unknown"
     Connection: str = "Solder"
 
     # Dados Elétricos (Defaults a 0.0 para não partir se faltar no CSV)
-    NominalVoltage: float = 0.0
-    ChargeVoltage: float = 4.2
-    Capacity: float = 0.0
-    MaxContinuousDischargeRate: float = 0.0
-    MaxContinuousChargeRate: float = 0.0
-    TheMaxDischargeCurrentOfTheTabs: float = 0.0
+    NominalVoltage: float
+    ChargeVoltage: float
+    Capacity: float
+    MaxContinuousDischargeRate: float
+    MaxContinuousChargeRate: float
+    TheMaxDischargeCurrentOfTheTabs: float = 1
     Impedance: float = 0.0
     Cycles: float = 0.0
 
     # Dados Físicos
-    Weight: float = 0.0
-    Cell_Thickness: float = 0.0
-    Cell_Width: float = 0.0
-    Cell_Height: float = 0.0
+    Weight: float
+    Cell_Thickness: float
+    Cell_Width: float
+    Cell_Height: float
 
     # Tabs (Geralmente faltam em CSVs simples, assumimos 0)
     TabsThickness: float = 0.0
@@ -171,7 +171,7 @@ class CellData(BaseModel):
 
 class Requirements(BaseModel):
     # O frontend pode enviar strings ou números, o Pydantic converte
-    min_voltage: float = 70
+    min_voltage: float = 50
     max_voltage: float = 80
     min_energy: float = 3000.0  # Default valor razoável
     min_continuous_power: float = 2000.0  # Default valor razoável
@@ -184,6 +184,7 @@ class Requirements(BaseModel):
     ambient_temp: float = 25.0
     debug: bool = False
     include_components: bool = True
+    use_custom_db: bool = False
 
 
 class Dimensions(BaseModel):

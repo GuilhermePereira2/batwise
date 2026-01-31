@@ -127,22 +127,22 @@ const downloadCsvTemplate = (type: string) => {
 
   switch (type) {
     case 'cells':
-      headers = "Brand,CellModelNo,NominalVoltage,Capacity,MaxContinuousDischargeRate,MaxContinuousChargeRate,Weight,Price,Cell_Height,Cell_Width,Cell_Thickness,Connection";
+      headers = "Brand,CellModelNo,NominalVoltage,ChargeVoltage,Capacity,MaxContinuousDischargeRate,MaxContinuousChargeRate,PeakDischargeCurrent,PeakChargeCurrent,Weight,Resistance,Price,Cell_Height,Cell_Width,Cell_Thickness,Cycles";
       break;
     case 'bms':
-      headers = "brand,model,price,vdc_max,a_max,max_cells,link";
+      headers = "brand,model,price,vdc_max,vdc_min,a_max,max_cells";
       break;
     case 'relays':
-      headers = "brand,model,price,vdc_max,a_max,link";
+      headers = "brand,model,price,vdc_max,a_max";
       break;
     case 'fuses':
-      headers = "brand,model,price,vdc_max,a_max,link";
+      headers = "brand,model,price,vdc_max,a_max";
       break;
     case 'cables':
-      headers = "brand,model,price,section,vdc_max,a_max,link";
+      headers = "brand,model,price,section_mm2,vdc_max,a_max";
       break;
     case 'shunts':
-      headers = "brand,model,price,vdc_max,a_max,link";
+      headers = "brand,model,price,vdc_max,a_max";
       break;
     default:
       headers = "col1,col2";
@@ -250,7 +250,7 @@ const DIYTool = () => {
         max_height: Number(maxHeight) || 2000,
         target_price: Number(targetPrice) || 0,
         ambient_temp: 25,
-        include_components: includeComponents || true,
+        include_components: includeComponents,
         debug: true,
       };
 
@@ -750,6 +750,7 @@ const DIYTool = () => {
           isOpen={!!selectedSolution}
           onClose={() => setSelectedSolution(null)}
           showComponents={includeComponents}
+          dataSource={dataSource}
         />
       )}
     </div>
@@ -757,7 +758,7 @@ const DIYTool = () => {
 };
 
 // --- UPDATED DETAIL MODAL ---
-const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents }: { solution: Configuration, isOpen: boolean, onClose: () => void, showComponents: boolean }) => {
+const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents, dataSource }: { solution: Configuration, isOpen: boolean, onClose: () => void, showComponents: boolean, dataSource: 'default' | 'custom' }) => {
   if (!solution) return null;
 
   const [showDiagram, setShowDiagram] = useState(false);
@@ -1020,7 +1021,7 @@ Always verify specifications with component manufacturers.
         </div>
 
         {/* Safety Warnings */}
-        {solution.safety.warnings.length > 0 && (
+        {dataSource === 'default' && solution.safety.warnings.length > 0 && (
           <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg mb-4">
             <h4 className="font-bold text-amber-800 flex items-center gap-2 mb-2">
               <AlertTriangle className="w-5 h-5" /> Safety Advisories
