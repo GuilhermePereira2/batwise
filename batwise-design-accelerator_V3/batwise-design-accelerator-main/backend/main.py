@@ -1,5 +1,5 @@
 import uvicorn
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, status, Header
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional, Dict
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
@@ -8,13 +8,23 @@ import json
 import csv
 import io
 from dotenv import load_dotenv
+from fastapi.security import OAuth2PasswordBearer
+from jose import jwt, JWTError
+import security
 
 # Importar Modelos
-from models import Requirements, ContactRequest, DesignResponse, CellData
+from models import Requirements, ContactRequest, DesignResponse, CellData, UserCreate, UserLogin, Token, UserResponse
+from tables import User
 
 # Importar Lógica e DB Padrão
 from logic import compute_cell_configurations
-from database import db
+from database import db, engine, SessionLocal
+
+from sqlalchemy.orm import Session
+import tables  # Importar para criar as tabelas
+import security
+
+tables.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="BatteryApp Calculator API")
 
@@ -75,6 +85,37 @@ def parse_csv_file(file_content: bytes) -> List[Dict]:
         return []
 
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
+# Dependency para obter o user logado a partir do Token
+
+
+def get_db():
+    db_session = SessionLocal()
+    try:
+        yield db_session
+    finally:
+        db_session.close()
+
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, security.SECRET_KEY,
+                             algorithms=[security.ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    user = db.query(User).filter(User.email == email).first()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+# --- NOVO ENDPOINT: Deduzir Créditos ---
+
+
 @app.get("/")
 def read_root():
     """Endpoint de saúde para verificar se os dados carregaram bem."""
@@ -103,47 +144,44 @@ def get_all_cells():
 
 @app.post("/calculate", response_model=DesignResponse)
 async def calculate_endpoint(
-    # Recebe a config como string JSON dentro do Form Data
     config: str = Form(...),
     use_custom_db: str = Form("false"),
-    # Recebe os ficheiros (opcionais)
     cells: Optional[UploadFile] = File(None),
     bms: Optional[UploadFile] = File(None),
     relays: Optional[UploadFile] = File(None),
     fuses: Optional[UploadFile] = File(None),
     shunts: Optional[UploadFile] = File(None),
-    cables: Optional[UploadFile] = File(None)
+    cables: Optional[UploadFile] = File(None),
+    # Injetar a DB e o Header de Autenticação
+    db_session: Session = Depends(get_db),
+    authorization: Optional[str] = Header(None)
 ):
-
     try:
-        # 1. Converter a string JSON de volta para o objeto Requirements
+        # 1. Parse da Configuração
         config_dict = json.loads(config)
         req = Requirements(**config_dict)
 
-        # Variáveis para a base de dados a usar nesta execução
+        # Variáveis para a DB
         active_cells = []
         active_components = {}
+        is_custom_run = use_custom_db.lower() == 'true'
 
-        # 2. Decidir qual base de dados usar
-        if use_custom_db.lower() == 'true':
-            # --- MODO CUSTOM: Ler ficheiros enviados ---
-            print("📂 Modo Custom DB detetado. A processar ficheiros...")
+        # 2. Carregar Dados (Custom ou Default)
+        if is_custom_run:
+            print("📂 Modo Custom DB detetado.")
             req.use_custom_db = True
-            # Processar Células (Obrigatório segundo o frontend)
+
+            # (Lógica de ficheiros igual à anterior...)
             if cells:
                 cells_raw = parse_csv_file(await cells.read())
-                # Validar e converter para objetos CellData
-                # (Isto filtra linhas inválidas automaticamente)
                 for c in cells_raw:
                     try:
                         active_cells.append(CellData(**c))
                     except Exception as e:
                         print(f"Skipping invalid custom cell: {e}")
             else:
-                # Se o utilizador não enviou células, não dá para calcular
                 return DesignResponse(results=[], plotResults=[], total=0, stats={"error": "No cells uploaded"})
 
-            # Processar Componentes
             active_components = {
                 "fuses": parse_csv_file(await fuses.read()) if fuses else [],
                 "relays": parse_csv_file(await relays.read()) if relays else [],
@@ -151,26 +189,61 @@ async def calculate_endpoint(
                 "bms": parse_csv_file(await bms.read()) if bms else [],
                 "cables": parse_csv_file(await cables.read()) if cables else [],
             }
-
         else:
             print("📂 Modo Default DB detetado.")
-
-            # --- MODO DEFAULT: Usar a base de dados interna ---
             active_cells = db.cells
             active_components = db.components
 
-        # 3. Executar o cálculo com os dados selecionados
-        res = compute_cell_configurations(
-            req,
-            active_cells,
-            active_components
-        )
+        # 3. Executar o Cálculo
+        res_dict = compute_cell_configurations(
+            req, active_cells, active_components)
 
-        return res
+        # --- LÓGICA DE DEDUÇÃO DE CRÉDITOS ---
+        remaining = None
+
+        # Só cobramos se:
+        # a) For Custom DB
+        # b) Tiver gerado pelo menos 2 resultados
+        if is_custom_run and res_dict["total"] >= 2:
+            if not authorization:
+                raise HTTPException(
+                    status_code=401, detail="Authentication required for Custom DB")
+
+            try:
+                # Extrair o Token (Remove "Bearer ")
+                token = authorization.split(" ")[1]
+                payload = jwt.decode(token, security.SECRET_KEY, algorithms=[
+                                     security.ALGORITHM])
+                email: str = payload.get("sub")
+
+                # Buscar User e Deduzir
+                user = db_session.query(User).filter(
+                    User.email == email).first()
+
+                if user:
+                    if user.credits > 0:
+                        user.credits -= 1
+                        db_session.commit()
+                        remaining = user.credits
+                        print(f"💰 Crédito deduzido. Restantes: {remaining}")
+                    else:
+                        # Se chegou aqui com 0 créditos (backend check final)
+                        raise HTTPException(
+                            status_code=403, detail="Insufficient credits")
+
+            except (JWTError, IndexError):
+                raise HTTPException(status_code=401, detail="Invalid token")
+
+        # Adicionar créditos restantes à resposta
+        res_dict["remaining_credits"] = remaining
+
+        return res_dict
 
     except json.JSONDecodeError:
         raise HTTPException(
             status_code=400, detail="Configuração JSON inválida")
+    except HTTPException as he:
+        raise he
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -241,6 +314,71 @@ async def send_contact_email(contact: ContactRequest):
     except Exception as e:
         print(f"Erro ao enviar email: {e}")
         raise HTTPException(status_code=500, detail="Falha ao enviar email")
+
+
+# --- ROTAS DE AUTH ---
+
+
+@app.post("/auth/signup", response_model=UserResponse)
+def signup(user: UserCreate, db_session: Session = Depends(get_db)):
+    # Verificar se email existe
+    db_user = db_session.query(tables.User).filter(
+        tables.User.email == user.email).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    # Criar User
+    hashed_pwd = security.get_password_hash(user.password)
+    new_user = tables.User(
+        email=user.email,
+        full_name=user.full_name,
+        company=user.company,
+        hashed_password=hashed_pwd,
+        credits=5  # Define aqui quantos créditos iniciais queres dar
+    )
+
+    db_session.add(new_user)
+    db_session.commit()
+    db_session.refresh(new_user)
+
+    return new_user
+
+
+@app.post("/auth/login", response_model=Token)
+def login(creds: UserLogin, db_session: Session = Depends(get_db)):
+    user = db_session.query(tables.User).filter(
+        tables.User.email == creds.email).first()
+
+    if not user or not security.verify_password(creds.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+        )
+
+    # Criar token
+    access_token = security.create_access_token(
+        data={"sub": user.email}
+    )
+
+    # Retorna token e info extra (créditos)
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_name": user.full_name,
+        "credits": user.credits
+    }
+
+
+@app.post("/auth/deduct-credit")
+def deduct_credit(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.credits <= 0:
+        raise HTTPException(status_code=403, detail="Insufficient credits")
+
+    current_user.credits -= 1
+    db.commit()
+
+    return {"remaining_credits": current_user.credits}
+
 
 if __name__ == "__main__":
     # Corre o servidor na porta 8000

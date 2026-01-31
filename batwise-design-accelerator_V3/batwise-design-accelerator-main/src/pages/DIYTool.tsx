@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight, Battery, Zap, Calculator, Sparkles, Loader2, ExternalLink, AlertTriangle, CheckCircle, CircuitBoard, ChevronDown, ChevronUp, Upload, FileDown, Database, FileSpreadsheet, FileText, DollarSign, Download } from "lucide-react";
+import { ArrowRight, Battery, Zap, Calculator, Sparkles, Loader2, ExternalLink, AlertTriangle, Lock, CheckCircle, CircuitBoard, ChevronDown, ChevronUp, Upload, FileDown, Database, FileSpreadsheet, FileText, DollarSign, Download } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,6 +18,7 @@ import { WiringDiagram } from "@/components/WiringDiagram";
 import { getApiUrl } from "@/lib/config";
 import { Checkbox } from "@/components/ui/checkbox";
 import { jsPDF } from "jspdf";
+import { useAuth } from "@/context/AuthContext";
 
 // --- IMPORTS CUSTOMIZADOS ---
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
@@ -200,6 +201,7 @@ const DIYTool = () => {
   const [yAxis, setYAxis] = useState("total_price");
   const [activeTab, setActiveTab] = useState("best-solutions");
 
+  const { isAuthenticated, user, token, updateCredits } = useAuth();
   const { toast } = useToast();
 
   const handlePresetChange = (value: string) => {
@@ -231,7 +233,31 @@ const DIYTool = () => {
     }
   };
 
+
   const handleGenerate = async () => {
+
+    // Validação inicial (sem chamada à API)
+    if (dataSource === 'custom') {
+      if (!isAuthenticated || !user) {
+        toast({
+          title: "Access Restricted",
+          description: "Please log in to use your custom component database.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Verificação Local de Créditos (apenas para não enviar pedido à toa)
+      if (user.credits <= 0) {
+        toast({
+          title: "Insufficient Credits",
+          description: "You have 0 credits. Please contact support.",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     setIsLoading(true);
     setShowResults(false);
     setResults([]);
@@ -255,16 +281,12 @@ const DIYTool = () => {
       };
 
       const url = getApiUrl("calculate");
-
-      // --- ALTERAÇÃO AQUI: USAR SEMPRE FORMDATA ---
       const formData = new FormData();
 
-      // Envia a configuração como uma string JSON dentro do formulário
       formData.append('config', JSON.stringify(configData));
 
       if (dataSource === 'custom') {
         formData.append('use_custom_db', 'true');
-        // Anexar ficheiros apenas se existirem
         Object.entries(customFiles).forEach(([key, file]) => {
           if (file) formData.append(key, file);
         });
@@ -272,22 +294,41 @@ const DIYTool = () => {
         formData.append('use_custom_db', 'false');
       }
 
-      console.log(`📡 A enviar pedido para: ${url} (Mode: ${dataSource})`);
+      console.log(`📡 Sending request to: ${url}`);
+
+      // --- ALTERAÇÃO: Enviar Token no Header ---
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
 
       const response = await fetch(url, {
         method: 'POST',
-        // Nota: NÃO definir 'Content-Type': 'application/json'
-        // O browser define automaticamente o Content-Type correto para multipart/form-data com o boundary
         body: formData,
+        headers: headers // Passar headers com o token
       });
 
       if (!response.ok) {
         const errorText = await response.text();
+        // Se for erro de créditos (403), mostramos msg bonita
+        if (response.status === 403) {
+          throw new Error("Insufficient credits to perform this calculation.");
+        }
         throw new Error(`Server Error: ${errorText}`);
       }
-      // ---------------------------------------------
 
       const data = await response.json();
+
+      // --- ALTERAÇÃO: Atualizar créditos se vierem na resposta ---
+      if (data.remaining_credits !== undefined && data.remaining_credits !== null) {
+        updateCredits(data.remaining_credits);
+        toast({
+          title: "Credits Updated",
+          description: `Calculation successful. You have ${data.remaining_credits} credits left.`,
+          variant: "default",
+          className: "bg-green-50 border-green-200 text-green-800"
+        });
+      }
 
       const newResults = data.results || [];
       setResults(newResults);
@@ -298,15 +339,20 @@ const DIYTool = () => {
       if (data.total === 0) {
         toast({
           title: "No solutions found",
-          description: "Try relaxing constraints or checking your custom CSVs.",
+          description: "Try relaxing constraints. (No credits were deducted)",
           variant: "destructive"
+        });
+      } else if (data.total < 2 && dataSource === 'custom') {
+        toast({
+          title: "Few solutions found",
+          description: `Only ${data.total} solution found. No credits deducted (minimum 2 required for deduction).`,
+          variant: "default"
         });
       } else {
         toast({
           title: "Success!",
-          description: `Showing ${data.plotResults.length} configurations out of ${data.total} safe configurations.`,
+          description: `Found ${data.total} configurations.`,
         });
-
         setTimeout(() => {
           document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" });
         }, 100);
@@ -315,7 +361,7 @@ const DIYTool = () => {
     } catch (error: any) {
       console.error('Error:', error);
       toast({
-        title: "Connection Failed",
+        title: "Calculation Failed",
         description: error.message || "Ensure the Python backend is running.",
         variant: "destructive"
       });
@@ -433,10 +479,18 @@ const DIYTool = () => {
                   </CardTitle>
 
                   {/* DB SWITCH */}
-                  <Tabs value={dataSource} onValueChange={(v) => setDataSource(v as 'default' | 'custom')} className="w-full">
+                  <Tabs
+                    value={dataSource}
+                    onValueChange={(v) => setDataSource(v as 'default' | 'custom')}
+                    className="w-full"
+                  >
                     <TabsList className="grid w-full grid-cols-2">
                       <TabsTrigger value="default" className="text-xs">Watt Builder Database</TabsTrigger>
-                      <TabsTrigger value="custom" className="text-xs">My Database</TabsTrigger>
+                      <TabsTrigger value="custom" className="text-xs flex items-center gap-2">
+                        {/* Adiciona um cadeado visual se não estiver logado */}
+                        {!isAuthenticated && <Lock className="w-3 h-3 text-muted-foreground" />}
+                        My Database
+                      </TabsTrigger>
                     </TabsList>
                   </Tabs>
                 </CardHeader>
@@ -444,7 +498,7 @@ const DIYTool = () => {
                 <CardContent className="space-y-6">
 
                   {/* CUSTOM DB UPLOAD FIELDS */}
-                  {dataSource === 'custom' && (
+                  {dataSource === 'custom' && isAuthenticated && (
                     <div className="space-y-4 p-4 border border-dashed rounded-lg bg-slate-50">
                       <Label className="text-xs font-bold uppercase text-slate-500 mb-2 block">Upload Components Data</Label>
 
@@ -479,6 +533,13 @@ const DIYTool = () => {
                         </div>
                       ))}
                       <p className="text-[10px] text-slate-500 mt-2 italic">*Upload at least Cells' data to proceed.</p>
+                    </div>
+                  )}
+
+                  {dataSource === 'custom' && !isAuthenticated && (
+                    <div className="p-4 border border-dashed rounded-lg bg-slate-50 text-sm text-muted-foreground flex items-center gap-2">
+                      <Lock className="w-4 h-4" />
+                      Log in to upload and use your own component database for free.
                     </div>
                   )}
 
@@ -750,7 +811,7 @@ const DIYTool = () => {
           isOpen={!!selectedSolution}
           onClose={() => setSelectedSolution(null)}
           showComponents={includeComponents}
-          dataSource={dataSource}
+          dataSource={dataSource} // Certifica-te que passas isto
         />
       )}
     </div>
@@ -761,6 +822,8 @@ const DIYTool = () => {
 const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents, dataSource }: { solution: Configuration, isOpen: boolean, onClose: () => void, showComponents: boolean, dataSource: 'default' | 'custom' }) => {
   if (!solution) return null;
 
+  const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const [showDiagram, setShowDiagram] = useState(false);
 
   // NEW STATES FOR COMMERCIAL
@@ -781,6 +844,19 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents, dataSo
         Buy from Affiliate <ExternalLink className="inline w-3 h-3" />
       </a>
     );
+  };
+
+  const requireAuthForDownload = (action: () => void) => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Login required",
+        description: "Log in to download documents.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    action();
   };
 
   // --- BOM CSV GENERATOR ---
@@ -810,6 +886,7 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents, dataSo
       `${solution.cell.NominalVoltage}V ${solution.cell.Capacity}mAh`,
       solution.cell.Price
     );
+
 
     // Components
     if (solution.bms) addRow('BMS', solution.bms.model, 1, `Max ${solution.bms.a_max}A`, solution.bms.master_price || solution.bms.price);
@@ -1137,17 +1214,20 @@ Always verify specifications with component manufacturers.
                   />
                   <Label htmlFor="bomCosts" className="text-xs cursor-pointer">Include costs in BOM</Label>
                 </div>
-                <Button variant="outline" className="w-full justify-start h-9" onClick={downloadBOM}>
+                <Button variant="outline" className="w-full justify-start h-9" onClick={() => requireAuthForDownload(downloadBOM)}>
                   <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" />
                   Download BOM (Excel/CSV)
+                  {!isAuthenticated && <Lock className="w-3 h-3 ml-auto text-muted-foreground" />}
                 </Button>
-                <Button variant="outline" className="w-full justify-start h-9" onClick={downloadDatasheet_txt}>
+                <Button variant="outline" className="w-full justify-start h-9" onClick={() => requireAuthForDownload(downloadDatasheet_txt)}>
                   <FileText className="w-4 h-4 mr-2 text-blue-600" />
-                  Download Technical Datasheet (txt)
+                  Download Datasheet (txt)
+                  {!isAuthenticated && <Lock className="w-3 h-3 ml-auto text-muted-foreground" />}
                 </Button>
-                <Button variant="outline" className="w-full justify-start h-9" onClick={downloadDatasheet_pdf}>
+                <Button variant="outline" className="w-full justify-start h-9" onClick={() => requireAuthForDownload(downloadDatasheet_pdf)}>
                   <FileText className="w-4 h-4 mr-2 text-red-600" />
-                  Download Technical Datasheet (PDF)
+                  Download Datasheet (PDF)
+                  {!isAuthenticated && <Lock className="w-3 h-3 ml-auto text-muted-foreground" />}
                 </Button>
               </CardContent>
             </Card>

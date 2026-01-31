@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { LogIn, Mail, Lock, Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext"; // Importar hook
+import { getApiUrl } from "@/lib/config";
 
 const Login = () => {
     const [email, setEmail] = useState("");
@@ -15,29 +17,48 @@ const Login = () => {
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
     const navigate = useNavigate();
+    const { login } = useAuth(); // Importar função de login
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
 
         try {
-            // Simulação de login (Substituir pela chamada real ao Supabase/Backend depois)
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            const url = getApiUrl("auth/login");
+            const response = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
 
-            console.log("Login attempt:", { email, password });
+            // Se falhar (ex: 401 Unauthorized)
+            if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error("Invalid email or password.");
+                }
+                throw new Error("Something went wrong. Please try again.");
+            }
+
+            const data = await response.json();
+
+            // Atualizar o contexto global
+            login(data.access_token, {
+                email: email, // O backend podia devolver o email, ou usamos o do form
+                name: data.user_name, // Backend tem de enviar isto
+                credits: data.credits // Backend tem de enviar isto
+            });
 
             toast({
                 title: "Welcome back!",
                 description: "You have successfully logged in.",
             });
 
-            // Redirecionar para a ferramenta após login
             navigate("/diy");
 
-        } catch (error) {
+        } catch (error: any) {
             toast({
                 title: "Login Failed",
-                description: "Please check your credentials and try again.",
+                description: error.message,
                 variant: "destructive"
             });
         } finally {

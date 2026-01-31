@@ -9,3 +9,7 @@ fastapi-mail
 email-validator
 resend
 python-multipart
+sqlalchemy 
+passlib[bcrypt] 
+python-jose[cryptography]
+bcrypt==3.2.2

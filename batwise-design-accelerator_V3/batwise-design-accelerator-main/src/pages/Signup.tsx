@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 // 1. ADICIONADO "Building" AOS IMPORTS
 import { UserPlus, Mail, Lock, User, Loader2, ArrowLeft, Building } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getApiUrl } from "@/lib/config";
 
 const Signup = () => {
     const [name, setName] = useState("");
@@ -27,7 +28,7 @@ const Signup = () => {
         e.preventDefault();
         setIsLoading(true);
 
-        // 3. VALIDAÇÃO DE PASSWORDS
+        // Validação de passwords
         if (password !== confirmPassword) {
             toast({
                 title: "Passwords do not match",
@@ -39,22 +40,43 @@ const Signup = () => {
         }
 
         try {
-            // Simulação de registo
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            // URL do endpoint de registo no backend
+            const url = getApiUrl("auth/signup");
 
-            console.log("Signup attempt:", { name, company, email, password });
-
-            toast({
-                title: "Account created!",
-                description: "Welcome to Watt Builder. You can now start designing.",
+            // Enviar pedido ao backend
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    full_name: name,
+                    email: email,
+                    password: password,
+                    company: company
+                }),
             });
 
-            navigate("/diy");
+            // Se o backend devolver erro (ex: email já existe)
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || "Registration failed");
+            }
 
-        } catch (error) {
+            // Sucesso!
+            toast({
+                title: "Account created!",
+                description: "You have successfully registered. Please log in.",
+            });
+
+            // Redirecionar para a página de Login (em vez de /diy)
+            navigate("/login");
+
+        } catch (error: any) {
+            console.error("Signup error:", error);
             toast({
                 title: "Error",
-                description: "Something went wrong. Please try again.",
+                description: error.message || "Something went wrong. Please try again.",
                 variant: "destructive"
             });
         } finally {

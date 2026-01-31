@@ -233,3 +233,33 @@ class DesignResponse(BaseModel):
     plotResults: List[Configuration]
     total: int
     stats: Optional[dict] = None
+    remaining_credits: Optional[int] = None
+
+
+class UserCreate(BaseModel):
+    full_name: str
+    company: Optional[str] = None
+    email: EmailStr
+    password: str
+
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user_name: str
+    credits: int
+
+
+class UserResponse(BaseModel):
+    id: int
+    email: EmailStr
+    full_name: str
+    credits: int
+
+    class Config:
+        from_attributes = True
