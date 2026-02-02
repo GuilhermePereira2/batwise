@@ -107,7 +107,7 @@ const BatteryForm = () => {
     };
 
     try {
-      const response = await fetch('http://localhost:8000/calculate', {
+      const response = await fetch('/calculate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

@@ -256,10 +256,11 @@ class Token(BaseModel):
 
 
 class UserResponse(BaseModel):
-    id: int
     email: EmailStr
     full_name: str
     credits: int
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
     class Config:
         from_attributes = True

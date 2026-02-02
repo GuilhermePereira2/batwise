@@ -7,6 +7,7 @@ import os
 import json
 import csv
 import io
+import sys
 from dotenv import load_dotenv
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
@@ -14,16 +15,14 @@ import security
 
 # Importar Modelos
 from models import Requirements, ContactRequest, DesignResponse, CellData, UserCreate, UserLogin, Token, UserResponse
-import tables  # Importar para criar as tabelas
 
-# Importar Lógica e DB Padrão
+# Importar Lógica e DB de Células
 from logic import compute_cell_configurations
-from database import db, engine, SessionLocal
+from cells_loader import db
 
-from sqlalchemy.orm import Session
-
-
-tables.Base.metadata.create_all(bind=engine)
+# Adicionar path para importar DynamoDB handler
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from database.dynamodb_handler import db_users
 
 app = FastAPI(title="BatteryApp Calculator API")
 
@@ -89,15 +88,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 # Dependency para obter o user logado a partir do Token
 
 
-def get_db():
-    db_session = SessionLocal()
-    try:
-        yield db_session
-    finally:
-        db_session.close()
-
-
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def get_current_user(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, security.SECRET_KEY,
                              algorithms=[security.ALGORITHM])
@@ -107,7 +98,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    user = db.query(tables.User).filter(tables.User.email == email).first()
+    user = db_users.get_user_by_email(email)
     if user is None:
         raise HTTPException(status_code=401, detail="User not found")
     return user
@@ -151,8 +142,7 @@ async def calculate_endpoint(
     fuses: Optional[UploadFile] = File(None),
     shunts: Optional[UploadFile] = File(None),
     cables: Optional[UploadFile] = File(None),
-    # Injetar a DB e o Header de Autenticação
-    db_session: Session = Depends(get_db),
+    # Injetar o Header de Autenticação
     authorization: Optional[str] = Header(None)
 ):
     try:
@@ -216,14 +206,11 @@ async def calculate_endpoint(
                 email: str = payload.get("sub")
 
                 # Buscar User e Deduzir
-                user = db_session.query(tables.User).filter(
-                    tables.User.email == email).first()
+                user = db_users.get_user_by_email(email)
 
                 if user:
-                    if user.credits > 0:
-                        user.credits -= 1
-                        db_session.commit()
-                        remaining = user.credits
+                    if user['credits'] > 0:
+                        remaining = db_users.deduct_credit(email)
                         print(f"💰 Crédito deduzido. Restantes: {remaining}")
                     else:
                         # Se chegou aqui com 0 créditos (backend check final)
@@ -319,36 +306,31 @@ async def send_contact_email(contact: ContactRequest):
 
 
 @app.post("/auth/signup", response_model=UserResponse)
-def signup(user: UserCreate, db_session: Session = Depends(get_db)):
+def signup(user: UserCreate):
     # Verificar se email existe
-    db_user = db_session.query(tables.User).filter(
-        tables.User.email == user.email).first()
-    if db_user:
+    if db_users.user_exists(user.email):
         raise HTTPException(status_code=400, detail="Email already registered")
 
     # Criar User
     hashed_pwd = security.get_password_hash(user.password)
-    new_user = tables.User(
-        email=user.email,
-        full_name=user.full_name,
-        company=user.company,
-        hashed_password=hashed_pwd,
-        credits=5  # Define aqui quantos créditos iniciais queres dar
-    )
-
-    db_session.add(new_user)
-    db_session.commit()
-    db_session.refresh(new_user)
-
-    return new_user
+    try:
+        new_user = db_users.create_user(
+            email=user.email,
+            full_name=user.full_name,
+            company=user.company,
+            hashed_password=hashed_pwd,
+            credits=5  # Define aqui quantos créditos iniciais queres dar
+        )
+        return new_user
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.post("/auth/login", response_model=Token)
-def login(creds: UserLogin, db_session: Session = Depends(get_db)):
-    user = db_session.query(tables.User).filter(
-        tables.User.email == creds.email).first()
+def login(creds: UserLogin):
+    user = db_users.get_user_by_email(creds.email)
 
-    if not user or not security.verify_password(creds.password, user.hashed_password):
+    if not user or not security.verify_password(creds.password, user['hashed_password']):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -356,27 +338,28 @@ def login(creds: UserLogin, db_session: Session = Depends(get_db)):
 
     # Criar token
     access_token = security.create_access_token(
-        data={"sub": user.email}
+        data={"sub": user['email']}
     )
 
     # Retorna token e info extra (créditos)
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "user_name": user.full_name,
-        "credits": user.credits
+        "user_name": user['full_name'],
+        "credits": user['credits']
     }
 
 
 @app.post("/auth/deduct-credit")
-def deduct_credit(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.credits <= 0:
+def deduct_credit(current_user: dict = Depends(get_current_user)):
+    if current_user['credits'] <= 0:
         raise HTTPException(status_code=403, detail="Insufficient credits")
 
-    current_user.credits -= 1
-    db.commit()
-
-    return {"remaining_credits": current_user.credits}
+    try:
+        remaining = db_users.deduct_credit(current_user['email'])
+        return {"remaining_credits": remaining}
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Insufficient credits")
 
 
 if __name__ == "__main__":

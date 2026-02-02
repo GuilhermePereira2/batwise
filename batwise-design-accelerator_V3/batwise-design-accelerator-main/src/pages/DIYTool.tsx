@@ -17,7 +17,6 @@ import { Badge } from "@/components/ui/badge";
 import { WiringDiagram } from "@/components/WiringDiagram";
 import { getApiUrl } from "@/lib/config";
 import { Checkbox } from "@/components/ui/checkbox";
-import { jsPDF } from "jspdf";
 import { useAuth } from "@/context/AuthContext";
 
 // --- IMPORTS CUSTOMIZADOS ---
@@ -911,7 +910,9 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents, dataSo
   };
 
   // --- FUNÇÃO PARA GERAR PDF ---
-  const downloadDatasheet_pdf = () => {
+  const downloadDatasheet_pdf =  async () => {
+    const { default: jsPDF } = await import("jspdf");
+
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 20;

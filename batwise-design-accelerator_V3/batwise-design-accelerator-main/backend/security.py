@@ -2,9 +2,10 @@ from datetime import datetime, timedelta
 from typing import Optional
 from passlib.context import CryptContext
 from jose import jwt
+import os
 
 # MUDAR ISTO EM PRODUÇÃO! Use: openssl rand -hex 32
-SECRET_KEY = "minha_chave_super_secreta_local"
+SECRET_KEY = os.getenv("SECRET_KEY", "minha_chave_super_secreta_local")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 dias
 
