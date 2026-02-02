@@ -1,0 +1,6 @@
+brand,model,vdc_max,a_max,temp_min,temp_max,price,link
+Isabellenhuette,IVT-S-100,1000,120,-40,105,380.7,
+Isabellenhuette,IVT-S-300,1000,320,-40,105,378.08,
+Isabellenhuette,IVT-S-500,1000,730,-40,105,388.04,
+Isabellenhuette,IVT-S-1000,1000,1100,-40,105,392.02,
+Victron,SmartShunt 500A,1000,500,-40,105,150.00,https://example.com/victron

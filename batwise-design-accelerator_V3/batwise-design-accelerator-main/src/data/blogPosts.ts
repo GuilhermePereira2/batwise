@@ -1,6 +1,7 @@
 // src/data/blogPosts.ts
-import venezuelaImg from './Venezuela.png';
-import TeslaImg from './TeslaBat.png';
+import venezuelaImg from './Venezuela.webp';
+import TeslaImg from './TeslaBat.webp';
+import BatteryGeoPoliticsImg from './Ch_Eu_Us.webp';
 
 export interface BlogPost {
     slug: string;
@@ -14,6 +15,48 @@ export interface BlogPost {
 }
 
 export const blogPosts: BlogPost[] = [
+    {
+        slug: "china-vs-europe-vs-us-battery-race",
+        title: "China vs Europe vs US: The Battery Technology Race",
+        excerpt: "Batteries now sit at the intersection of geopolitics and industry. This article analyzes the uneven race between China's scale, the US's innovation, and Europe's regulatory approach, highlighting why real-world data is becoming the ultimate competitive advantage.",
+        content: `
+    <p>Batteries stopped being just an engineering problem a long time ago. Today they sit right at the intersection of energy, industry, and geopolitics. Whoever controls battery technology controls electric vehicles, grid stability, data centers, and, to a large extent, the speed of the energy transition.</p>
+    
+    <p>And despite the polite political language, this is a race. A very uneven one.</p>
+    
+    <h3>China: Scale First, Optimize Later</h3>
+    <p>China approached batteries the same way it approaches most strategic industries: scale first, optimize later. While other regions debated standards, incentives, and roadmaps, China built factories. Lots of them. Gigafactories that didn’t start perfect, didn’t wait for ideal yields, and didn’t aim for academic elegance. They aimed for throughput.</p>
+    
+    <p>The side effect of this strategy is often ignored. More factories mean more real-world data. More data means faster learning. Over time, that compounds into a serious advantage, not just in cost, but in know-how.</p>
+    
+    <h3>Europe: Vision vs. Execution</h3>
+    <p>Europe, on the other hand, understands the importance of batteries very well. The problem isn’t awareness. It’s execution. The European approach is heavy on regulation, sustainability targets, and long-term vision. All of that matters. But hardware industries don’t wait patiently for alignment across dozens of stakeholders.</p>
+    
+    <p>Battery factories exist in Europe, but supply chains are still fragile, timelines are slow, and dependency on external suppliers hasn’t truly gone away. Europe is very good at defining how things should be done. Less good at doing them fast.</p>
+    
+    <h3>The US: Innovation Without Industrialization</h3>
+    <p>The United States sits somewhere in between. It remains a powerhouse of innovation. New chemistries, advanced concepts, software-driven battery management, and ambitious startups often emerge there first. But when it comes to large-scale cell manufacturing, the gap is obvious. Production capacity is limited, imports are still critical, and policy direction tends to shift with political cycles.</p>
+    
+    <p>The US invents quickly. China industrializes even faster. In batteries, that difference matters more than most people like to admit.</p>
+    
+    <h3>From Chemistry to Systems Engineering</h3>
+    <p>What’s interesting is that this race is no longer mainly about chemistry. The conversation often gets stuck on LFP versus NMC, or on whether solid-state batteries are coming “next year”. In reality, the real competitive edge today lies elsewhere: manufacturing yield, quality consistency, thermal behaviour, and degradation under non-ideal loads.</p>
+    
+    <p>It is about cost per usable kilowatt-hour, not per advertised one. Battery technology has quietly become a systems engineering problem, not a laboratory showcase.</p>
+    
+    <h3>The Data Advantage</h3>
+    <p>One of the least visible but most powerful weapons in this race is data. Not simulation data. Not small lab samples. Real operational data from millions of cells tested, stressed, aged, and deployed across different temperatures and current profiles. This is where China’s advantage compounds. Without data, progress is slow and speculative. With data, optimization becomes unavoidable.</p>
+    
+    <h3>The Takeaway for Engineers</h3>
+    <p>For engineers and designers working with batteries today, the takeaway is uncomfortable but clear. You can’t trust origin alone. You can’t trust datasheets blindly. And you can’t design robust systems without validating how cells behave in real conditions. In a market moving this fast, assumptions are expensive.</p>
+    
+    <p>China is currently winning on scale. The US is winning on ideas. Europe is still deciding how aggressively it wants to play. In the long run, the regions that master testing, validation, and real-world performance will shape the battery landscape. And by extension, the future of energy itself.</p>
+    `,
+        image: BatteryGeoPoliticsImg,
+        author: "Joaquim Monteiro",
+        date: "January 22, 2026",
+        readTime: "4 min read"
+    },
     {
         slug: "tesla-battery-strategy-breakdown",
         title: "Tesla Battery Strategy Breakdown",
@@ -79,7 +122,6 @@ export const blogPosts: BlogPost[] = [
         date: "January 8, 2026",
         readTime: "4 min read",
     },
-
     /*{
         slug: "what-cell-types-can-i-choose",
         title: "What cell types can I choose?",

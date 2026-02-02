@@ -19,7 +19,7 @@ const Blog = () => {
             Learn & Build
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto animate-fade-in">
-            Expert guides, tutorials, and insights to help you master battery design
+            Stay ahead with the latest industry news, market trends, and technological breakthroughs in energy storage.
           </p>
         </div>
       </section>

@@ -21,12 +21,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
-import { Search, Loader2, Database, X, ExternalLink, RefreshCw, LayoutGrid, BarChart3, Microscope, FlaskConical, ClipboardCheck } from "lucide-react";
+import { Search, Loader2, Database, X, ExternalLink, RefreshCw, LayoutGrid, BarChart3, Microscope, FlaskConical, ClipboardCheck, ArrowUp, ArrowDown, Check, ChevronsUpDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { getApiUrl } from "@/lib/config";
 import { useNavigate } from "react-router-dom";
-import { Analytics } from "@vercel/analytics/next";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 // --- Types ---
 interface Cell {
@@ -75,9 +75,9 @@ interface FilterBoundaries {
 // Renamed to 'chemistry'
 interface FilterValues {
     searchQuery: string;
-    brand: string;
-    chemistry: string;
-    cellStack: string;
+    brand: string[];
+    chemistry: string[];
+    cellStack: string[];
     capacity: [number, number];
     weight: [number, number];
     dischargeRate: [number, number];
@@ -134,6 +134,32 @@ const getDensity = (c: Cell) => {
     return volumeL > 0 ? energy / volumeL : 0;
 };
 
+// Helper Component: Chart Legend
+const ChartLegend = ({ colors }: { colors: { [key: string]: string } }) => {
+    return (
+        <div className="flex flex-wrap justify-center gap-4 mt-4 p-4 bg-muted/20 rounded-lg border border-border/50">
+            {Object.entries(colors).map(([chemistry, color]) => (
+                <div key={chemistry} className="flex items-center gap-2">
+                    <span
+                        className="w-3 h-3 rounded-full shadow-sm"
+                        style={{ backgroundColor: color }}
+                    />
+                    <span className="text-xs font-medium text-muted-foreground">
+                        {chemistry}
+                    </span>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+const getFormatFromStack = (stack: string) => {
+    if (!stack) return "Unknown";
+    const parts = stack.split('-');
+    // Retorna a parte depois do hifen, ou a string original se não houver hifen
+    return parts.length > 1 ? parts[1] : stack;
+};
+
 // --- Main Component ---
 const CellExplorer = () => {
     const navigate = useNavigate();
@@ -151,7 +177,9 @@ const CellExplorer = () => {
     const [activeTab, setActiveTab] = useState("chart");
     const [xAxis, setXAxis] = useState("energyDensityWhL");
     const [yAxis, setYAxis] = useState("energyWh");
-    const [sortKey, setSortKey] = useState("capacity-desc");
+    const [sortParam, setSortParam] = useState("capacity"); // Parâmetro
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+    const [formatCounts, setFormatCounts] = useState<Record<string, number>>({});
 
     // Set browser tab title
     useEffect(() => {
@@ -185,6 +213,22 @@ const CellExplorer = () => {
                 setAllCells(data);
                 setFilteredCells(data);
 
+                const counts: Record<string, number> = {};
+                data.forEach(cell => {
+                    const fmt = getFormatFromStack(cell.Cell_Stack);
+                    counts[fmt] = (counts[fmt] || 0) + 1;
+                });
+                setFormatCounts(counts);
+
+                const cellStackOptions = new Set<string>();
+                Object.entries(counts).forEach(([fmt, count]) => {
+                    if (count > 5) {
+                        cellStackOptions.add(fmt);
+                    } else {
+                        cellStackOptions.add("Cylindrical");
+                    }
+                });
+
                 const getOptions = (key: keyof Cell) => [
                     ...new Set(data.map(c => c[key] as string).filter(Boolean))
                 ].sort();
@@ -192,7 +236,7 @@ const CellExplorer = () => {
                 const options: FilterOptions = {
                     brands: getOptions('Brand'),
                     chemistries: getOptions('Composition'), // Data key 'Composition' maps to state 'chemistries'
-                    cellStacks: getOptions('Cell_Stack'),
+                    cellStacks: Array.from(cellStackOptions).sort(),
                     connections: getOptions('Connection'),
                 };
                 setFilterOptions(options);
@@ -216,9 +260,9 @@ const CellExplorer = () => {
 
                 setFilterValues({
                     searchQuery: "",
-                    brand: "all",
-                    chemistry: "all", // Renamed from 'composition'
-                    cellStack: "all",
+                    brand: [],
+                    chemistry: [],
+                    cellStack: [],
                     ...boundaries
                 });
 
@@ -239,10 +283,16 @@ const CellExplorer = () => {
 
         const cells = allCells.filter(cell => {
             if (query && !cell.CellModelNo.toLowerCase().includes(query) && !cell.Brand.toLowerCase().includes(query)) return false;
-            if (filterValues.brand !== "all" && cell.Brand !== filterValues.brand) return false;
-            // Compare data 'Composition' with state 'chemistry'
-            if (filterValues.chemistry !== "all" && cell.Composition !== filterValues.chemistry) return false;
-            if (filterValues.cellStack !== "all" && cell.Cell_Stack !== filterValues.cellStack) return false;
+            if (filterValues.brand.length > 0 && !filterValues.brand.includes(cell.Brand)) return false;
+
+            if (filterValues.chemistry.length > 0 && !filterValues.chemistry.includes(cell.Composition)) return false;
+
+            if (filterValues.cellStack.length > 0) {
+                const rawFormat = getFormatFromStack(cell.Cell_Stack);
+                // Se a contagem deste formato for <= 5, ele é considerado "Others"
+                const category = (formatCounts[rawFormat] || 0) > 5 ? rawFormat : "Cylindrical";
+                if (!filterValues.cellStack.includes(category)) return false;
+            }
             if (cell.Capacity < filterValues.capacity[0] || cell.Capacity > filterValues.capacity[1]) return false;
             if (cell.Weight < filterValues.weight[0] || cell.Weight > filterValues.weight[1]) return false;
             if (cell.MaxContinuousDischargeRate < filterValues.dischargeRate[0] || cell.MaxContinuousDischargeRate > filterValues.dischargeRate[1]) return false;
@@ -252,31 +302,27 @@ const CellExplorer = () => {
             return true;
         });
         cells.sort((a, b) => {
-            switch (sortKey) {
-                case "energy-asc": return getEnergy(a) - getEnergy(b);
-                case "energy-desc": return getEnergy(b) - getEnergy(a);
-                case "power-asc": return getPower(a) - getPower(b);
-                case "power-desc": return getPower(b) - getPower(a);
-                case "weight-asc": return a.Weight - b.Weight;
-                case "weight-desc": return b.Weight - a.Weight;
-                case "density-asc": return getDensity(a) - getDensity(b);
-                case "density-desc": return getDensity(b) - getDensity(a);
-                case "capacity-asc": return a.Capacity - b.Capacity;
-                case "capacity-desc": return b.Capacity - a.Capacity;
-                case "energyDensityWhKg-desc":
-                    return (getEnergy(b) / b.Weight) - (getEnergy(a) / a.Weight);
-                case "energyDensityWhKg-asc":
-                    return (getEnergy(a) / a.Weight) - (getEnergy(b) / b.Weight);
-                case "powerDensityWKg-desc":
-                    return (getPower(b) / b.Weight) - (getPower(a) / a.Weight);
-                case "powerDensityWKg-asc":
-                    return (getPower(a) / a.Weight) - (getPower(b) / b.Weight);
-                default: return 0;
-            }
+            const getValue = (c: Cell) => {
+                switch (sortParam) {
+                    case "energy": return getEnergy(c);
+                    case "power": return getPower(c);
+                    case "weight": return c.Weight;
+                    case "density": return getDensity(c);
+                    case "capacity": return c.Capacity;
+                    case "energyDensityWhKg": return c.Weight > 0 ? getEnergy(c) / c.Weight : 0;
+                    case "powerDensityWKg": return c.Weight > 0 ? getPower(c) / c.Weight : 0;
+                    default: return 0;
+                }
+            };
+
+            const valA = getValue(a);
+            const valB = getValue(b);
+
+            return sortOrder === 'asc' ? valA - valB : valB - valA;
         });
         setFilteredCells(cells);
         setCurrentPage(1);
-    }, [allCells, filterValues, sortKey]);
+    }, [allCells, filterValues, sortParam, sortOrder]);
 
     // Pagination Logic
     const pageCount = Math.ceil(filteredCells.length / CELLS_PER_PAGE);
@@ -294,9 +340,9 @@ const CellExplorer = () => {
         if (filterBoundaries) {
             setFilterValues({
                 searchQuery: "",
-                brand: "all",
-                chemistry: "all", // Renamed
-                cellStack: "all",
+                brand: [],
+                chemistry: [],
+                cellStack: [],
                 ...filterBoundaries
             });
         }
@@ -473,23 +519,31 @@ const CellExplorer = () => {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label>Brand</Label>
-                                                    <Select value={filterValues.brand} onValueChange={(v) => handleFilterChange('brand', v)}>
-                                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="all">All Brands</SelectItem>
-                                                            {filterOptions.brands.map(opt => <SelectItem key={opt} value={opt}>{opt || "Unknown"}</SelectItem>)}
-                                                        </SelectContent>
-                                                    </Select>
+                                                    <MultiSelect
+                                                        options={filterOptions.brands}
+                                                        selected={filterValues.brand}
+                                                        onChange={(v) => handleFilterChange('brand', v)}
+                                                        placeholder="Select Brands"
+                                                    />
                                                 </div>
+                                                {/* Chemistry Filter */}
                                                 <div className="space-y-2">
                                                     <Label>Chemistry</Label>
-                                                    <Select value={filterValues.chemistry} onValueChange={(v) => handleFilterChange('chemistry', v)}>
-                                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="all">All Chemistries</SelectItem>
-                                                            {filterOptions.chemistries.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                                                        </SelectContent>
-                                                    </Select>
+                                                    <MultiSelect
+                                                        options={filterOptions.chemistries}
+                                                        selected={filterValues.chemistry}
+                                                        onChange={(v) => handleFilterChange('chemistry', v)}
+                                                        placeholder="Select Chemistries"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Cell Format</Label>
+                                                    <MultiSelect
+                                                        options={filterOptions.cellStacks}
+                                                        selected={filterValues.cellStack}
+                                                        onChange={(v) => handleFilterChange('cellStack', v)}
+                                                        placeholder="Select Formats"
+                                                    />
                                                 </div>
                                             </div>
 
@@ -571,30 +625,37 @@ const CellExplorer = () => {
                                             </TabsTrigger>
                                         </TabsList>
                                         {/* --- ADIÇÃO: Seletor de Ordenação --- */}
-                                        <div className="flex items-center gap-2 w-full md:w-auto">
-                                            <Label className="text-sm text-muted-foreground whitespace-nowrap">Sort by:</Label>
-                                            <Select value={sortKey} onValueChange={setSortKey}>
-                                                <SelectTrigger className="h-9 w-[220px] bg-background">
-                                                    <SelectValue placeholder="Sort order" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="capacity-desc">Capacity Ah (High to Low)</SelectItem>
-                                                    <SelectItem value="capacity-asc">Capacity Ah (Low to High)</SelectItem>
-                                                    <SelectItem value="energy-desc">Energy Wh (High to Low)</SelectItem>
-                                                    <SelectItem value="energy-asc">Energy Wh (Low to High)</SelectItem>
-                                                    <SelectItem value="power-desc">Power W (High to Low)</SelectItem>
-                                                    <SelectItem value="power-asc">Power W (Low to High)</SelectItem>
-                                                    <SelectItem value="density-desc">Density Wh/L (High to Low)</SelectItem>
-                                                    <SelectItem value="density-asc">Density Wh/L (Low to High)</SelectItem>
-                                                    <SelectItem value="energyDensityWhKg-desc">Energy Density Wh/Kg (High to Low)</SelectItem>
-                                                    <SelectItem value="energyDensityWhKg-asc">Energy Density Wh/Kg (Low to High)</SelectItem>
-                                                    <SelectItem value="powerDensityWKg-desc">Power Density W/Kg (High to Low)</SelectItem>
-                                                    <SelectItem value="powerDensityWKg-asc">Power Density W/Kg (Low to High)</SelectItem>
-                                                    <SelectItem value="weight-asc">Weight (Lighter first)</SelectItem>
-                                                    <SelectItem value="weight-desc">Weight (Heavier first)</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
+                                        {activeTab === 'grid' && (
+                                            <div className="flex items-center gap-2 w-full md:w-auto animate-fade-in">
+                                                <Label className="text-sm text-muted-foreground whitespace-nowrap">Sort by:</Label>
+                                                <div className="flex items-center gap-1">
+                                                    <Select value={sortParam} onValueChange={setSortParam}>
+                                                        <SelectTrigger className="h-9 w-[180px] bg-background">
+                                                            <SelectValue placeholder="Parameter" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="capacity">Capacity (Ah)</SelectItem>
+                                                            <SelectItem value="energy">Energy (Wh)</SelectItem>
+                                                            <SelectItem value="power">Power (W)</SelectItem>
+                                                            <SelectItem value="weight">Weight (g)</SelectItem>
+                                                            <SelectItem value="density">Vol. Density (Wh/L)</SelectItem>
+                                                            <SelectItem value="energyDensityWhKg">Grav. Density (Wh/Kg)</SelectItem>
+                                                            <SelectItem value="powerDensityWKg">Grav. Power (W/Kg)</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-9 w-9"
+                                                        onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                                                        title={sortOrder === 'asc' ? "Ascending" : "Descending"}
+                                                    >
+                                                        {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
                                         <p className="text-sm text-muted-foreground hidden lg:block">
                                             Found {filteredCells.length} matching cells
                                             {activeTab === 'grid' && ` (showing ${paginatedCells.length})`}
@@ -778,6 +839,7 @@ const CellExplorer = () => {
                                                         </ScatterChart>
                                                     </ResponsiveContainer>
                                                 </ChartContainer>
+                                                <ChartLegend colors={chemistryColors} />
                                             </div>
                                         </div>
                                     </TabsContent>

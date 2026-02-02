@@ -1,0 +1,215 @@
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+// 1. ADICIONADO "Building" AOS IMPORTS
+import { UserPlus, Mail, Lock, User, Loader2, ArrowLeft, Building } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { getApiUrl } from "@/lib/config";
+
+const Signup = () => {
+    const [name, setName] = useState("");
+    // 2. NOVOS ESTADOS ADICIONADOS
+    const [company, setCompany] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+
+    const { toast } = useToast();
+    const navigate = useNavigate();
+
+    const handleSignup = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+
+        // Validação de passwords
+        if (password !== confirmPassword) {
+            toast({
+                title: "Passwords do not match",
+                description: "Please ensure both passwords are identical.",
+                variant: "destructive"
+            });
+            setIsLoading(false);
+            return;
+        }
+
+        try {
+            // URL do endpoint de registo no backend
+            const url = getApiUrl("auth/signup");
+
+            // Enviar pedido ao backend
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    full_name: name,
+                    email: email,
+                    password: password,
+                    company: company
+                }),
+            });
+
+            // Se o backend devolver erro (ex: email já existe)
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || "Registration failed");
+            }
+
+            // Sucesso!
+            toast({
+                title: "Account created!",
+                description: "You have successfully registered. Please log in.",
+            });
+
+            // Redirecionar para a página de Login (em vez de /diy)
+            navigate("/login");
+
+        } catch (error: any) {
+            console.error("Signup error:", error);
+            toast({
+                title: "Error",
+                description: error.message || "Something went wrong. Please try again.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen flex flex-col font-sans">
+            <Navigation />
+
+            <main className="flex-1 flex items-center justify-center p-4 mt-16 bg-gradient-to-br from-background via-muted/30 to-background">
+                <div className="w-full max-w-md animate-fade-in">
+
+                    <Button variant="ghost" asChild className="mb-4 pl-0 hover:bg-transparent text-muted-foreground hover:text-foreground">
+                        <Link to="/" className="flex items-center gap-2">
+                            <ArrowLeft className="w-4 h-4" /> Back to Home
+                        </Link>
+                    </Button>
+
+                    <Card className="border-border shadow-lg">
+                        <CardHeader className="space-y-1">
+                            <CardTitle className="text-2xl font-bold flex items-center gap-2">
+                                <UserPlus className="w-6 h-6 text-accent" /> Create Account
+                            </CardTitle>
+                            <CardDescription>
+                                Enter your details below to create your account and start building.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={handleSignup} className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="name">Full Name</Label>
+                                    <div className="relative">
+                                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            id="name"
+                                            type="text"
+                                            placeholder="John Doe"
+                                            className="pl-9"
+                                            value={name}
+                                            onChange={(e) => setName(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="company">Company (Optional)</Label>
+                                    <div className="relative">
+                                        <Building className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            id="company"
+                                            type="text"
+                                            placeholder="Your Company Ltd"
+                                            className="pl-9"
+                                            value={company}
+                                            onChange={(e) => setCompany(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="email">Email</Label>
+                                    <div className="relative">
+                                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            placeholder="name@example.com"
+                                            className="pl-9"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="password">Password</Label>
+                                    <div className="relative">
+                                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            id="password"
+                                            type="password"
+                                            placeholder="••••••••"
+                                            className="pl-9"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            required
+                                            minLength={8}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                                    <div className="relative">
+                                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            id="confirmPassword"
+                                            type="password"
+                                            placeholder="••••••••"
+                                            className="pl-9"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            required
+                                            minLength={8}
+                                        />
+                                    </div>
+                                </div>
+                                <Button type="submit" className="w-full" disabled={isLoading}>
+                                    {isLoading ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating account...
+                                        </>
+                                    ) : (
+                                        "Create Account"
+                                    )}
+                                </Button>
+                            </form>
+                        </CardContent>
+                        <CardFooter className="flex flex-col space-y-4 border-t bg-muted/20 p-6">
+                            <div className="text-center text-sm text-muted-foreground">
+                                Already have an account?{" "}
+                                <Link to="/login" className="text-accent hover:underline font-medium">
+                                    Sign in
+                                </Link>
+                            </div>
+                        </CardFooter>
+                    </Card>
+                </div>
+            </main>
+
+            <Footer />
+        </div>
+    );
+};
+
+export default Signup;

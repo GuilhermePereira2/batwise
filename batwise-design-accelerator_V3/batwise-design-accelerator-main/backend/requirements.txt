@@ -5,4 +5,9 @@ numpy
 python-multipart
 fastapi-mail
 email-validator
-mangum
+resend
+python-multipart
+sqlalchemy 
+passlib[bcrypt] 
+python-jose[cryptography]
+bcrypt==3.2.2

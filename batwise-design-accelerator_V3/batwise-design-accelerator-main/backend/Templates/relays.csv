@@ -1,0 +1,6 @@
+brand,model,vdc_max,a_max,temp_min,temp_max,price,link
+OZSSLJJ,RL/180,72,100,-40,125,47,
+Sensata,D1D100,100,100,-40,125,159,
+Innuovo,INVE01-200,450,200,-40,125,36.36,
+Innuovo,High Power 450V,450,2000,-40,125,150.00,
+Gigavac,GV200,800,400,-40,125,115.00,https://example.com/gigavac

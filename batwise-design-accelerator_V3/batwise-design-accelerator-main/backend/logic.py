@@ -255,7 +255,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
 
             for parallel in range(min_p_power, MAX_PARALLEL_CELLS):  # Limite aumentado para teste
 
-                if parallel * series > MAX_TOTAL_CELLS: # MAX 200 células no total
+                if parallel * series > MAX_TOTAL_CELLS and not req.use_custom_db: # MAX 200 and not req.use_custom_db células no total
                     continue
 
                 stats["totalAttempts"] += 1
@@ -299,7 +299,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 # 2. Seleção Condicional de FUSE
                 fuse_obj = None
                 fuse_price = 0
-                if tech["needs_fuse"] & req.include_components:
+                if tech["needs_fuse"] and req.include_components and sorted_fuses:
                     fuse_data = select_component_fast(
                         sorted_fuses, max_voltage, cont_current * FUSE_CURRENT_FACTOR)
                     if not fuse_data:
@@ -310,7 +310,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 # 3. Seleção Condicional de RELAY
                 relay_obj = None
                 relay_price = 0
-                if tech["needs_relay"] & req.include_components:
+                if tech["needs_relay"] and req.include_components and sorted_relays:
                     relay_data = select_component_fast(
                         sorted_relays, max_voltage * RELAY_VOLTAGE_FACTOR, cont_current * RELAY_CURRENT_FACTOR)
                     if not relay_data:
@@ -321,7 +321,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 # 4. Seleção Condicional de SHUNT
                 shunt_obj = None
                 shunt_price = 0
-                if tech["needs_shunt"] & req.include_components:
+                if tech["needs_shunt"] and req.include_components and sorted_shunts:
                     shunt_data = select_component_fast(
                         sorted_shunts, max_voltage, cont_current_pack)
                     if not shunt_data:
@@ -329,22 +329,33 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                     shunt_obj = Shunt(**shunt_data)
                     shunt_price = shunt_data['price']
 
-                cable = select_cable_fast(
-                    sorted_cables, cont_current * FUSE_CURRENT_FACTOR, max_voltage, req.ambient_temp)
-                if not cable:
-                    continue
+                cable_data = None
+                cable_price = 0
+                if not req.use_custom_db or (req.use_custom_db and req.include_components and sorted_cables):
+                    cable_data = select_cable_fast(
+                        sorted_cables, cont_current * FUSE_CURRENT_FACTOR, max_voltage, req.ambient_temp)
+                    if not cable_data:
+                        # Se precisar de cabo e não encontrar, salta esta config
+                        # Ou podes decidir continuar sem cabo, mas assumindo preço 0
+                        continue
+                    cable_price = cable_data['price']
 
                 # 5. Seleção Condicional de BMS
-                bms = select_bms_fast(
-                    sorted_bms, series, cont_current_pack)
-                if not bms:
-                    continue
+                bms_data = None
+                bms_price = 0
+                if not req.use_custom_db or (req.use_custom_db and req.include_components and sorted_bms):
+                    bms_data = select_bms_fast(
+                        sorted_bms, series, cont_current_pack)
+                    if not bms_data:
+                        continue
+                    bms_price = bms_data['master_price']
 
                 # Preço
                 cells_cost = cell.Price * total_cells
-                total_price = cells_cost + \
-                    fuse_price + relay_price + cable['price'] + \
-                    bms['master_price'] + shunt_price
+                total_price = cells_cost
+                if req.include_components:
+                    total_price += fuse_price + relay_price + cable_price + \
+                        bms_price + shunt_price
 
                 if total_price > req.max_price:
                     continue
@@ -367,22 +378,8 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                     cell_price=round(cells_cost, 2),
                     fuse=fuse_obj,
                     relay=relay_obj,
-                    cable=Cable(**cable),
-                    bms=Bms(
-                        brand=bms.get('brand', 'Generic'),
-                        model=bms.get('model', 'Unknown'),
-                        max_cells=bms.get('max_cells', 0),
-                        vdc_min=bms.get('vdc_min', 0),
-                        vdc_max=bms.get('vdc_max', 0),
-                        a_max=bms.get('a_max', 0),
-                        # --- FIX: Adicionar defaults para temperatura ---
-                        temp_min=bms.get('temp_min', -20),  # Default seguro
-                        temp_max=bms.get('temp_max', 60),  # Default seguro
-                        # -----------------------------------------------
-                        master_price=bms.get('master_price', 0),
-                        slave_price=bms.get('slave_price', 0),
-                        link=bms.get('link', '')
-                    ),
+                    cable=Cable(**cable_data) if cable_data else None,
+                    bms=Bms(**bms_data) if bms_data else None,
                     shunt=shunt_obj,
                     total_price=round(total_price, 2),
                     dimensions=Dimensions(
