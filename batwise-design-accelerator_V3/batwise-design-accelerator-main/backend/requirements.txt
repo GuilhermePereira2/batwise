@@ -2,9 +2,7 @@ fastapi
 uvicorn
 pydantic
 numpy
-pandas
-scipy
 python-multipart
 fastapi-mail
 email-validator
-resend
+mangum

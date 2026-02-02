@@ -4,7 +4,7 @@ from typing import List, Dict, Optional, Tuple, Any
 from models import Requirements, CellData, Fuse, Relay, Cable, Bms, Shunt, Configuration, Dimensions, SafetyAssessment
 
 # --- CONSTANTES DE SEGURANÇA E FÍSICA ---
-HEIGHT_MARGIN_MM = 30.0
+HEIGHT_MARGIN_MM = 20.0
 SPACING_THICKNESS_MM = 0.2
 SPACING_WIDTH_MM = 0.2
 CABLE_TEMP_MAX = 100
@@ -12,10 +12,13 @@ RHO_E_COPPER = 1.68e-8
 DEFAULT_CABLE_LENGTH_M = 2
 THERMAL_RESISTANCE = 0.5
 MIN_DELTA_T = 1.0
-FUSE_CURRENT_FACTOR = 1.5
+FUSE_CURRENT_FACTOR = 1.25
 RELAY_VOLTAGE_FACTOR = 1.1
-RELAY_CURRENT_FACTOR = 2.0
+RELAY_CURRENT_FACTOR = 1.5
 
+MAX_PARALLEL_CELLS = 12
+MAX_TOTAL_CELLS = 500
+COMPONENTS_WEIGHT_FACTOR = 0.05
 # --- FUNÇÕES AUXILIARES ---
 
 
@@ -237,28 +240,29 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
         if min_series > max_series:
             continue
 
-        for series in range(min_series, max_series + 1):
+        for series in range(min_series, max_series + 1): # Inclusivo
             bat_voltage = series * cell.NominalVoltage
             max_voltage = series * cell.ChargeVoltage
 
             # Estimativa de Parallel
-            cell_power = (cell.Capacity * 1e-3 *
-                          cell.MaxContinuousDischargeRate) * cell.NominalVoltage
-            min_p_power = math.ceil(
-                req.min_continuous_power / (series * cell_power)) if cell_power > 0 else 1
-            start_p = max(min_p_power, 1)
+            cell_power = (cell.Capacity * 1e-3 * cell.MaxContinuousDischargeRate) * cell.NominalVoltage
 
-            for parallel in range(start_p, 5):  # Limite aumentado para teste
+            if cell_power <= 0:
+                print(f"Skipping cell {cell.CellModelNo} due to non-positive power.")
+                continue
 
-                if parallel * series > 200:
+            min_p_power = math.ceil(req.min_continuous_power / (series * cell_power))
+
+            for parallel in range(min_p_power, MAX_PARALLEL_CELLS):  # Limite aumentado para teste
+
+                if parallel * series > MAX_TOTAL_CELLS: # MAX 200 células no total
                     continue
 
                 stats["totalAttempts"] += 1
 
                 # --- SAFETY CHECK ---
-                cont_current = req.min_continuous_power / bat_voltage
-                cont_current_pack = max(cont_current, cell.Capacity * 1e-3 *
-                                        cell.MaxContinuousDischargeRate*parallel)
+                cont_current = req.min_continuous_power / bat_voltage 
+                cont_current_pack = max(cont_current, cell.Capacity * 1e-3 * cell.MaxContinuousDischargeRate * parallel)
 
                 tech = get_hardware_requirements(
                     bat_voltage, cont_current)
@@ -277,7 +281,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 bat_weight = (cell.Weight * 1e-3) * total_cells
 
                 if req.include_components:
-                    if bat_weight > (req.max_weight*0.7):
+                    if bat_weight > (req.max_weight*(1 - COMPONENTS_WEIGHT_FACTOR)):
                         continue
                 else:
                     if bat_weight > req.max_weight:
@@ -330,6 +334,7 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 if not cable:
                     continue
 
+                # 5. Seleção Condicional de BMS
                 bms = select_bms_fast(
                     sorted_bms, series, cont_current_pack)
                 if not bms:
