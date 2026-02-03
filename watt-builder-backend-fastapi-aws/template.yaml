@@ -1,0 +1,37 @@
+Transform: AWS::Serverless-2016-10-31
+Parameters: {}
+Resources:
+  LambdaFunctionFunctionwattbuilderbackendfastapi:
+    Type: AWS::Serverless::Function
+    Properties:
+      MemorySize: 512
+      Description: ''
+      Timeout: 30
+      RuntimeManagementConfig:
+        UpdateRuntimeOn: Auto
+      Handler: main.handler
+      Role: arn:aws:iam::267067829753:role/service-role/watt-builder-backend-fastapi-role-51mbg1zv
+      FileSystemConfigs: []
+      FunctionName: watt-builder-backend-fastapi
+      Runtime: python3.12
+      PackageType: Zip
+      LoggingConfig:
+        LogFormat: Text
+        LogGroup: /aws/lambda/watt-builder-backend-fastapi
+      RecursiveLoop: Terminate
+      Environment:
+        Variables:
+          MAIL_PORT: '587'
+          SECRET_KEY: 8233eaa5eeddbd0d22b17ae01886fb0a1e7e099d0b31a8b845c081a29f814950
+          MAIL_SERVER: smtp.zoho.eu
+          MAIL_USERNAME: general@watt-builder.com
+          MAIL_FROM: general@watt-builder.com
+          MAIL_PASSWORD: wQEmyvxXkFW1
+      EphemeralStorage:
+        Size: 512
+      Layers:
+        - arn:aws:lambda:eu-west-3:267067829753:layer:watt-builder-libs:2
+      Architectures:
+        - x86_64
+      Tracing: PassThrough
+      CodeUri: LambdaFunctionFunctionwattbuilderbackendfastapi
