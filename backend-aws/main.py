@@ -7,9 +7,10 @@ import os
 import json
 import csv
 import io
-import sys
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
+from mangum import Mangum
+from cells_loader import Database
 
 # Carregar variáveis de ambiente antes de importar módulos que dependem delas
 from env_loader import load_backend_env
@@ -23,7 +24,6 @@ from models import Requirements, ContactRequest, DesignResponse, CellData, UserC
 
 # Importar Lógica e DB de Células
 from logic import compute_cell_configurations
-from cells_loader import db
 
 # Adicionar path para importar DynamoDB handler
 from dynamodb_handler import DynamoDBUserHandler
@@ -40,6 +40,7 @@ origins = [
     "http://127.0.0.1:5173",  # Vite dev server via IP
     # O teu URL do Vercel (ajusta se for diferente)
     "https://www.watt-builder.com",
+    "https://www.preview.watt-builder.com",
     "https://batwise.vercel.app"
 ]
 
@@ -118,13 +119,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 def read_root():
     """Endpoint de saúde para verificar se os dados carregaram bem."""
     return {
-        "status": "Operational 🚀",
-        "database_stats": {
-            "cells": len(db.cells),
-            "fuses": len(db.components.get("fuses", [])),
-            "relays": len(db.components.get("relays", [])),
-            "cables": len(db.components.get("cables", []))
-        }
+        "status": "Operational 🚀"
     }
 
 
@@ -134,6 +129,8 @@ def get_all_cells():
     Retorna a lista completa de células disponíveis na base de dados.
     O Frontend usa isto para popular a página 'Cell Explorer'.
     """
+    db = Database()
+
     if not db.cells:
         # Opcional: Retornar lista vazia ou erro se não houver dados
         return []
@@ -188,6 +185,7 @@ async def calculate_endpoint(
             }
         else:
             print("📂 Modo Default DB detetado.")
+            db = Database()
             active_cells = db.cells
             active_components = db.components
 
@@ -244,21 +242,7 @@ async def calculate_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# --- Endpoint Bónus: Recarregar Dados sem desligar o servidor ---
 
-
-@app.post("/admin/reload-data")
-def reload_data():
-    """
-    Útil para quando editares o ficheiro .json e quiseres atualizar
-    os dados sem ter de parar e arrancar o python.
-    """
-    try:
-        db.reload()
-        return {"message": "Base de dados recarregada com sucesso!", "stats": len(db.cells)}
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Erro ao recarregar: {str(e)}")
 
 
 # 2. Configuração do Servidor de Email (Lê das variáveis de ambiente)
@@ -368,6 +352,7 @@ def deduct_credit(current_user: dict = Depends(get_current_user)):
     except ValueError:
         raise HTTPException(status_code=403, detail="Insufficient credits")
 
+handler = Mangum(app)
 
 if __name__ == "__main__":
     # Corre o servidor na porta definida no .env (default 8000)

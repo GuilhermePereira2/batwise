@@ -1,0 +1,23 @@
+# Core FastAPI (sem CLI/dev tools)
+fastapi==0.115.0
+mangum==0.20.0
+pydantic==2.10.0
+pydantic-settings==2.6.0
+
+# Server (Lambda não precisa de uvloop/httptools)
+uvicorn==0.32.0
+# AWS
+boto3==1.35.0
+
+# Auth & Security
+passlib==1.7.4
+bcrypt==3.2.2
+python-jose[cryptography]==3.3.0
+python-multipart==0.0.22
+
+# Email
+fastapi-mail==1.4.1
+email-validator==2.2.0
+
+# Utilities
+python-dotenv==1.0.1
