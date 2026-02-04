@@ -2,17 +2,19 @@
 
 // Esta lógica corre uma vez e serve para toda a app
 export const getApiUrl = (endpoint: string) => {
-    // Garante que o endpoint começa com /
-    const path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+    // 1. Tenta ler a variável do Vercel
+    let base = import.meta.env.VITE_API_URL;
 
-    // Em desenvolvimento, usa o proxy do Vite (vite.config.ts)
-    // Em produção, usa VITE_API_URL do .env
-    if (import.meta.env.DEV) {
-        // Proxy do Vite handle automaticamente /auth, /api, /calculate
-        return path;
+    // 2. Se não existir (estás no teu PC), usa localhost
+    if (!base) {
+        base = "http://127.0.0.1:8000";
     }
 
-    // Em produção: usa a URL completa do backend
-    const base = import.meta.env.VITE_API_URL || "";
-    return `${base.replace(/\/$/, "")}${path}`;
+    // 3. Remove a barra final se existir (para evitar erros de //)
+    base = base.replace(/\/$/, "");
+
+    // 4. Remove a barra inicial do endpoint se existir
+    const path = endpoint.replace(/^\//, "");
+
+    return `${base}/${path}`;
 };
