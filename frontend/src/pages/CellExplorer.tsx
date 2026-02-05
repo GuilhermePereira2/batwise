@@ -385,8 +385,9 @@ const CellExplorer = () => {
             const powerDensityWL = powerW / safeVolumeL;
             const energyDensityWhKg = energyWh / (cell.Weight / 1000000);
             const powerDensityWKg = powerW / (cell.Weight / 1000000);
-            return {
-                ...cell,
+            
+            // Create computed values object
+            const computed = {
                 capacityAh,
                 energyWh,
                 powerW,
@@ -395,7 +396,11 @@ const CellExplorer = () => {
                 powerDensityWL,
                 energyDensityWhKg,
                 powerDensityWKg,
-            } as ChartCellData;
+            };
+            
+            // Merge cell data with computed values for chart
+            // Using Object.assign to create a new object without spread
+            return Object.assign({}, cell, computed) as ChartCellData;
         });
     }, [filteredCells]);
     const chartAxisOptions = [
@@ -833,7 +838,22 @@ const CellExplorer = () => {
                                                                         const slug = createCellSlug(data.payload.Brand, data.payload.CellModelNo);
                                                                         window.location.href = `/cell/${slug}`; // Usando window location para simplificar dentro do recharts
                                                                     }}
-                                                                    shape={(props) => <circle {...props} r={5} style={{ cursor: 'pointer' }} />}
+                                                                    shape={(props: any) => {
+                                                                        // Only pass valid SVG circle props to avoid React warnings
+                                                                        const { cx, cy, fill, fillOpacity, stroke, strokeWidth } = props;
+                                                                        return (
+                                                                            <circle
+                                                                                cx={cx}
+                                                                                cy={cy}
+                                                                                r={5}
+                                                                                fill={fill}
+                                                                                fillOpacity={fillOpacity}
+                                                                                stroke={stroke}
+                                                                                strokeWidth={strokeWidth}
+                                                                                style={{ cursor: 'pointer' }}
+                                                                            />
+                                                                        );
+                                                                    }}
                                                                 />
                                                             ))}
                                                         </ScatterChart>

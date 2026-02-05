@@ -73,7 +73,7 @@ class Shunt(BaseModel):
 class CellData(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     # Identificadores (CellModelNo é o único estritamente obrigatório)
-    CellModelNo: str = Field(..., alias="Model")
+    CellModelNo: str
     Brand: str
     Composition: str = "Li-ion"
     Cell_Stack: str = "Unknown"
