@@ -33,7 +33,7 @@ load_database_env()
 # Configuração - usar variáveis de ambiente
 DYNAMODB_ENDPOINT = os.getenv("DYNAMODB_ENDPOINT", None)  # None = AWS real
 AWS_REGION = os.getenv("AWS_REGION", "eu-west-3")
-USERS_TABLE_NAME = os.getenv("USERS_TABLE_NAME", "batwise-users")
+USERS_TABLE_NAME = os.getenv("USERS_TABLE_NAME", "watt-builder-Users")
 
 # Debug: Ver se as variáveis foram carregadas
 print(f"🔍 Debug - AWS_REGION: {AWS_REGION}")
@@ -113,7 +113,7 @@ class DynamoDBUserHandler:
     @staticmethod
     def get_user_by_email(email: str) -> Optional[Dict]:
         """
-        Busca um utilizador pelo email usando Scan
+        Busca um utilizador pelo email usando Query no GSI
         
         Args:
             email: Email do utilizador
@@ -122,8 +122,10 @@ class DynamoDBUserHandler:
             Dict com dados do utilizador ou None se não encontrado
         """
         try:
-            response = users_table.scan(
-                FilterExpression='email = :email',
+            # Usar Query no GSI email-index (muito mais rápido que Scan)
+            response = users_table.query(
+                IndexName='email-index',
+                KeyConditionExpression='email = :email',
                 ExpressionAttributeValues={':email': email}
             )
             items = response.get('Items', [])

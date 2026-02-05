@@ -41,7 +41,7 @@ Configurar em `backend/.env`:
 ```env
 DYNAMODB_ENDPOINT=http://localhost:8000
 AWS_REGION=local
-USERS_TABLE_NAME=batwise-users
+USERS_TABLE_NAME=watt-builder-Users
 ```
 
 **AWS:**

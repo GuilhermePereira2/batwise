@@ -4,7 +4,7 @@ Resources:
   LambdaFunctionFunctionwattbuilderbackendfastapi:
     Type: AWS::Serverless::Function
     Properties:
-      MemorySize: 512
+      MemorySize: 1024
       Description: ''
       Timeout: 30
       RuntimeManagementConfig:

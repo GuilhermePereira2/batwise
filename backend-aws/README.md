@@ -40,7 +40,7 @@ Acede a http://localhost:8001/docs para ver a API.
 ```env
 DYNAMODB_ENDPOINT=http://localhost:8000
 AWS_REGION=local
-USERS_TABLE_NAME=batwise-users
+USERS_TABLE_NAME=watt-builder-Users
 ```
 
 **AWS DynamoDB:**

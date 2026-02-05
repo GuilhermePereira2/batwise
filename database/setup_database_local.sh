@@ -16,7 +16,7 @@ else
     echo "⚠️  Usando defaults"
     export DYNAMODB_ENDPOINT="http://localhost:8000"
     export AWS_REGION="local"
-    export USERS_TABLE_NAME="batwise-users"
+    export USERS_TABLE_NAME="watt-builder-Users"
 fi
 
 # Verificar se DynamoDB Local está a correr

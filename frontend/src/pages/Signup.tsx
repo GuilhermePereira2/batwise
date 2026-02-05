@@ -6,14 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-// 1. ADICIONADO "Building" AOS IMPORTS
-import { UserPlus, Mail, Lock, User, Loader2, ArrowLeft, Building } from "lucide-react";
+import { UserPlus, Mail, Lock, User, Loader2, ArrowLeft, Eye, EyeOff, AlertTriangle, Building } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/config";
 
 const Signup = () => {
     const [name, setName] = useState("");
-    // 2. NOVOS ESTADOS ADICIONADOS
     const [company, setCompany] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -21,14 +19,51 @@ const Signup = () => {
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
+    // ESTADOS PARA OS OLHOS (Independentes)
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    
+    // ESTADO DO CAPS LOCK
+    const [capsLockActive, setCapsLockActive] = useState(false);
+
     const { toast } = useToast();
     const navigate = useNavigate();
+
+    // --- FUNÇÃO ROBUSTA DO CAPS LOCK ---
+    const checkCapsLock = (event: React.KeyboardEvent | React.MouseEvent | React.FocusEvent) => {
+        // 1. Casting para evitar erros de TS
+        const evt = event as any;
+        if (typeof evt.getModifierState !== "function") return;
+
+        const currentState = evt.getModifierState("CapsLock");
+
+        // 2. Se for um evento de teclado
+        if (evt.nativeEvent instanceof KeyboardEvent) {
+            // Se a tecla pressionada for o PRÓPRIO CapsLock
+            if (evt.key === "CapsLock") {
+                // No 'keydown', o sistema ainda reporta o estado antigo.
+                // Nós invertemos manualmente para a UI ser instantânea.
+                if (evt.type === 'keydown') {
+                    setCapsLockActive(!currentState);
+                } else {
+                    // No 'keyup', confiamos no estado real
+                    setCapsLockActive(currentState);
+                }
+            } else {
+                // Se for outra tecla qualquer (ex: letras), o estado já é real
+                setCapsLockActive(currentState);
+            }
+        } else {
+            // Para cliques (mouse) e focus, o estado é sempre real
+            setCapsLockActive(currentState);
+        }
+    };
+
 
     const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
 
-        // Validação de passwords
         if (password !== confirmPassword) {
             toast({
                 title: "Passwords do not match",
@@ -40,15 +75,11 @@ const Signup = () => {
         }
 
         try {
-            // URL do endpoint de registo no backend
             const url = getApiUrl("auth/signup");
 
-            // Enviar pedido ao backend
             const response = await fetch(url, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     full_name: name,
                     email: email,
@@ -57,19 +88,16 @@ const Signup = () => {
                 }),
             });
 
-            // Se o backend devolver erro (ex: email já existe)
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.detail || "Registration failed");
             }
 
-            // Sucesso!
             toast({
                 title: "Account created!",
                 description: "You have successfully registered. Please log in.",
             });
 
-            // Redirecionar para a página de Login (em vez de /diy)
             navigate("/login");
 
         } catch (error: any) {
@@ -152,38 +180,91 @@ const Signup = () => {
                                         />
                                     </div>
                                 </div>
+                                
+                                {/* --- PASSWORD FIELD --- */}
                                 <div className="space-y-2">
                                     <Label htmlFor="password">Password</Label>
                                     <div className="relative">
                                         <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                         <Input
                                             id="password"
-                                            type="password"
+                                            type={showPassword ? "text" : "password"}
                                             placeholder="••••••••"
-                                            className="pl-9"
+                                            className="pl-9 pr-10" // Adicionei padding right para o olho não ficar em cima do texto
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
+                                            // Eventos do Caps Lock
+                                            onKeyDown={checkCapsLock}
+                                            onKeyUp={checkCapsLock}
+                                            onClick={checkCapsLock} 
+                                            onFocus={checkCapsLock}
+                                            onBlur={() => setCapsLockActive(false)} 
                                             required
                                             minLength={8}
                                         />
+                                        
+                                        {/* Botão do Olho 1 */}
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-3 top-3 text-muted-foreground hover:text-foreground focus:outline-none"
+                                            tabIndex={-1}
+                                        >
+                                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </button>
                                     </div>
+                                    
+                                    {/* Aviso de Caps Lock (Só aparece se o foco estiver neste ou no outro) */}
+                                    {capsLockActive && (
+                                        <div className="flex items-center text-xs text-yellow-600 mt-1 animate-in fade-in slide-in-from-top-1">
+                                            <AlertTriangle className="h-3 w-3 mr-1" />
+                                            Caps Lock is on
+                                        </div>
+                                    )}
                                 </div>
+
+                                {/* --- CONFIRM PASSWORD FIELD --- */}
                                 <div className="space-y-2">
                                     <Label htmlFor="confirmPassword">Confirm Password</Label>
                                     <div className="relative">
                                         <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                         <Input
                                             id="confirmPassword"
-                                            type="password"
+                                            // AQUI MUDOU: Usa o estado showConfirmPassword
+                                            type={showConfirmPassword ? "text" : "password"}
                                             placeholder="••••••••"
-                                            className="pl-9"
+                                            className="pl-9 pr-10" // Padding para o olho
                                             value={confirmPassword}
                                             onChange={(e) => setConfirmPassword(e.target.value)}
+                                            // Eventos do Caps Lock
+                                            onKeyDown={checkCapsLock}
+                                            onKeyUp={checkCapsLock}
+                                            onClick={checkCapsLock} 
+                                            onFocus={checkCapsLock}
+                                            onBlur={() => setCapsLockActive(false)} 
                                             required
                                             minLength={8}
                                         />
+                                        
+                                        {/* Botão do Olho 2 (Novo) */}
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                            className="absolute right-3 top-3 text-muted-foreground hover:text-foreground focus:outline-none"
+                                            tabIndex={-1}
+                                        >
+                                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </button>
                                     </div>
+                                    {/* Dupliquei o aviso aqui caso o user esteja a focar neste campo */}
+                                    {capsLockActive && (
+                                        <div className="flex items-center text-xs text-yellow-600 mt-1 animate-in fade-in slide-in-from-top-1">
+                                            <AlertTriangle className="h-3 w-3 mr-1" />
+                                            Caps Lock is on
+                                        </div>
+                                    )}
                                 </div>
+
                                 <Button type="submit" className="w-full" disabled={isLoading}>
                                     {isLoading ? (
                                         <>

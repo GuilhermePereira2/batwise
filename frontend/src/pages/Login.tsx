@@ -6,18 +6,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { LogIn, Mail, Lock, Loader2, ArrowLeft } from "lucide-react";
+import { LogIn, Mail, Lock, Loader2, ArrowLeft, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/context/AuthContext"; // Importar hook
+import { useAuth } from "@/context/AuthContext";
 import { getApiUrl } from "@/lib/config";
 
 const Login = () => {
+    // Estados do Formulário
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+
+    // Novos Estados para UI
+    const [showPassword, setShowPassword] = useState(false);
+    const [capsLockActive, setCapsLockActive] = useState(false);
+
     const { toast } = useToast();
     const navigate = useNavigate();
-    const { login } = useAuth(); // Importar função de login
+    const { login } = useAuth();
+
+    // Função para detetar Caps Lock
+    const checkCapsLock = (event: React.KeyboardEvent<HTMLInputElement>) => {
+        const capsLockOn: boolean = event.getModifierState('CapsLock');
+        setCapsLockActive(capsLockOn);
+    };
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -31,7 +43,6 @@ const Login = () => {
                 body: JSON.stringify({ email, password })
             });
 
-            // Se falhar (ex: 401 Unauthorized)
             if (!response.ok) {
                 if (response.status === 401) {
                     throw new Error("Invalid email or password.");
@@ -41,11 +52,11 @@ const Login = () => {
 
             const data = await response.json();
 
-            // Atualizar o contexto global
             login(data.access_token, {
-                email: email, // O backend podia devolver o email, ou usamos o do form
-                name: data.user_name, // Backend tem de enviar isto
-                credits: data.credits // Backend tem de enviar isto
+                id: email, // Use email as unique ID
+                email: email,
+                name: data.user_name,
+                credits: data.credits
             });
 
             toast({
@@ -115,19 +126,52 @@ const Login = () => {
                                             Forgot password?
                                         </Link>
                                     </div>
+
+                                    {/* Campo Password Modificado */}
                                     <div className="relative">
                                         <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+
                                         <Input
                                             id="password"
-                                            type="password"
+                                            // Lógica para mostrar/esconder texto
+                                            type={showPassword ? "text" : "password"}
                                             placeholder="••••••••"
-                                            className="pl-9"
+                                            // Adicionado pr-10 para o texto não ficar atrás do olho
+                                            className="pl-9 pr-10"
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
+                                            // Eventos do Caps Lock
+                                            onKeyDown={checkCapsLock}
+                                            onKeyUp={checkCapsLock}
+                                            onClick={checkCapsLock} // Verifica se clicar já com ele ligado
+                                            onBlur={() => setCapsLockActive(false)} // Esconde aviso se sair do campo
                                             required
                                         />
+
+                                        {/* Botão do Olho */}
+                                        <button
+                                            type="button" // Importante para não submeter o form
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-3 top-3 text-muted-foreground hover:text-foreground focus:outline-none"
+                                            tabIndex={-1} // Opcional: para não focar no tab
+                                        >
+                                            {showPassword ? (
+                                                <EyeOff className="h-4 w-4" />
+                                            ) : (
+                                                <Eye className="h-4 w-4" />
+                                            )}
+                                        </button>
                                     </div>
+
+                                    {/* Aviso de Caps Lock */}
+                                    {capsLockActive && (
+                                        <div className="flex items-center text-xs text-yellow-600 mt-1 animate-in fade-in slide-in-from-top-1">
+                                            <AlertTriangle className="h-3 w-3 mr-1" />
+                                            Caps Lock is on
+                                        </div>
+                                    )}
                                 </div>
+
                                 <Button type="submit" className="w-full" disabled={isLoading}>
                                     {isLoading ? (
                                         <>

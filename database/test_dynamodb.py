@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../backend'))
 # Definir variáveis de ambiente para teste local
 os.environ['DYNAMODB_ENDPOINT'] = 'http://localhost:8000'
 os.environ['AWS_REGION'] = 'local'
-os.environ['USERS_TABLE_NAME'] = 'batwise-users'
+os.environ['USERS_TABLE_NAME'] = 'watt-builder-Users'
 
 from dynamodb_handler import DynamoDBUserHandler
 from security import get_password_hash, verify_password

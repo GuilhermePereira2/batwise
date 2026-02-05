@@ -50,7 +50,3 @@ class Database:
 
         print(
             f"✅ Database Loaded: {len(self.cells)} Cells, {len(self.components['fuses'])} Fuses, etc.")
-
-
-# Criar uma instância global para ser usada na App
-db = Database()
