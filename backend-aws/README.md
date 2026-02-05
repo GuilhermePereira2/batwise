@@ -49,4 +49,3 @@ USERS_TABLE_NAME=watt-builder-Users
 AWS_REGION=eu-west-3
 USERS_TABLE_NAME=watt-builder-Users
 ```
-
