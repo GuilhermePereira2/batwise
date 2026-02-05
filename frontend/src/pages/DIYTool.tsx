@@ -88,25 +88,34 @@ const findBestConfigurations = (configs: Configuration[], targetPrice: number) =
   if (!configs.length) return [];
 
   const findBest = (metric: (c: Configuration) => number, compare: 'min' | 'max' = 'max') => {
-    return configs.reduce((best, current) => {
-      const bestMetric = metric(best);
-      const currentMetric = metric(current);
-      return (compare === 'max' ? currentMetric > bestMetric : currentMetric < bestMetric) ? current : best;
-    });
+    try {
+      const result = configs.reduce((best, current) => {
+        const bestMetric = metric(best);
+        const currentMetric = metric(current);
+        // Skip invalid metrics (NaN, Infinity, etc.)
+        if (!isFinite(bestMetric) || !isFinite(currentMetric)) return best;
+        return (compare === 'max' ? currentMetric > bestMetric : currentMetric < bestMetric) ? current : best;
+      });
+      return result;
+    } catch (e) {
+      console.warn('Error in findBest:', e);
+      return null;
+    }
   };
 
   const calculateOptimalScore = (config: Configuration) => {
     if (!config.safety.is_safe) return 0;
     const energyDensity = config.battery_energy / config.battery_weight;
     const maxEnergyDensity = Math.max(...configs.map(c => c.battery_energy / c.battery_weight));
+    if (!isFinite(maxEnergyDensity)) return 0;
     const normalizedDensity = energyDensity / maxEnergyDensity;
     const priceDifference = Math.abs(config.total_price - targetPrice);
     const maxPriceDiff = Math.max(...configs.map(c => Math.abs(c.total_price - targetPrice)));
-    const normalizedPrice = 1 - (priceDifference / maxPriceDiff);
+    const normalizedPrice = maxPriceDiff > 0 ? 1 - (priceDifference / maxPriceDiff) : 0;
     return (normalizedDensity + normalizedPrice + (config.safety.safety_score / 100)) / 3;
   };
 
-  return [
+  const results = [
     { title: "Lowest Price", config: findBest(c => c.total_price, 'min'), metric: (c: Configuration) => `$${c.total_price.toFixed(2)}` },
     { title: "Highest Energy", config: findBest(c => c.battery_energy), metric: (c: Configuration) => formatUnit(c.battery_energy, 'Wh') },
     { title: "Highest Energy Density", config: findBest(c => c.battery_energy / c.battery_weight), metric: (c: Configuration) => `${(c.battery_energy / c.battery_weight).toFixed(1)} Wh/kg` },
@@ -114,6 +123,9 @@ const findBestConfigurations = (configs: Configuration[], targetPrice: number) =
     { title: "Lightest", config: findBest(c => c.battery_weight, 'min'), metric: (c: Configuration) => `${c.battery_weight.toFixed(1)} kg` },
     { title: "Optimal Balance", config: findBest(c => calculateOptimalScore(c)), metric: (c: Configuration) => `${(c.battery_energy / c.battery_weight).toFixed(1)} Wh/kg @ $${c.total_price.toFixed(0)}` }
   ];
+
+  // Filter out any results with undefined config
+  return results.filter(r => r.config !== null && r.config !== undefined);
 };
 
 // --- HELPER PARA DOWNLOAD DE TEMPLATES CSV ---
@@ -746,7 +758,9 @@ const DIYTool = () => {
 
                       <TabsContent value="best-solutions">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {findBestConfigurations(results, Number(targetPrice) || 0).map(({ title, config, metric }, idx) => (
+                          {findBestConfigurations(results, Number(targetPrice) || 0).map(({ title, config, metric }, idx) => {
+                            if (!config) return null;
+                            return (
                             <Card
                               key={title + idx}
                               className={`cursor-pointer hover:shadow-lg transition-all border-l-4 ${config.safety.is_safe ? 'border-l-[#f97316]' : 'border-l-red-500'}`}
@@ -776,7 +790,8 @@ const DIYTool = () => {
                                 )}
                               </CardContent>
                             </Card>
-                          ))}
+                            );
+                          })}
                         </div>
                       </TabsContent>
 
@@ -980,12 +995,7 @@ const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents, dataSo
           <div className="flex flex-col h-full min-h-[300px]">
             <h3 className="font-bold mb-2 flex items-center gap-2"><Zap className="w-4 h-4" /> Wiring Logic</h3>
             <div className="flex-1 border rounded-lg bg-white p-2 flex items-center justify-center overflow-hidden">
-              <WiringDiagram 
-                series={solution.series_cells} 
-                parallel={solution.parallel_cells} 
-                hasBms={!!solution.bms}
-                hasFuse={!!solution.fuse}
-              />
+              <WiringDiagram config={solution} />
             </div>
             
             {/* Safety Report */}
