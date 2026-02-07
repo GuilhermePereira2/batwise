@@ -23,9 +23,10 @@ const Profile = () => {
         return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     };
 
-    // Verificar se o trial já foi ativado (campo trial_started_at existe)
-    // Usamos (user as any) porque o tipo User no frontend pode ainda não ter sido atualizado com este campo
-    const isTrialActive = (user as any).trial_started_at !== null && (user as any).trial_started_at !== undefined;
+    // --- LÓGICA DE VERIFICAÇÃO DO TRIAL ---
+    // Verifica se o campo existe e não está vazio ou nulo
+    const rawTrialDate = (user as any).trial_started_at;
+    const isTrialActive = !!rawTrialDate && rawTrialDate !== "";
 
     // --- FUNÇÃO PARA ATIVAR O TRIAL ---
     const handleActivateTrial = async () => {
@@ -47,11 +48,17 @@ const Profile = () => {
                 throw new Error(data.detail || "Failed to activate trial");
             }
 
-            // ATUALIZAÇÃO VISUAL IMEDIATA
-            // O backend retorna o objeto User atualizado com os novos créditos.
-            // Ao chamar updateUser, o Contexto global atualiza e reflete os créditos na Navbar e aqui.
+            // --- ATUALIZAÇÃO VISUAL IMEDIATA ---
             if (updateUser) {
-                updateUser(data);
+                // Mesclamos os dados atuais do user com a resposta do backend.
+                // IMPORTANTE: Forçamos a data de hoje caso o backend por algum motivo
+                // não devolva o campo 'trial_started_at' no response body (fallback de segurança).
+                // Isto garante que o cartão desaparece INSTANTANEAMENTE.
+                updateUser({
+                    ...user,
+                    ...data,
+                    trial_started_at: data.trial_started_at || new Date().toISOString()
+                });
             }
 
             toast({
@@ -61,6 +68,7 @@ const Profile = () => {
             });
 
         } catch (error: any) {
+            console.error(error);
             toast({
                 title: "Activation Failed",
                 description: error.message,
@@ -71,6 +79,8 @@ const Profile = () => {
         }
     };
 
+    console.log("DADOS DO USER:", user);
+    console.log("DATA TRIAL:", (user as any).trial_started_at);
     return (
         <div className="min-h-screen flex flex-col font-sans bg-muted/10">
             <Navigation />
@@ -81,8 +91,8 @@ const Profile = () => {
 
                     {/* Badge de estado da conta */}
                     <div className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide border ${isTrialActive
-                            ? "bg-orange-100 text-orange-700 border-orange-200"
-                            : "bg-gray-100 text-gray-600 border-gray-200"
+                        ? "bg-orange-100 text-orange-700 border-orange-200"
+                        : "bg-gray-100 text-gray-600 border-gray-200"
                         }`}>
                         {isTrialActive ? "Premium Trial Active" : "Standard Plan"}
                     </div>
@@ -118,7 +128,7 @@ const Profile = () => {
                     <div className="md:col-span-2 space-y-6">
 
                         {/* CARTÃO DE FREE TRIAL 
-                            Só aparece se !isTrialActive
+                            Só aparece se !isTrialActive (se user.trial_started_at for nulo/vazio)
                         */}
                         {!isTrialActive && (
                             <Card className="bg-gradient-to-br from-orange-500 to-amber-600 text-white border-none shadow-md overflow-hidden relative">

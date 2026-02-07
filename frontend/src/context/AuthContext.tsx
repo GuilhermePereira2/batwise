@@ -1,10 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 
+// 1. Atualizamos a interface para incluir os campos do Trial e outros úteis
 interface User {
-    id: string;
+    id?: string;
     email: string;
     name: string;
     credits: number;
+    company?: string;
+    created_at?: string;
+    trial_started_at?: string | null; // <--- FUNDAMENTAL para a lógica do trial
 }
 
 interface AuthContextType {
@@ -12,7 +16,8 @@ interface AuthContextType {
     token: string | null;
     login: (token: string, userData: User) => void;
     logout: () => void;
-    updateCredits: (newCredits: number) => void; // <--- NOVO
+    updateCredits: (newCredits: number) => void;
+    updateUser: (userData: Partial<User>) => void; // <--- NOVA FUNÇÃO GENÉRICA
     isAuthenticated: boolean;
 }
 
@@ -28,8 +33,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const storedUser = localStorage.getItem("user");
 
         if (storedToken && storedUser) {
-            setToken(storedToken);
-            setUser(JSON.parse(storedUser));
+            try {
+                setToken(storedToken);
+                setUser(JSON.parse(storedUser));
+            } catch (e) {
+                console.error("Failed to parse stored user", e);
+                localStorage.removeItem("user");
+                localStorage.removeItem("token");
+            }
         }
     }, []);
 
@@ -37,7 +48,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setToken(newToken);
         setUser(userData);
 
-        // Guardar no browser para não perder login ao fazer refresh
         localStorage.setItem("token", newToken);
         localStorage.setItem("user", JSON.stringify(userData));
     };
@@ -47,8 +57,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(null);
         localStorage.removeItem("token");
         localStorage.removeItem("user");
+
+        // Opcional: Redirecionar para home ou login
+        window.location.href = "/login";
     };
 
+    // Atualiza apenas créditos (mantido para compatibilidade)
     const updateCredits = (newCredits: number) => {
         if (user) {
             const updatedUser = { ...user, credits: newCredits };
@@ -57,8 +71,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
+    // 2. Implementação da função que atualiza qualquer campo (usada no Profile.tsx)
+    const updateUser = (newUserData: Partial<User>) => {
+        if (user) {
+            // Mescla os dados atuais com os novos (ex: adiciona trial_started_at)
+            const updatedUser = { ...user, ...newUserData };
+
+            setUser(updatedUser);
+            localStorage.setItem("user", JSON.stringify(updatedUser));
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, token, login, logout, updateCredits, isAuthenticated: !!user }}>
+        <AuthContext.Provider value={{
+            user,
+            token,
+            login,
+            logout,
+            updateCredits,
+            updateUser, // Exportar a nova função
+            isAuthenticated: !!user
+        }}>
             {children}
         </AuthContext.Provider>
     );

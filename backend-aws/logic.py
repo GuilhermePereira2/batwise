@@ -249,10 +249,16 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 req.min_continuous_power / (series * cell_power)) if cell_power > 0 else 1
             start_p = max(min_p_power, 1)
 
-            for parallel in range(start_p, 5):  # Limite aumentado para teste
+            if cell.Cell_Stack and cell.Cell_Stack.lstrip().startswith('P'):
+                start_p = 1
+                end_p = 2
+            else:
+                end_p = 10
 
-                if parallel * series > 200 and not req.use_custom_db:
-                    continue
+            for parallel in range(start_p, end_p):  # Limite aumentado para teste
+
+                # if parallel * series > 200 and not req.use_custom_db:
+                #    continue
 
                 stats["totalAttempts"] += 1
 

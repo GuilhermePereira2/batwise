@@ -253,6 +253,7 @@ class Token(BaseModel):
     token_type: str
     user_name: str
     credits: int
+    trial_started_at: Optional[str] = None
 
 
 class UserResponse(BaseModel):

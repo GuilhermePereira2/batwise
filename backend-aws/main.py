@@ -364,7 +364,8 @@ def login(creds: UserLogin):
         "access_token": access_token,
         "token_type": "bearer",
         "user_name": user['full_name'],
-        "credits": user['credits']
+        "credits": user['credits'],
+        "trial_started_at": user.get('trial_started_at')
     }
 
 
@@ -380,27 +381,34 @@ def deduct_credit(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Insufficient credits")
 
 
+# No endpoint activate_trial
 @app.post("/auth/activate-trial", response_model=UserResponse)
 def activate_trial(current_user: dict = Depends(get_current_user)):
-    # 1. Verificar se já ativou o trial antes
+    # 1. Verificar se já ativou
     if current_user.get("trial_started_at"):
         raise HTTPException(
             status_code=400,
             detail="Free trial already activated or used."
         )
 
-    # 2. Definir data de início e dar 1000 créditos
-    now_iso = datetime.utcnow().isoformat()
+    # 2. Ativar
+    try:
+        now_iso = datetime.utcnow().isoformat()
 
-    # Tens de garantir que tens este método no teu DynamoDBUserHandler
-    # Algo como: update_user_fields(email, updates_dict)
-    updated_user = db_users.activate_trial_for_user(
-        email=current_user['email'],
-        start_date=now_iso,
-        bonus_credits=1000
-    )
+        # Esta função devolve o dict atualizado do DynamoDB
+        updated_attributes = db_users.activate_trial_for_user(
+            email=current_user['email'],
+            start_date=now_iso,
+            bonus_credits=1000
+        )
 
-    return updated_user
+        # FastAPI usa o response_model=UserResponse para filtrar este dict.
+        # Como atualizaste o models.py no passo 1, o campo 'trial_started_at'
+        # agora vai passar para o frontend.
+        return updated_attributes
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 handler = Mangum(app)
