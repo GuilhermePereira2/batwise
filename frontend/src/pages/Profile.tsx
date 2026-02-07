@@ -23,10 +23,24 @@ const Profile = () => {
         return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     };
 
-    const isTrialActive = Boolean(
-        user?.trial_started_at &&
-        !isNaN(Date.parse(user.trial_started_at))
-    );
+    const isTrialActive = (() => {
+        // 1. Verificar se a data existe
+        if (!user?.trial_started_at) return false;
+
+        const startDate = Date.parse(user.trial_started_at);
+
+        // 2. Verificar se a data é válida
+        if (isNaN(startDate)) return false;
+
+        // 3. Calcular a diferença de tempo
+        const now = new Date().getTime();
+        const fifteenDaysInMs = 15 * 24 * 60 * 60 * 1000; // 15 dias em milissegundos
+
+        // O trial está ativo apenas se (Data Atual - Data Início) for menor que 15 dias
+        return (now - startDate) < fifteenDaysInMs;
+    })();
+
+    const hasActivatedTrial = Boolean(user?.trial_started_at);
 
 
     // --- FUNÇÃO PARA ATIVAR O TRIAL ---
@@ -95,7 +109,7 @@ const Profile = () => {
                         ? "bg-orange-100 text-orange-700 border-orange-200"
                         : "bg-gray-100 text-gray-600 border-gray-200"
                         }`}>
-                        {isTrialActive ? "Premium Trial Active" : "Standard Plan"}
+                        {isTrialActive ? "Premium" : "Free Plan"}
                     </div>
                 </div>
 
@@ -131,7 +145,7 @@ const Profile = () => {
                         {/* CARTÃO DE FREE TRIAL 
                             Só aparece se !isTrialActive (se user.trial_started_at for nulo/vazio)
                         */}
-                        {!isTrialActive && (
+                        {!hasActivatedTrial && (
                             <Card className="bg-gradient-to-br from-orange-500 to-amber-600 text-white border-none shadow-md overflow-hidden relative">
                                 {/* Efeito de fundo subtil */}
                                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full blur-3xl pointer-events-none"></div>
