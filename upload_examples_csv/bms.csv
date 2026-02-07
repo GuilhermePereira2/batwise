@@ -1,6 +1,6 @@
-brand,model,max_cells,vdc_min,vdc_max,a_max,temp_min,temp_max,master_price,slave_price,link
-Sensata,c-BMS,24,11,120,2000,-40,125,800,0,
-Sensata,n-BMS,384,12,1000,5000,-40,125,1000,200,
-JKBMS,Smart BMS 8S-20S 200A,20,20,100,200,-40,125,109.99,0,https://amzn.to/3LkI7wv
-JKBMS,Smart BMS 8S-24S 40A,24,20,100,40,-40,125,55.99,0,https://amzn.to/49dgGwL
-JKBMS,Smart BMS 8S-24S 100A,24,20,100,100,-40,125,93.99,0,https://amzn.to/4atXFs5
+brand,model,max_cells,vdc_min,vdc_max,a_max,master_price,slave_price,link
+Sensata,c-BMS,24,11,120,2000,800,0,
+Sensata,n-BMS,384,12,1000,5000,1000,200,
+JKBMS,Smart BMS 8S-20S 200A,20,20,100,200,109.99,0,https://amzn.to/3LkI7wv
+JKBMS,Smart BMS 8S-24S 40A,24,20,100,40,55.99,0,https://amzn.to/49dgGwL
+JKBMS,Smart BMS 8S-24S 100A,24,20,100,100,93.99,0,https://amzn.to/4atXFs5

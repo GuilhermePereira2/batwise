@@ -1,6 +1,6 @@
-brand,model,section,vdc_max,a_max,temp_min,temp_max,price,link
-TUELETFU,4AWG/25mm2 Battery Cable,25,120,100,-40,120,7,https://amzn.to/4jckH96
-Gopayia,2AWG/35mm2 Battery Cable,35,500,125,-40,120,9,https://amzn.to/45txoGS
-Gopayia,8AWG/10mm2 Battery Cable,10,500,60,-40,120,4,https://amzn.to/44HmjBY
-Gopayia,16AWG/1.5mm2 Battery Cable,1.5,70,17.5,-40,120,4.29,https://amzn.to/4sgwIyy
-Gopayia,17AWG/1mm2 Battery Cable,1,50,14,-40,120,3.73,https://amzn.to/49bwJv0
+brand,model,section,vdc_max,a_max,price,link
+TUELETFU,4AWG/25mm2 Battery Cable,25,120,100,7,https://amzn.to/4jckH96
+Gopayia,2AWG/35mm2 Battery Cable,35,500,125,9,https://amzn.to/45txoGS
+Gopayia,8AWG/10mm2 Battery Cable,10,500,60,4,https://amzn.to/44HmjBY
+Gopayia,16AWG/1.5mm2 Battery Cable,1.5,70,17.5,4.29,https://amzn.to/4sgwIyy
+Gopayia,17AWG/1mm2 Battery Cable,1,50,14,3.73,https://amzn.to/49bwJv0

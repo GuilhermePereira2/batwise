@@ -55,22 +55,22 @@ export const downloadCsvTemplate = (type: string) => {
 
   switch (type) {
     case "cells":
-      headers = "Brand,CellModelNo,NominalVoltage,ChargeVoltage,Capacity,MaxContinuousDischargeRate,MaxContinuousChargeRate,PeakDischargeCurrent,PeakChargeCurrent,Weight,Resistance,Price,Cell_Height,Cell_Width,Cell_Thickness,Cycles";
+      headers = "Brand,CellModelNo,Composition,Cell_Stack,NominalVoltage,ChargeVoltage,Capacity,MaxContinuousDischargeRate,MaxContinuousChargeRate,PeakDischargeCurrent,PeakChargeCurrent,Weight,Resistance,Price,Cell_Height,Cell_Width,Cell_Thickness,Cycles,Link";
       break;
     case "bms":
-      headers = "brand,model,price,vdc_max,vdc_min,a_max,max_cells";
+      headers = "brand,model,price,vdc_max,vdc_min,a_max,max_cells,master_price,slave_price,link";
       break;
     case "relays":
-      headers = "brand,model,price,vdc_max,a_max";
+      headers = "brand,model,vdc_max,a_max,price,Link";
       break;
     case "fuses":
-      headers = "brand,model,price,vdc_max,a_max";
+      headers = "brand,model,vdc_max,a_max,price,Link";
       break;
     case "cables":
-      headers = "brand,model,price,section_mm2,vdc_max,a_max";
+      headers = "brand,model,section_mm2,vdc_max,a_max,price,Link";
       break;
     case "shunts":
-      headers = "brand,model,price,vdc_max,a_max";
+      headers = "brand,model,vdc_max,a_max,price,Link";
       break;
     default:
       headers = "col1,col2";

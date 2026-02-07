@@ -1,6 +1,6 @@
-brand,model,vdc_max,a_max,temp_min,temp_max,price,link
-Littelfuse Inc,0999030.ZXN,58,30,-40,125,3.32,
-ESKA,340027-80V,80,30,-40,125,3.21,
-Littelfuse Inc,0HEV030.ZXISO,450,30,-40,125,24.35,
-HELLA,8JS 742 901-051,150,100,-40,125,5.33,
-KVAEY,Battery Terminal Fuse 200A,58,200,-40,125,12.49,https://amzn.to/3MSSV5w
+brand,model,vdc_max,a_max,price,link
+Littelfuse Inc,0999030.ZXN,58,30,3.32,
+ESKA,340027-80V,80,30,3.21,
+Littelfuse Inc,0HEV030.ZXISO,450,30,24.35,
+HELLA,8JS 742 901-051,150,100,5.33,
+KVAEY,Battery Terminal Fuse 200A,58,200,12.49,https://amzn.to/3MSSV5w

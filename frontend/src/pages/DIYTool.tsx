@@ -96,7 +96,7 @@ const DIYTool = () => {
   useEffect(() => {
     const userId = user?.id || user?.email;
     console.log('🔄 DIYTool mounted/updated - Auth:', isAuthenticated, 'User ID:', userId);
-    
+
     if (!isAuthenticated || !userId) {
       console.log('⏸️ Skipping file load - not authenticated or no user ID');
       return;
@@ -148,7 +148,7 @@ const DIYTool = () => {
 
     if (file) {
       toast({ title: "File Attached", description: `${file.name} loaded for ${type}.` });
-      
+
       const userId = user?.id || user?.email;
       if (userId) {
         try {
@@ -156,8 +156,8 @@ const DIYTool = () => {
           console.log(`💾 Saved ${type} to IndexedDB:`, file.name);
         } catch (error) {
           console.error(`❌ Error saving ${type}:`, error);
-          toast({ 
-            title: "Save Error", 
+          toast({
+            title: "Save Error",
             description: `Failed to save ${type} file.`,
             variant: "destructive"
           });
@@ -176,24 +176,24 @@ const DIYTool = () => {
   };
 
   const handleGenerate = async () => {
-    if (dataSource === 'custom') {
-      if (!isAuthenticated || !user) {
-        toast({
-          title: "Access Restricted",
-          description: "Please log in to use your custom component database.",
-          variant: "destructive"
-        });
-        return;
-      }
+    // 1. Verificação global de autenticação
+    if (!isAuthenticated || !user) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to generate battery configurations.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-      if (user.credits <= 0) {
-        toast({
-          title: "Insufficient Credits",
-          description: "You have 0 credits. Please contact support.",
-          variant: "destructive"
-        });
-        return;
-      }
+    // 2. Verificação de créditos (agora para todos os utilizadores logados)
+    if (user.credits <= 0) {
+      toast({
+        title: "Insufficient Credits",
+        description: "You have 0 credits. Please contact support to get more.",
+        variant: "destructive"
+      });
+      return;
     }
 
     setIsLoading(true);
@@ -444,20 +444,20 @@ const DIYTool = () => {
                         <div key={item.id} className="grid grid-cols-[1fr_auto] gap-2 items-end">
                           <div className="space-y-1">
                             <Label htmlFor={item.id} className="text-xs">{item.label}</Label>
-                            
+
                             {customFiles[item.id] ? (
                               <div className="flex items-center justify-between h-8 px-3 text-xs bg-blue-50 border border-blue-200 rounded text-blue-700 animate-in fade-in">
-                                  <span className="truncate flex items-center gap-2">
-                                    <CheckCircle className="w-3 h-3" /> 
-                                    {customFiles[item.id]?.name || "Loaded"}
-                                  </span>
-                                  <button 
-                                      onClick={() => handleRemoveFile(item.id)}
-                                      className="ml-2 text-slate-400 hover:text-red-500 transition-colors"
-                                      type="button"
-                                  >
-                                      <Trash2 className="w-3 h-3" />
-                                  </button>
+                                <span className="truncate flex items-center gap-2">
+                                  <CheckCircle className="w-3 h-3" />
+                                  {customFiles[item.id]?.name || "Loaded"}
+                                </span>
+                                <button
+                                  onClick={() => handleRemoveFile(item.id)}
+                                  className="ml-2 text-slate-400 hover:text-red-500 transition-colors"
+                                  type="button"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
                               </div>
                             ) : (
                               <Input
@@ -620,35 +620,35 @@ const DIYTool = () => {
                           {findBestConfigurations(results, Number(targetPrice) || 0).map(({ title, config, metric }, idx) => {
                             if (!config) return null;
                             return (
-                            <Card
-                              key={title + idx}
-                              className={`cursor-pointer hover:shadow-lg transition-all border-l-4 ${config.safety.is_safe ? 'border-l-[#f97316]' : 'border-l-red-500'}`}
-                              onClick={() => setSelectedSolution(config)}
-                            >
-                              <CardHeader className="pb-2">
-                                <div className="flex justify-between items-start">
-                                  <div>
-                                    <CardTitle className="text-lg">{title}</CardTitle>
-                                    <CardDescription>{metric(config)}</CardDescription>
+                              <Card
+                                key={title + idx}
+                                className={`cursor-pointer hover:shadow-lg transition-all border-l-4 ${config.safety.is_safe ? 'border-l-[#f97316]' : 'border-l-red-500'}`}
+                                onClick={() => setSelectedSolution(config)}
+                              >
+                                <CardHeader className="pb-2">
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <CardTitle className="text-lg">{title}</CardTitle>
+                                      <CardDescription>{metric(config)}</CardDescription>
+                                    </div>
+                                    <Badge variant={config.safety.safety_score > 0 ? "default" : "destructive"}>
+                                      Safety: {config.safety.safety_score}
+                                    </Badge>
                                   </div>
-                                  <Badge variant={config.safety.safety_score > 0 ? "default" : "destructive"}>
-                                    Safety: {config.safety.safety_score}
-                                  </Badge>
-                                </div>
-                              </CardHeader>
-                              <CardContent className="text-sm space-y-1">
-                                <p><strong>Cell Model:</strong> {config.cell.CellModelNo}</p>
-                                <p><strong>Configuration:</strong> {config.series_cells}S {config.parallel_cells}P</p>
-                                <p><strong>Energy:</strong> {formatUnit(config.battery_energy, 'Wh')}</p>
-                                <p><strong>Cells' Weight:</strong> {config.battery_weight.toFixed(1)} kg</p>
-                                <p><strong>Estimated Price:</strong> ${config.total_price.toFixed(2)}</p>
-                                {config.safety.warnings.length > 0 && (
-                                  <div className="mt-2 text-xs text-amber-600 flex items-center gap-1 font-semibold">
-                                    <AlertTriangle className="w-3 h-3" /> Check Warnings
-                                  </div>
-                                )}
-                              </CardContent>
-                            </Card>
+                                </CardHeader>
+                                <CardContent className="text-sm space-y-1">
+                                  <p><strong>Cell Model:</strong> {config.cell.CellModelNo}</p>
+                                  <p><strong>Configuration:</strong> {config.series_cells}S {config.parallel_cells}P</p>
+                                  <p><strong>Energy:</strong> {formatUnit(config.battery_energy, 'Wh')}</p>
+                                  <p><strong>Cells' Weight:</strong> {config.battery_weight.toFixed(1)} kg</p>
+                                  <p><strong>Estimated Price:</strong> ${config.total_price.toFixed(2)}</p>
+                                  {config.safety.warnings.length > 0 && (
+                                    <div className="mt-2 text-xs text-amber-600 flex items-center gap-1 font-semibold">
+                                      <AlertTriangle className="w-3 h-3" /> Check Warnings
+                                    </div>
+                                  )}
+                                </CardContent>
+                              </Card>
                             );
                           })}
                         </div>
@@ -688,18 +688,18 @@ const DIYTool = () => {
                           <ResponsiveContainer width="100%" height="100%">
                             <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                              <XAxis 
-                                type="number" 
-                                dataKey={xAxis} 
-                                name={xAxis.replace('_', ' ')} 
-                                unit={xAxis.includes('price') ? '$' : ''} 
+                              <XAxis
+                                type="number"
+                                dataKey={xAxis}
+                                name={xAxis.replace('_', ' ')}
+                                unit={xAxis.includes('price') ? '$' : ''}
                                 label={{ value: xAxis.replace('_', ' '), position: 'bottom', offset: 0 }}
                               />
-                              <YAxis 
-                                type="number" 
-                                dataKey={yAxis} 
-                                name={yAxis.replace('_', ' ')} 
-                                unit={yAxis.includes('price') ? '$' : ''} 
+                              <YAxis
+                                type="number"
+                                dataKey={yAxis}
+                                name={yAxis.replace('_', ' ')}
+                                unit={yAxis.includes('price') ? '$' : ''}
                                 label={{ value: yAxis.replace('_', ' '), angle: -90, position: 'left' }}
                               />
                               <ChartTooltip cursor={{ strokeDasharray: '3 3' }} content={({ active, payload }) => {
@@ -717,9 +717,9 @@ const DIYTool = () => {
                                 }
                                 return null;
                               }} />
-                              <Scatter 
-                                name="Configurations" 
-                                data={plotResults} 
+                              <Scatter
+                                name="Configurations"
+                                data={plotResults}
                                 shape={<CustomScatterDot />}
                                 onClick={(data) => setSelectedSolution(data.payload)}
                               />

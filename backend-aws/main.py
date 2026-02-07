@@ -1,3 +1,7 @@
+from dynamodb_handler import DynamoDBUserHandler
+from logic import compute_cell_configurations
+from models import Requirements, ContactRequest, DesignResponse, CellData, UserCreate, UserLogin, Token, UserResponse
+import security
 import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, status, Header
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,16 +21,12 @@ from env_loader import load_backend_env
 
 load_backend_env()
 
-import security
 
 # Importar Modelos
-from models import Requirements, ContactRequest, DesignResponse, CellData, UserCreate, UserLogin, Token, UserResponse
 
 # Importar Lógica e DB de Células
-from logic import compute_cell_configurations
 
 # Adicionar path para importar DynamoDB handler
-from dynamodb_handler import DynamoDBUserHandler
 
 db_users = DynamoDBUserHandler()
 
@@ -197,9 +197,8 @@ async def calculate_endpoint(
         remaining = None
 
         # Só cobramos se:
-        # a) For Custom DB
-        # b) Tiver gerado pelo menos 2 resultados
-        if is_custom_run and res_dict["total"] >= 2:
+        # a) Tiver gerado pelo menos 2 resultados
+        if res_dict["total"] >= 2:
             if not authorization:
                 raise HTTPException(
                     status_code=401, detail="Authentication required for Custom DB")
@@ -240,9 +239,6 @@ async def calculate_endpoint(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-
-
-
 
 
 # 2. Configuração do Servidor de Email (Lê das variáveis de ambiente)
@@ -351,6 +347,7 @@ def deduct_credit(current_user: dict = Depends(get_current_user)):
         return {"remaining_credits": remaining}
     except ValueError:
         raise HTTPException(status_code=403, detail="Insufficient credits")
+
 
 handler = Mangum(app)
 
