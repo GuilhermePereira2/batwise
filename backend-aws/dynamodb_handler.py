@@ -6,7 +6,7 @@ import os
 import boto3
 from botocore.exceptions import ClientError
 from typing import Optional, Dict
-from datetime import datetime
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from pathlib import Path
 import uuid
@@ -296,6 +296,64 @@ class DynamoDBUserHandler:
                 print(f"📉 Créditos forçados a {new_amount} para {email}")
             except ClientError as e:
                 print(f"❌ Erro ao atualizar créditos: {e}")
+
+    @staticmethod
+    def save_reset_token(email: str, token: str):
+        """Guarda o token de reset e a validade (1 hora)"""
+        user = DynamoDBUserHandler.get_user_by_email(email)
+        if not user:
+            return False
+
+        try:
+            # Expira em 1 hora
+            expiry = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+
+            # ATENÇÃO: Mudado de self.table para users_table
+            users_table.update_item(
+                Key={'userId': user['userId']},
+                UpdateExpression="set reset_token = :t, reset_token_expiry = :e",
+                ExpressionAttributeValues={
+                    ':t': token,
+                    ':e': expiry
+                }
+            )
+            return True
+        except ClientError as e:
+            print(f"Error saving reset token: {e}")
+            return False
+
+    @staticmethod
+    def reset_password(email: str, token: str, new_hashed_password: str):
+        """Verifica o token e atualiza a password"""
+        user = DynamoDBUserHandler.get_user_by_email(email)
+        if not user:
+            raise ValueError("User not found")
+
+        stored_token = user.get('reset_token')
+        expiry = user.get('reset_token_expiry')
+
+        if not stored_token or not expiry:
+            raise ValueError("No reset request found")
+
+        if stored_token != token:
+            raise ValueError("Invalid token")
+
+        if datetime.utcnow().isoformat() > expiry:
+            raise ValueError("Token expired")
+
+        try:
+            # ATENÇÃO: Mudado de self.table para users_table
+            users_table.update_item(
+                Key={'userId': user['userId']},
+                UpdateExpression="set hashed_password = :p remove reset_token, reset_token_expiry",
+                ExpressionAttributeValues={
+                    ':p': new_hashed_password
+                }
+            )
+            return True
+        except ClientError as e:
+            print(f"Error during password reset: {e}")
+            raise e
 
 
 # Instância global para uso fácil

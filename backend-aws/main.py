@@ -1,6 +1,7 @@
+from urllib import request
 from dynamodb_handler import DynamoDBUserHandler
 from logic import compute_cell_configurations
-from models import Requirements, ContactRequest, DesignResponse, CellData, UserCreate, UserLogin, Token, UserResponse
+from models import Requirements, PasswordResetConfirm, PasswordResetRequest, ContactRequest, DesignResponse, CellData, UserCreate, UserLogin, Token, UserResponse
 import security
 import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, status, Header
@@ -16,7 +17,7 @@ from jose import jwt, JWTError
 from mangum import Mangum
 from cells_loader import Database
 from datetime import datetime, timedelta
-import pytz
+import uuid
 
 # Carregar variáveis de ambiente antes de importar módulos que dependem delas
 from env_loader import load_backend_env
@@ -114,7 +115,7 @@ def check_trial_status(user: dict):
             now = datetime.utcnow()
 
             # Verificar se passaram 15 dias
-            if now > (start_date + timedelta(days=1)):
+            if now > (start_date + timedelta(days=15)):
                 print(
                     f"🚫 Trial expirado para {user['email']}. Removendo créditos.")
                 # Chamar DynamoDB para zerar créditos
@@ -414,6 +415,90 @@ def activate_trial(current_user: dict = Depends(get_current_user)):
 @app.get("/auth/me", response_model=UserResponse)
 def get_me(current_user: dict = Depends(get_current_user)):
     return current_user
+
+
+@app.post("/auth/forgot-password")
+async def forgot_password(request: PasswordResetRequest):
+    # 1. Gerar Token
+    token = str(uuid.uuid4())
+
+    # 2. Guardar na DB (Se o user existir)
+    # Nota: Por segurança, respondemos sempre "200 OK" mesmo que o email não exista
+    if db_users.save_reset_token(request.email, token):
+        # 3. Enviar Email
+        # O link aponta para o teu frontend
+        frontend_url = os.getenv(
+            "FRONTEND_URL", "https://www.watt-builder.com")
+        reset_link = f"{frontend_url}/reset-password?token={token}&email={request.email}"
+
+        email_body = f"""
+        <div style="font-family: Arial, Helvetica, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937;">
+            <h2 style="color: #111827;">Reset your password</h2>
+
+            <p>Hello,</p>
+
+            <p>
+                We received a request to reset the password for your account.
+                Click the button below to choose a new password.
+            </p>
+
+            <p style="text-align: center; margin: 32px 0;">
+                <a href="{reset_link}"
+                style="
+                        background-color: #f97316;
+                        color: #ffffff;
+                        padding: 12px 24px;
+                        text-decoration: none;
+                        font-weight: bold;
+                        border-radius: 6px;
+                        display: inline-block;
+                ">
+                    Reset Password
+                </a>
+            </p>
+
+            <p>
+                This link is valid for <strong>1 hour</strong>.
+            </p>
+
+            <p style="font-size: 14px; color: #6b7280;">
+                If you didn’t request a password reset, you can safely ignore this email.
+                Your password will not be changed.
+            </p>
+
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;">
+
+            <p style="font-size: 12px; color: #9ca3af;">
+                For security reasons, never share this link with anyone.
+            </p>
+        </div>
+        """
+
+        message = MessageSchema(
+            subject="WattBuilder Password Reset",
+            recipients=[request.email],
+            body=email_body,
+            subtype=MessageType.html
+        )
+
+        try:
+            fm = FastMail(conf)
+            await fm.send_message(message)
+        except Exception as e:
+            print(f"Error sending email: {e}")
+            # Em produção, deves logar o erro mas não falhar o request para não revelar info
+
+    return {"message": "If an account exists, an email has been sent."}
+
+
+@app.post("/auth/reset-password")
+def reset_password_confirm(data: PasswordResetConfirm):
+    try:
+        new_hash = security.get_password_hash(data.new_password)
+        db_users.reset_password(data.email, data.token, new_hash)
+        return {"message": "Password updated successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 handler = Mangum(app)

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { KeyRound, Mail, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getApiUrl } from "@/lib/config";
 
 const ForgotPassword = () => {
     const [email, setEmail] = useState("");
@@ -20,11 +21,17 @@ const ForgotPassword = () => {
         setIsLoading(true);
 
         try {
-            // Simulação de envio de email
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            const url = getApiUrl("auth/forgot-password");
 
-            console.log("Reset password for:", email);
+            const response = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email }),
+            });
 
+            if (!response.ok) throw new Error("Request failed");
+
+            // Independentemente do resultado (segurança), mostramos sucesso
             setIsSubmitted(true);
             toast({
                 title: "Email sent",

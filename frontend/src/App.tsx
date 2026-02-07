@@ -19,6 +19,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import Profile from "./pages/Profile";
+import ResetPassword from "./pages/ResetPassword";
 
 
 const queryClient = new QueryClient();
@@ -40,7 +41,7 @@ const App = () => (
           <Route path="/auth" element={<BatteryForm />} />
           <Route path="/cell-explorer" element={<CellExplorer />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="*" element={<NotFound />} />
           <Route path="/cell/:slug" element={<CellDetails />} />
           <Route path="/login" element={<Login />} />
