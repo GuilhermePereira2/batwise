@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom"; // Adicionado useNavigate
 import { Button } from "@/components/ui/button";
 import { Menu, X, LogIn, User, LogOut, Coins, UserCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate(); // Inicializar o navigate
   const { user, logout, isAuthenticated } = useAuth();
 
   const menuItems = [
@@ -29,16 +30,25 @@ const Navigation = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  // --- ALTERAÇÃO 1: Lógica de iniciais (Primeiro + Último nome) ---
+  // --- NOVA FUNÇÃO DE LOGOUT COM REDIRECIONAMENTO ---
+  const handleLogout = async () => {
+    // Definimos as rotas que não podem ser vistas sem estar logado
+    const protectedRoutes = ["/profile"];
+
+    // Chamamos o logout do context
+    await logout();
+
+    // Se a página atual for uma rota protegida, mandamos o utilizador para a Home
+    if (protectedRoutes.includes(location.pathname)) {
+      navigate("/");
+    }
+    // Caso contrário, ele fica na mesma página (ex: se estiver no Blog ou Home)
+  };
+
   const getInitials = (name: string) => {
     if (!name) return "U";
     const parts = name.trim().split(" ");
-
-    if (parts.length === 1) {
-      return parts[0].substring(0, 2).toUpperCase();
-    }
-
-    // Pega a primeira letra do primeiro nome e a primeira do último
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
@@ -68,14 +78,11 @@ const Navigation = () => {
 
           {/* Desktop Auth Area */}
           <div className="hidden lg:flex items-center gap-3">
-
-            {/* --- ALTERAÇÃO 2: Botão Try for Free sempre visível --- */}
             <Button asChild>
               <Link to="/diy">Try for Free</Link>
             </Button>
 
             {isAuthenticated && user ? (
-              // --- USER LOGGED IN (DROPDOWN) ---
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full ml-2">
@@ -102,24 +109,21 @@ const Navigation = () => {
                     <span>Credits: <strong>{user.credits}</strong></span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-
-                  {/* --- ALTERAÇÃO 3: Opção Profile --- */}
                   <DropdownMenuItem asChild>
                     <Link to="/profile" className="cursor-pointer flex items-center w-full">
                       <UserCircle className="mr-2 h-4 w-4" />
                       <span>Profile</span>
                     </Link>
                   </DropdownMenuItem>
-
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={logout} className="text-red-600 cursor-pointer focus:text-red-600">
+                  {/* Alterado de logout para handleLogout */}
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer focus:text-red-600">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              // --- NOT LOGGED IN ---
               <Button variant="ghost" asChild>
                 <Link to="/login">Log In</Link>
               </Button>
@@ -174,7 +178,8 @@ const Navigation = () => {
                         <UserCircle className="w-4 h-4 mr-2" /> Profile
                       </Link>
                     </Button>
-                    <Button variant="ghost" onClick={() => { logout(); setIsOpen(false); }} className="justify-start text-red-600 hover:text-red-600">
+                    {/* Alterado de logout para handleLogout no mobile também */}
+                    <Button variant="ghost" onClick={() => { handleLogout(); setIsOpen(false); }} className="justify-start text-red-600 hover:text-red-600">
                       <LogOut className="w-4 h-4 mr-2" /> Log Out
                     </Button>
                   </>
@@ -187,7 +192,6 @@ const Navigation = () => {
                     </Button>
                   </>
                 )}
-                {/* Botão Try Free sempre no fundo do mobile menu */}
                 <Button asChild className="w-full">
                   <Link to="/diy" onClick={() => setIsOpen(false)}>
                     Try for Free
