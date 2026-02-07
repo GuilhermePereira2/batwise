@@ -70,24 +70,24 @@ class DynamoDBUserHandler:
     def create_user(email: str, full_name: str, hashed_password: str, company: Optional[str] = None, credits: int = 5) -> Dict:
         """
         Cria um novo utilizador no DynamoDB
-        
+
         Args:
             email: Email do utilizador
             full_name: Nome completo
             hashed_password: Password já hasheada
             company: Nome da empresa (opcional)
             credits: Créditos iniciais (default: 5)
-        
+
         Returns:
             Dict com os dados do utilizador criado
-        
+
         Raises:
             ClientError: Se o email já existir
         """
         # Verificar se email já existe (scan)
         if DynamoDBUserHandler.user_exists(email):
             raise ValueError("Email já registado")
-        
+
         try:
             item = {
                 'userId': str(uuid.uuid4()),  # Partition key
@@ -98,15 +98,15 @@ class DynamoDBUserHandler:
                 'created_at': datetime.utcnow().isoformat(),
                 'updated_at': datetime.utcnow().isoformat()
             }
-            
+
             if company:
                 item['company'] = company
 
             users_table.put_item(Item=item)
-            
+
             print(f"✅ Utilizador criado: {email}")
             return item
-            
+
         except ClientError as e:
             raise
 
@@ -114,10 +114,10 @@ class DynamoDBUserHandler:
     def get_user_by_email(email: str) -> Optional[Dict]:
         """
         Busca um utilizador pelo email usando Query no GSI
-        
+
         Args:
             email: Email do utilizador
-        
+
         Returns:
             Dict com dados do utilizador ou None se não encontrado
         """
@@ -138,14 +138,14 @@ class DynamoDBUserHandler:
     def update_credits(email: str, credits_delta: int) -> int:
         """
         Atualiza os créditos de um utilizador
-        
+
         Args:
             email: Email do utilizador
             credits_delta: Quantidade a adicionar/remover (pode ser negativo)
-        
+
         Returns:
             Novo valor de créditos
-        
+
         Raises:
             ValueError: Se o utilizador não existir ou créditos ficarem negativos
         """
@@ -154,13 +154,13 @@ class DynamoDBUserHandler:
             user = DynamoDBUserHandler.get_user_by_email(email)
             if not user:
                 raise ValueError("Utilizador não encontrado")
-            
+
             new_credits = user['credits'] + credits_delta
-            
+
             # Validar se os créditos ficariam negativos
             if new_credits < 0:
                 raise ValueError("Créditos insuficientes")
-            
+
             # Atualizar com a nova quantidade usando userId como key
             response = users_table.update_item(
                 Key={'userId': user['userId']},
@@ -172,11 +172,11 @@ class DynamoDBUserHandler:
                 ConditionExpression='attribute_exists(userId)',
                 ReturnValues='UPDATED_NEW'
             )
-            
+
             updated_credits = response['Attributes']['credits']
             print(f"💰 Créditos atualizados para {email}: {updated_credits}")
             return updated_credits
-            
+
         except ClientError as e:
             if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
                 raise ValueError("Utilizador não encontrado")
@@ -186,10 +186,10 @@ class DynamoDBUserHandler:
     def deduct_credit(email: str) -> int:
         """
         Deduz 1 crédito do utilizador
-        
+
         Args:
             email: Email do utilizador
-        
+
         Returns:
             Créditos restantes
         """
@@ -199,11 +199,11 @@ class DynamoDBUserHandler:
     def add_credits(email: str, amount: int) -> int:
         """
         Adiciona créditos ao utilizador
-        
+
         Args:
             email: Email do utilizador
             amount: Quantidade de créditos a adicionar
-        
+
         Returns:
             Novo total de créditos
         """
@@ -213,10 +213,10 @@ class DynamoDBUserHandler:
     def user_exists(email: str) -> bool:
         """
         Verifica se um utilizador existe
-        
+
         Args:
             email: Email a verificar
-        
+
         Returns:
             True se existir, False caso contrário
         """
@@ -226,10 +226,10 @@ class DynamoDBUserHandler:
     def delete_user(email: str) -> bool:
         """
         Remove um utilizador (CUIDADO!)
-        
+
         Args:
             email: Email do utilizador a remover
-        
+
         Returns:
             True se removido com sucesso
         """
@@ -239,7 +239,7 @@ class DynamoDBUserHandler:
             if not user:
                 print(f"⚠️  Utilizador não encontrado: {email}")
                 return False
-            
+
             users_table.delete_item(
                 Key={'userId': user['userId']},
                 ConditionExpression='attribute_exists(userId)'
@@ -251,6 +251,51 @@ class DynamoDBUserHandler:
                 print(f"⚠️  Utilizador não encontrado: {email}")
                 return False
             raise
+
+    @staticmethod
+    def activate_trial_for_user(email: str, start_date: str, bonus_credits: int) -> Dict:
+        """
+        Ativa o free trial: define a data de início e atribui os créditos.
+        """
+        # 1. Precisamos do userId (Primary Key) para fazer o update
+        user = DynamoDBUserHandler.get_user_by_email(email)
+        if not user:
+            raise ValueError("Utilizador não encontrado")
+
+        try:
+            response = users_table.update_item(
+                Key={'userId': user['userId']},
+                # Define créditos, data de inicio do trial e data de update
+                UpdateExpression="SET credits = :c, trial_started_at = :t, updated_at = :u",
+                ExpressionAttributeValues={
+                    ':c': bonus_credits,
+                    ':t': start_date,
+                    ':u': datetime.utcnow().isoformat()
+                },
+                ReturnValues="ALL_NEW"
+            )
+            print(f"🎉 Free Trial ativado para {email}")
+            return response['Attributes']
+        except ClientError as e:
+            print(f"❌ Erro ao ativar trial: {e}")
+            raise
+
+    @staticmethod
+    def update_user_credits(email: str, new_amount: int) -> None:
+        """
+        Força um valor específico de créditos (usado para zerar quando o trial expira).
+        """
+        user = DynamoDBUserHandler.get_user_by_email(email)
+        if user:
+            try:
+                users_table.update_item(
+                    Key={'userId': user['userId']},
+                    UpdateExpression="SET credits = :c",
+                    ExpressionAttributeValues={':c': new_amount}
+                )
+                print(f"📉 Créditos forçados a {new_amount} para {email}")
+            except ClientError as e:
+                print(f"❌ Erro ao atualizar créditos: {e}")
 
 
 # Instância global para uso fácil

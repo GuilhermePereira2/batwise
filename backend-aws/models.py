@@ -261,6 +261,7 @@ class UserResponse(BaseModel):
     credits: int
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+    trial_started_at: Optional[str] = None
 
     class Config:
         from_attributes = True

@@ -15,6 +15,8 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from mangum import Mangum
 from cells_loader import Database
+from datetime import datetime, timedelta
+import pytz
 
 # Carregar variáveis de ambiente antes de importar módulos que dependem delas
 from env_loader import load_backend_env
@@ -94,7 +96,34 @@ def parse_csv_file(file_content: bytes) -> List[Dict]:
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
-# Dependency para obter o user logado a partir do Token
+
+def check_trial_status(user: dict):
+    """
+    Verifica se o user está em trial e se já passaram 15 dias.
+    Se expirou, coloca os créditos a 0.
+    """
+    if user.get("trial_started_at") and user.get("credits") > 0:
+        # Converter string ISO para objeto datetime
+        try:
+            start_date = datetime.fromisoformat(user["trial_started_at"])
+
+            # Adicionar info de timezone se necessário (assumindo UTC)
+            if start_date.tzinfo is None:
+                start_date = start_date.replace(tzinfo=None)
+
+            now = datetime.utcnow()
+
+            # Verificar se passaram 15 dias
+            if now > (start_date + timedelta(days=15)):
+                print(
+                    f"🚫 Trial expirado para {user['email']}. Removendo créditos.")
+                # Chamar DynamoDB para zerar créditos
+                db_users.update_user_credits(user['email'], 0)
+                user['credits'] = 0  # Atualizar objeto local
+        except ValueError:
+            pass  # Data inválida, ignorar
+
+    return user
 
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -110,6 +139,8 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     user = db_users.get_user_by_email(email)
     if user is None:
         raise HTTPException(status_code=401, detail="User not found")
+
+    user = check_trial_status(user)
     return user
 
 # --- NOVO ENDPOINT: Deduzir Créditos ---
@@ -347,6 +378,29 @@ def deduct_credit(current_user: dict = Depends(get_current_user)):
         return {"remaining_credits": remaining}
     except ValueError:
         raise HTTPException(status_code=403, detail="Insufficient credits")
+
+
+@app.post("/auth/activate-trial", response_model=UserResponse)
+def activate_trial(current_user: dict = Depends(get_current_user)):
+    # 1. Verificar se já ativou o trial antes
+    if current_user.get("trial_started_at"):
+        raise HTTPException(
+            status_code=400,
+            detail="Free trial already activated or used."
+        )
+
+    # 2. Definir data de início e dar 1000 créditos
+    now_iso = datetime.utcnow().isoformat()
+
+    # Tens de garantir que tens este método no teu DynamoDBUserHandler
+    # Algo como: update_user_fields(email, updates_dict)
+    updated_user = db_users.activate_trial_for_user(
+        email=current_user['email'],
+        start_date=now_iso,
+        bonus_credits=1000
+    )
+
+    return updated_user
 
 
 handler = Mangum(app)
