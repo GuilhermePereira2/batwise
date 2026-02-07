@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { getApiUrl } from "@/lib/config";
+
 
 // 1. Atualizamos a interface para incluir os campos do Trial e outros úteis
 interface User {
@@ -23,6 +25,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
@@ -44,12 +47,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     }, []);
 
+    useEffect(() => {
+        if (!token) return;
+
+        const refreshUser = async () => {
+            try {
+                const res = await fetch(getApiUrl("auth/me"), {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
+                if (!res.ok) throw new Error("Failed to fetch user");
+
+                const freshData = await res.json();
+
+                const mappedUser: User = {
+                    ...user,
+                    ...freshData,
+                    name: freshData.full_name || freshData.name || user?.name || "User",
+                    email: freshData.email || user?.email
+                };
+
+                setUser(mappedUser);
+                localStorage.setItem("user", JSON.stringify(mappedUser));
+            } catch (err) {
+                console.error("Failed to refresh user from backend", err);
+            }
+        };
+
+        refreshUser();
+    }, [token]);
+
+
     const login = (newToken: string, userData: User) => {
         setToken(newToken);
-        setUser(userData);
+        const safeUser = {
+            ...userData,
+            name: userData.name || (userData as any).full_name || (userData as any).user_name
+        };
 
+        setUser(safeUser);
         localStorage.setItem("token", newToken);
-        localStorage.setItem("user", JSON.stringify(userData));
+        localStorage.setItem("user", JSON.stringify(safeUser));
     };
 
     const logout = () => {

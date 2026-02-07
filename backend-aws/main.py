@@ -114,7 +114,7 @@ def check_trial_status(user: dict):
             now = datetime.utcnow()
 
             # Verificar se passaram 15 dias
-            if now > (start_date + timedelta(days=15)):
+            if now > (start_date + timedelta(days=1)):
                 print(
                     f"🚫 Trial expirado para {user['email']}. Removendo créditos.")
                 # Chamar DynamoDB para zerar créditos
@@ -409,6 +409,11 @@ def activate_trial(current_user: dict = Depends(get_current_user)):
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/auth/me", response_model=UserResponse)
+def get_me(current_user: dict = Depends(get_current_user)):
+    return current_user
 
 
 handler = Mangum(app)

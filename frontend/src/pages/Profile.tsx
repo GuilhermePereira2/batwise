@@ -23,10 +23,11 @@ const Profile = () => {
         return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     };
 
-    // --- LÓGICA DE VERIFICAÇÃO DO TRIAL ---
-    // Verifica se o campo existe e não está vazio ou nulo
-    const rawTrialDate = (user as any).trial_started_at;
-    const isTrialActive = !!rawTrialDate && rawTrialDate !== "";
+    const isTrialActive = Boolean(
+        user?.trial_started_at &&
+        !isNaN(Date.parse(user.trial_started_at))
+    );
+
 
     // --- FUNÇÃO PARA ATIVAR O TRIAL ---
     const handleActivateTrial = async () => {
@@ -48,18 +49,18 @@ const Profile = () => {
                 throw new Error(data.detail || "Failed to activate trial");
             }
 
-            // --- ATUALIZAÇÃO VISUAL IMEDIATA ---
             if (updateUser) {
-                // Mesclamos os dados atuais do user com a resposta do backend.
-                // IMPORTANTE: Forçamos a data de hoje caso o backend por algum motivo
-                // não devolva o campo 'trial_started_at' no response body (fallback de segurança).
-                // Isto garante que o cartão desaparece INSTANTANEAMENTE.
                 updateUser({
                     ...user,
                     ...data,
-                    trial_started_at: data.trial_started_at || new Date().toISOString()
                 });
             }
+            await fetch(getApiUrl("auth/me"), {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+                .then(res => res.json())
+                .then(freshUser => updateUser(freshUser));
+
 
             toast({
                 title: "Trial Activated Successfully!",
