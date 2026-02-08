@@ -67,48 +67,34 @@ class DynamoDBUserHandler:
     """Handler para operações de utilizadores no DynamoDB"""
 
     @staticmethod
-    def create_user(email: str, full_name: str, hashed_password: str, company: Optional[str] = None, credits: int = 5) -> Dict:
-        """
-        Cria um novo utilizador no DynamoDB
+    def create_or_update_unverified_user(email: str, full_name: str, hashed_password: str, company: Optional[str] = None, credits: int = 5) -> Dict:
+        # 1. Verificar se o utilizador já existe
+        existing_user = DynamoDBUserHandler.get_user_by_email(email)
 
-        Args:
-            email: Email do utilizador
-            full_name: Nome completo
-            hashed_password: Password já hasheada
-            company: Nome da empresa (opcional)
-            credits: Créditos iniciais (default: 5)
+        # 2. Se já existe e está verificado, lançamos erro
+        if existing_user and existing_user.get('is_verified'):
+            raise ValueError("Email already registered and verified")
 
-        Returns:
-            Dict com os dados do utilizador criado
+        # 3. Se não existe, criamos um novo ID. Se existe (não verificado), mantemos o mesmo userId
+        user_id = existing_user['userId'] if existing_user else str(
+            uuid.uuid4())
+        token = str(uuid.uuid4())
 
-        Raises:
-            ClientError: Se o email já existir
-        """
-        # Verificar se email já existe (scan)
-        if DynamoDBUserHandler.user_exists(email):
-            raise ValueError("Email já registado")
+        item = {
+            'userId': user_id,
+            'email': email,
+            'full_name': full_name,
+            'hashed_password': hashed_password,
+            'credits': credits,
+            'is_verified': False,
+            'verification_token': token,
+            'created_at': existing_user['created_at'] if existing_user else datetime.utcnow().isoformat(),
+            'updated_at': datetime.utcnow().isoformat(),
+            'company': company
+        }
 
-        try:
-            item = {
-                'userId': str(uuid.uuid4()),  # Partition key
-                'email': email,
-                'full_name': full_name,
-                'hashed_password': hashed_password,
-                'credits': credits,
-                'created_at': datetime.utcnow().isoformat(),
-                'updated_at': datetime.utcnow().isoformat()
-            }
-
-            if company:
-                item['company'] = company
-
-            users_table.put_item(Item=item)
-
-            print(f"✅ Utilizador criado: {email}")
-            return item
-
-        except ClientError as e:
-            raise
+        users_table.put_item(Item=item)
+        return item
 
     @staticmethod
     def get_user_by_email(email: str) -> Optional[Dict]:
@@ -221,6 +207,18 @@ class DynamoDBUserHandler:
             True se existir, False caso contrário
         """
         return DynamoDBUserHandler.get_user_by_email(email) is not None
+
+    @staticmethod
+    def verify_user(email: str, token: str):
+        user = DynamoDBUserHandler.get_user_by_email(email)
+        if user and user.get('verification_token') == token:
+            users_table.update_item(
+                Key={'userId': user['userId']},
+                UpdateExpression="SET is_verified = :v REMOVE verification_token",
+                ExpressionAttributeValues={':v': True}
+            )
+            return True
+        return False
 
     @staticmethod
     def delete_user(email: str) -> bool:

@@ -11,7 +11,7 @@ const Footer = () => {
             <div className="text-center md:text-left">
               <h3 className="text-2xl font-bold mb-2">Watt Builder</h3>
               <p className="text-primary-foreground/80">
-                © 2025 Watt Builder. All rights reserved.
+                © 2026 Watt Builder. All rights reserved.
               </p>
             </div>
 

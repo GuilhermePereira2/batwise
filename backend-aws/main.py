@@ -1,3 +1,4 @@
+import token
 from urllib import request
 from dynamodb_handler import DynamoDBUserHandler
 from logic import compute_cell_configurations
@@ -322,27 +323,51 @@ async def send_contact_email(contact: ContactRequest):
 
 
 # --- ROTAS DE AUTH ---
-
-
 @app.post("/auth/signup", response_model=UserResponse)
-def signup(user: UserCreate):
-    # Verificar se email existe
-    if db_users.user_exists(user.email):
-        raise HTTPException(status_code=400, detail="Email already registered")
+async def signup(user: UserCreate):
+    # Removemos o check simples 'if db_users.user_exists'
 
-    # Criar User
     hashed_pwd = security.get_password_hash(user.password)
+
     try:
-        new_user = db_users.create_user(
+        # Usa o novo método que lida com utilizadores não verificados
+        new_user = db_users.create_or_update_unverified_user(
             email=user.email,
             full_name=user.full_name,
             company=user.company,
             hashed_password=hashed_pwd,
-            credits=5  # Define aqui quantos créditos iniciais queres dar
+            credits=5
         )
+
+        frontend_url = os.getenv(
+            "FRONTEND_URL", "https://www.watt-builder.com")
+        token = new_user['verification_token']
+        verify_link = f"{frontend_url}/verify-email?token={token}&email={user.email}"
+
+        message = MessageSchema(
+            subject="Verify your WattBuilder Account",
+            recipients=[user.email],
+            body=f"Hi {user.full_name},<br>Please verify your account by clicking <a href='{verify_link}'>here</a>.",
+            subtype=MessageType.html
+        )
+
+        fm = FastMail(conf)
+        await fm.send_message(message)
+
         return new_user
+
     except ValueError as e:
+        # Se cair aqui, é porque o utilizador já está verificado
         raise HTTPException(status_code=400, detail=str(e))
+
+# 3. NOVO ENDPOINT para o link do e-mail:
+
+
+@app.post("/auth/verify-email")
+def verify_email(data: dict):  # recebe {'email': '...', 'token': '...'}
+    if db_users.verify_user(data['email'], data['token']):
+        return {"message": "Email verified successfully"}
+    raise HTTPException(status_code=400, detail="Invalid or expired token")
 
 
 @app.post("/auth/login", response_model=Token)
@@ -354,6 +379,10 @@ def login(creds: UserLogin):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
+
+    if not user.get('is_verified', False):
+        raise HTTPException(
+            status_code=403, detail="Please verify your email before logging in.")
 
     # Criar token
     access_token = security.create_access_token(

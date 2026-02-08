@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { UserPlus, Mail, Lock, User, Loader2, ArrowLeft, Eye, EyeOff, AlertTriangle, Building } from "lucide-react";
+import { UserPlus, Mail, Lock, User, Loader2, ArrowLeft, Eye, EyeOff, AlertTriangle, Building, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/config";
 
@@ -22,39 +22,32 @@ const Signup = () => {
     // ESTADOS PARA OS OLHOS (Independentes)
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    
+
     // ESTADO DO CAPS LOCK
     const [capsLockActive, setCapsLockActive] = useState(false);
+    const [isSubmitted, setIsSubmitted] = useState(false);
 
     const { toast } = useToast();
     const navigate = useNavigate();
 
     // --- FUNÇÃO ROBUSTA DO CAPS LOCK ---
     const checkCapsLock = (event: React.KeyboardEvent | React.MouseEvent | React.FocusEvent) => {
-        // 1. Casting para evitar erros de TS
         const evt = event as any;
         if (typeof evt.getModifierState !== "function") return;
 
         const currentState = evt.getModifierState("CapsLock");
 
-        // 2. Se for um evento de teclado
         if (evt.nativeEvent instanceof KeyboardEvent) {
-            // Se a tecla pressionada for o PRÓPRIO CapsLock
             if (evt.key === "CapsLock") {
-                // No 'keydown', o sistema ainda reporta o estado antigo.
-                // Nós invertemos manualmente para a UI ser instantânea.
                 if (evt.type === 'keydown') {
                     setCapsLockActive(!currentState);
                 } else {
-                    // No 'keyup', confiamos no estado real
                     setCapsLockActive(currentState);
                 }
             } else {
-                // Se for outra tecla qualquer (ex: letras), o estado já é real
                 setCapsLockActive(currentState);
             }
         } else {
-            // Para cliques (mouse) e focus, o estado é sempre real
             setCapsLockActive(currentState);
         }
     };
@@ -93,12 +86,12 @@ const Signup = () => {
                 throw new Error(errorData.detail || "Registration failed");
             }
 
+            // ALTERAÇÃO AQUI: Em vez de navegar, mostramos a confirmação
+            setIsSubmitted(true);
             toast({
                 title: "Account created!",
-                description: "You have successfully registered. Please log in.",
+                description: "Verification email sent. Please check your inbox.",
             });
-
-            navigate("/login");
 
         } catch (error: any) {
             console.error("Signup error:", error);
@@ -119,169 +112,192 @@ const Signup = () => {
             <main className="flex-1 flex items-center justify-center p-4 mt-16 bg-gradient-to-br from-background via-muted/30 to-background">
                 <div className="w-full max-w-md animate-fade-in">
 
-                    <Button variant="ghost" asChild className="mb-4 pl-0 hover:bg-transparent text-muted-foreground hover:text-foreground">
-                        <Link to="/" className="flex items-center gap-2">
-                            <ArrowLeft className="w-4 h-4" /> Back to Home
-                        </Link>
-                    </Button>
+                    {!isSubmitted && (
+                        <Button variant="ghost" asChild className="mb-4 pl-0 hover:bg-transparent text-muted-foreground hover:text-foreground">
+                            <Link to="/" className="flex items-center gap-2">
+                                <ArrowLeft className="w-4 h-4" /> Back to Home
+                            </Link>
+                        </Button>
+                    )}
 
                     <Card className="border-border shadow-lg">
                         <CardHeader className="space-y-1">
                             <CardTitle className="text-2xl font-bold flex items-center gap-2">
-                                <UserPlus className="w-6 h-6 text-accent" /> Create Account
+                                {isSubmitted ? (
+                                    <><Mail className="w-6 h-6 text-accent" /> Verify your email</>
+                                ) : (
+                                    <><UserPlus className="w-6 h-6 text-accent" /> Create Account</>
+                                )}
                             </CardTitle>
                             <CardDescription>
-                                Enter your details below to create your account and start building.
+                                {isSubmitted
+                                    ? "We have sent a verification link to your email address."
+                                    : "Enter your details below to create your account and start building."}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <form onSubmit={handleSignup} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="name">Full Name</Label>
-                                    <div className="relative">
-                                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            id="name"
-                                            type="text"
-                                            placeholder="John Doe"
-                                            className="pl-9"
-                                            value={name}
-                                            onChange={(e) => setName(e.target.value)}
-                                            required
-                                        />
+                            {isSubmitted ? (
+                                <div className="text-center py-6 space-y-4 animate-in fade-in zoom-in duration-300">
+                                    <div className="h-20 w-20 bg-accent/10 rounded-full flex items-center justify-center mx-auto">
+                                        <Mail className="h-10 w-10 text-accent animate-pulse" />
                                     </div>
+                                    <div className="space-y-2">
+                                        <p className="text-sm text-muted-foreground">
+                                            A verification link was sent to <span className="font-semibold text-foreground">{email}</span>.
+                                        </p>
+                                        <p className="text-xs text-muted-foreground italic">
+                                            Please check your spam folder if you don't see it in a few minutes.
+                                        </p>
+                                    </div>
+                                    <Button asChild className="w-full mt-4">
+                                        <Link to="/login">Go to Login</Link>
+                                    </Button>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="company">Company (Optional)</Label>
-                                    <div className="relative">
-                                        <Building className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            id="company"
-                                            type="text"
-                                            placeholder="Your Company Ltd"
-                                            className="pl-9"
-                                            value={company}
-                                            onChange={(e) => setCompany(e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="email">Email</Label>
-                                    <div className="relative">
-                                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            id="email"
-                                            type="email"
-                                            placeholder="name@example.com"
-                                            className="pl-9"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            required
-                                        />
-                                    </div>
-                                </div>
-                                
-                                {/* --- PASSWORD FIELD --- */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="password">Password</Label>
-                                    <div className="relative">
-                                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            id="password"
-                                            type={showPassword ? "text" : "password"}
-                                            placeholder="••••••••"
-                                            className="pl-9 pr-10" // Adicionei padding right para o olho não ficar em cima do texto
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            // Eventos do Caps Lock
-                                            onKeyDown={checkCapsLock}
-                                            onKeyUp={checkCapsLock}
-                                            onClick={checkCapsLock} 
-                                            onFocus={checkCapsLock}
-                                            onBlur={() => setCapsLockActive(false)} 
-                                            required
-                                            minLength={8}
-                                        />
-                                        
-                                        {/* Botão do Olho 1 */}
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-3 text-muted-foreground hover:text-foreground focus:outline-none"
-                                            tabIndex={-1}
-                                        >
-                                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                        </button>
-                                    </div>
-                                    
-                                    {/* Aviso de Caps Lock (Só aparece se o foco estiver neste ou no outro) */}
-                                    {capsLockActive && (
-                                        <div className="flex items-center text-xs text-yellow-600 mt-1 animate-in fade-in slide-in-from-top-1">
-                                            <AlertTriangle className="h-3 w-3 mr-1" />
-                                            Caps Lock is on
+                            ) : (
+                                <form onSubmit={handleSignup} className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="name">Full Name</Label>
+                                        <div className="relative">
+                                            <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                id="name"
+                                                type="text"
+                                                placeholder="John Doe"
+                                                className="pl-9"
+                                                value={name}
+                                                onChange={(e) => setName(e.target.value)}
+                                                required
+                                            />
                                         </div>
-                                    )}
-                                </div>
-
-                                {/* --- CONFIRM PASSWORD FIELD --- */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                                    <div className="relative">
-                                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            id="confirmPassword"
-                                            // AQUI MUDOU: Usa o estado showConfirmPassword
-                                            type={showConfirmPassword ? "text" : "password"}
-                                            placeholder="••••••••"
-                                            className="pl-9 pr-10" // Padding para o olho
-                                            value={confirmPassword}
-                                            onChange={(e) => setConfirmPassword(e.target.value)}
-                                            // Eventos do Caps Lock
-                                            onKeyDown={checkCapsLock}
-                                            onKeyUp={checkCapsLock}
-                                            onClick={checkCapsLock} 
-                                            onFocus={checkCapsLock}
-                                            onBlur={() => setCapsLockActive(false)} 
-                                            required
-                                            minLength={8}
-                                        />
-                                        
-                                        {/* Botão do Olho 2 (Novo) */}
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                            className="absolute right-3 top-3 text-muted-foreground hover:text-foreground focus:outline-none"
-                                            tabIndex={-1}
-                                        >
-                                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                        </button>
                                     </div>
-                                    {/* Dupliquei o aviso aqui caso o user esteja a focar neste campo */}
-                                    {capsLockActive && (
-                                        <div className="flex items-center text-xs text-yellow-600 mt-1 animate-in fade-in slide-in-from-top-1">
-                                            <AlertTriangle className="h-3 w-3 mr-1" />
-                                            Caps Lock is on
+                                    <div className="space-y-2">
+                                        <Label htmlFor="company">Company (Optional)</Label>
+                                        <div className="relative">
+                                            <Building className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                id="company"
+                                                type="text"
+                                                placeholder="Your Company Ltd"
+                                                className="pl-9"
+                                                value={company}
+                                                onChange={(e) => setCompany(e.target.value)}
+                                            />
                                         </div>
-                                    )}
-                                </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="email">Email</Label>
+                                        <div className="relative">
+                                            <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                id="email"
+                                                type="email"
+                                                placeholder="name@example.com"
+                                                className="pl-9"
+                                                value={email}
+                                                onChange={(e) => setEmail(e.target.value)}
+                                                required
+                                            />
+                                        </div>
+                                    </div>
 
-                                <Button type="submit" className="w-full" disabled={isLoading}>
-                                    {isLoading ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating account...
-                                        </>
-                                    ) : (
-                                        "Create Account"
-                                    )}
-                                </Button>
-                            </form>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="password">Password</Label>
+                                        <div className="relative">
+                                            <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                id="password"
+                                                type={showPassword ? "text" : "password"}
+                                                placeholder="••••••••"
+                                                className="pl-9 pr-10"
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                onKeyDown={checkCapsLock}
+                                                onKeyUp={checkCapsLock}
+                                                onClick={checkCapsLock}
+                                                onFocus={checkCapsLock}
+                                                onBlur={() => setCapsLockActive(false)}
+                                                required
+                                                minLength={8}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="absolute right-3 top-3 text-muted-foreground hover:text-foreground focus:outline-none"
+                                                tabIndex={-1}
+                                            >
+                                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                            </button>
+                                        </div>
+                                        {capsLockActive && (
+                                            <div className="flex items-center text-xs text-yellow-600 mt-1 animate-in fade-in slide-in-from-top-1">
+                                                <AlertTriangle className="h-3 w-3 mr-1" />
+                                                Caps Lock is on
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="confirmPassword">Confirm Password</Label>
+                                        <div className="relative">
+                                            <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                id="confirmPassword"
+                                                type={showConfirmPassword ? "text" : "password"}
+                                                placeholder="••••••••"
+                                                className="pl-9 pr-10"
+                                                value={confirmPassword}
+                                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                                onKeyDown={checkCapsLock}
+                                                onKeyUp={checkCapsLock}
+                                                onClick={checkCapsLock}
+                                                onFocus={checkCapsLock}
+                                                onBlur={() => setCapsLockActive(false)}
+                                                required
+                                                minLength={8}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                className="absolute right-3 top-3 text-muted-foreground hover:text-foreground focus:outline-none"
+                                                tabIndex={-1}
+                                            >
+                                                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                            </button>
+                                        </div>
+                                        {capsLockActive && (
+                                            <div className="flex items-center text-xs text-yellow-600 mt-1 animate-in fade-in slide-in-from-top-1">
+                                                <AlertTriangle className="h-3 w-3 mr-1" />
+                                                Caps Lock is on
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <Button type="submit" className="w-full" disabled={isLoading}>
+                                        {isLoading ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating account...
+                                            </>
+                                        ) : (
+                                            "Create Account"
+                                        )}
+                                    </Button>
+                                </form>
+                            )}
                         </CardContent>
-                        <CardFooter className="flex flex-col space-y-4 border-t bg-muted/20 p-6">
-                            <div className="text-center text-sm text-muted-foreground">
-                                Already have an account?{" "}
-                                <Link to="/login" className="text-accent hover:underline font-medium">
-                                    Sign in
-                                </Link>
+                        <CardFooter className="flex flex-col space-y-4 border-t bg-muted/20 p-6 text-center">
+                            <div className="text-sm text-muted-foreground">
+                                {isSubmitted ? (
+                                    <Link to="/signup" onClick={() => setIsSubmitted(false)} className="text-accent hover:underline font-medium">
+                                        Did not receive the email? Try again
+                                    </Link>
+                                ) : (
+                                    <>
+                                        Already have an account?{" "}
+                                        <Link to="/login" className="text-accent hover:underline font-medium">
+                                            Sign in
+                                        </Link>
+                                    </>
+                                )}
                             </div>
                         </CardFooter>
                     </Card>
