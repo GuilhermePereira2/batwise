@@ -401,8 +401,8 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                  x.battery_energy if x.battery_energy > 0 else 0, reverse=True)
 
     return {
-        "results": configs[:100],
-        "plotResults": configs[:100],
+        "results": configs,
+        "plotResults": configs,
         "total": len(configs),
         "stats": stats if req.debug else None
     }

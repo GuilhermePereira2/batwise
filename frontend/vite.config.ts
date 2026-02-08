@@ -14,6 +14,8 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "react-dom/client": "react-dom/client",
+      "react-dom": "react-dom",
     },
   },
 }));

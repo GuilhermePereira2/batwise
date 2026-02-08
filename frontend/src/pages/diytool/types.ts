@@ -33,4 +33,5 @@ export interface Configuration extends BaseConfiguration {
   bms: ComponentData | null;
   shunt: ComponentData | null;
   cable: CableData | null;
+  layout?: [number, number];
 }

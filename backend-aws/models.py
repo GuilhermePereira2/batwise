@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Tuple
 # --- Component Models (minúsculas, como no teu Deno) ---
 
 
@@ -8,8 +8,8 @@ class Fuse(BaseModel):
     model: str
     vdc_max: float
     a_max: float
-    temp_min: float
-    temp_max: float
+    temp_min: Optional[float] = None  # Alterado para opcional
+    temp_max: Optional[float] = None  # Alterado para opcional
     price: float
     link: str
 
@@ -25,8 +25,8 @@ class Relay(BaseModel):
     model: str
     vdc_max: float
     a_max: float
-    temp_min: float
-    temp_max: float
+    temp_min: Optional[float] = None  # Alterado para opcional
+    temp_max: Optional[float] = None  # Alterado para opcional
     price: float
     link: str
 
@@ -37,8 +37,8 @@ class Cable(BaseModel):
     section: float
     vdc_max: float
     a_max: float
-    temp_min: float
-    temp_max: float
+    temp_min: Optional[float] = None  # Alterado para opcional
+    temp_max: Optional[float] = None  # Alterado para opcional
     price: float
     link: str
 
@@ -50,8 +50,8 @@ class Bms(BaseModel):
     vdc_min: float
     vdc_max: float
     a_max: float
-    temp_min: float
-    temp_max: float
+    temp_min: Optional[float] = None  # Alterado para opcional
+    temp_max: Optional[float] = None  # Alterado para opcional
     master_price: float
     slave_price: float
     link: str
@@ -62,8 +62,8 @@ class Shunt(BaseModel):
     model: str
     vdc_max: float
     a_max: float
-    temp_min: float
-    temp_max: float
+    temp_min: Optional[float] = None  # Alterado para opcional
+    temp_max: Optional[float] = None  # Alterado para opcional
     price: float
     link: str
 
@@ -216,15 +216,14 @@ class Configuration(BaseModel):
     cell_price: float
     fuse: Optional[Fuse]
     relay: Optional[Relay]
-    # No Deno tinhas um tipo custom para cable selecionado, aqui simplificamos
     cable: Optional[Cable]
     bms: Optional[Bms]
     shunt: Optional[Shunt]
     total_price: float
     dimensions: Dimensions
     affiliate_link: str
-    safety: SafetyAssessment  # Novo campo
-    # Link para imagem gerada ou estática
+    safety: SafetyAssessment
+    layout: Optional[Tuple[int, int]] = None
     wiring_diagram_url: Optional[str] = None
 
 
@@ -263,6 +262,7 @@ class UserResponse(BaseModel):
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
     trial_started_at: Optional[str] = None
+    is_verified: bool = False
 
     class Config:
         from_attributes = True
