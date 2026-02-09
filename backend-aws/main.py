@@ -340,7 +340,7 @@ async def signup(user: UserCreate):
         )
 
         frontend_url = os.getenv(
-            "FRONTEND_URL", "https://www.watt-builder.com")
+            "FRONTEND_URL", "https://www.preview.watt-builder.com")
         token = new_user['verification_token']
         verify_link = f"{frontend_url}/verify-email?token={token}&email={user.email}"
 
@@ -457,7 +457,7 @@ async def forgot_password(request: PasswordResetRequest):
         # 3. Enviar Email
         # O link aponta para o teu frontend
         frontend_url = os.getenv(
-            "FRONTEND_URL", "https://www.watt-builder.com")
+            "FRONTEND_URL", "https://www.preview.watt-builder.com")
         reset_link = f"{frontend_url}/reset-password?token={token}&email={request.email}"
 
         email_body = f"""
