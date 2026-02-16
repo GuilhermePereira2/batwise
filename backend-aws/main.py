@@ -344,10 +344,53 @@ async def signup(user: UserCreate):
         token = new_user['verification_token']
         verify_link = f"{frontend_url}/verify-email?token={token}&email={user.email}"
 
+        email_body = f"""
+                <div style="font-family: Arial, Helvetica, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937;">
+                    <h2 style="color: #111827;">Verify your email address</h2>
+
+                    <p>Hi {user.full_name},</p>
+
+                    <p>
+                        Welcome to WattBuilder! We're excited to have you on board.
+                        Please confirm your email address to activate your account and start building.
+                    </p>
+
+                    <p style="text-align: center; margin: 32px 0;">
+                        <a href="{verify_link}"
+                        style="
+                                background-color: #f97316;
+                                color: #ffffff;
+                                padding: 12px 24px;
+                                text-decoration: none;
+                                font-weight: bold;
+                                border-radius: 6px;
+                                display: inline-block;
+                        ">
+                            Verify Email
+                        </a>
+                    </p>
+
+                    <p>
+                        This link is valid for <strong>24 hours</strong>.
+                    </p>
+
+                    <p style="font-size: 14px; color: #6b7280;">
+                        If you didn't create an account with WattBuilder, you can safely ignore this email.
+                        Your account will not be activated.
+                    </p>
+
+                    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;">
+
+                    <p style="font-size: 12px; color: #9ca3af;">
+                        For security reasons, never share this link with anyone.
+                    </p>
+                </div>
+                """
+
         message = MessageSchema(
             subject="Verify your WattBuilder Account",
             recipients=[user.email],
-            body=f"Hi {user.full_name},<br>Please verify your account by clicking <a href='{verify_link}'>here</a>.",
+            body=email_body,
             subtype=MessageType.html
         )
 
