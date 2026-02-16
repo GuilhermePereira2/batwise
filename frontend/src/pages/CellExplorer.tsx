@@ -385,7 +385,7 @@ const CellExplorer = () => {
             const powerDensityWL = powerW / safeVolumeL;
             const energyDensityWhKg = energyWh / (cell.Weight / 1000000);
             const powerDensityWKg = powerW / (cell.Weight / 1000000);
-            
+
             // Create computed values object
             const computed = {
                 capacityAh,
@@ -397,7 +397,7 @@ const CellExplorer = () => {
                 energyDensityWhKg,
                 powerDensityWKg,
             };
-            
+
             // Merge cell data with computed values for chart
             // Using Object.assign to create a new object without spread
             return Object.assign({}, cell, computed) as ChartCellData;
@@ -670,9 +670,9 @@ const CellExplorer = () => {
                                     {/* TAB 1: GRID VIEW */}
                                     <TabsContent value="grid">
                                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                                            {paginatedCells.map((cell) => (
+                                            {paginatedCells.map((cell, index) => (
                                                 <Link
-                                                    key={cell.CellModelNo}
+                                                    key={`${cell.Brand}-${cell.CellModelNo}-${index}`}
                                                     to={`/cell/${createCellSlug(cell.Brand, cell.CellModelNo)}`}
                                                     className="block h-full"
                                                 >

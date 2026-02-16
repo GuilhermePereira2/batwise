@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox"; // <-- NOVO IMPORT
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { UserPlus, Mail, Lock, User, Loader2, ArrowLeft, Eye, EyeOff, AlertTriangle, Building, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -13,10 +14,11 @@ import { getApiUrl } from "@/lib/config";
 const Signup = () => {
     const [name, setName] = useState("");
     const [company, setCompany] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
-
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [acceptTerms, setAcceptTerms] = useState(false); // <-- NOVO ESTADO
+
     const [isLoading, setIsLoading] = useState(false);
 
     // ESTADOS PARA OS OLHOS (Independentes)
@@ -57,6 +59,17 @@ const Signup = () => {
         e.preventDefault();
         setIsLoading(true);
 
+        // <-- NOVA VALIDAÇÃO DOS TERMOS
+        if (!acceptTerms) {
+            toast({
+                title: "Terms and Conditions",
+                description: "You must accept the terms and conditions to create an account.",
+                variant: "destructive"
+            });
+            setIsLoading(false);
+            return;
+        }
+
         if (password !== confirmPassword) {
             toast({
                 title: "Passwords do not match",
@@ -86,7 +99,6 @@ const Signup = () => {
                 throw new Error(errorData.detail || "Registration failed");
             }
 
-            // ALTERAÇÃO AQUI: Em vez de navegar, mostramos a confirmação
             setIsSubmitted(true);
             toast({
                 title: "Account created!",
@@ -272,7 +284,25 @@ const Signup = () => {
                                         )}
                                     </div>
 
-                                    <Button type="submit" className="w-full" disabled={isLoading}>
+                                    {/* <-- NOVA ZONA DOS TERMOS E CONDIÇÕES --> */}
+                                    <div className="flex items-center space-x-2 pt-2">
+                                        <Checkbox
+                                            id="terms"
+                                            checked={acceptTerms}
+                                            onCheckedChange={(checked) => setAcceptTerms(checked === true)}
+                                        />
+                                        <Label
+                                            htmlFor="terms"
+                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                        >
+                                            I accept the{" "}
+                                            <Link to="/Terms" className="text-accent hover:underline" target="_blank">
+                                                Terms and Conditions
+                                            </Link>
+                                        </Label>
+                                    </div>
+
+                                    <Button type="submit" className="w-full mt-2" disabled={isLoading}>
                                         {isLoading ? (
                                             <>
                                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating account...
