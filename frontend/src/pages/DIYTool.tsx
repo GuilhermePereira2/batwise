@@ -201,22 +201,37 @@ const DIYTool = () => {
     setResults([]);
 
     try {
-      const configData = {
-        min_voltage: Number(minVoltage) || 70,
-        max_voltage: Number(maxVoltage) || 80,
-        min_continuous_power: Number(minContinuousPower) || 2000,
-        peak_power: Number(peakPower) || (Number(minContinuousPower) * 1),
-        min_energy: Number(minEnergy) || 3000,
-        max_weight: Number(maxWeight) || 100,
-        max_price: Number(maxPrice) || 100000,
-        max_width: Number(maxWidth) || 2000,
-        max_length: Number(maxLength) || 10000,
-        max_height: Number(maxHeight) || 2000,
-        target_price: Number(targetPrice) || 0,
-        ambient_temp: 25,
+      // Validação de campos obrigatórios no frontend
+      if (!minVoltage || !maxVoltage || !minContinuousPower || !minEnergy) {
+        toast({
+          title: "Missing Required Fields",
+          description: "Please fill in: Min Voltage, Max Voltage, Min Power, and Min Energy.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Campos obrigatórios - sem defaults
+      const configData: any = {
+        min_voltage: Number(minVoltage),
+        max_voltage: Number(maxVoltage),
+        min_continuous_power: Number(minContinuousPower),
+        min_energy: Number(minEnergy),
         include_components: includeComponents,
         debug: true,
       };
+
+      // Campos opcionais - só adiciona se tiver valor
+      if (peakPower) configData.peak_power = Number(peakPower);
+      if (maxWeight) configData.max_weight = Number(maxWeight);
+      if (maxPrice) configData.max_price = Number(maxPrice);
+      if (maxWidth) configData.max_width = Number(maxWidth);
+      if (maxLength) configData.max_length = Number(maxLength);
+      if (maxHeight) configData.max_height = Number(maxHeight);
+      if (targetPrice) configData.target_price = Number(targetPrice);
+      
+      configData.ambient_temp = 25; // Default para temperatura ambiente
 
       const url = getApiUrl("calculate");
       const formData = new FormData();
@@ -244,11 +259,24 @@ const DIYTool = () => {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
+        let errorMessage = "An error occurred";
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorMessage;
+        } catch {
+          // Se não conseguir parsear JSON, tenta texto
+          const errorText = await response.text();
+          errorMessage = errorText || errorMessage;
+        }
+
         if (response.status === 403) {
           throw new Error("Insufficient credits to perform this calculation.");
+        } else if (response.status === 422) {
+          throw new Error(errorMessage);
         }
-        throw new Error(`Server Error: ${errorText}`);
+        
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -494,26 +522,50 @@ const DIYTool = () => {
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="minVoltage">
-                        Min Voltage (V)
+                        Min Voltage (V) <span className="text-red-500">*</span>
                         <InfoTooltip content="The minimum voltage where your system shuts down (Low Voltage Cutoff)." />
                       </Label>
-                      <Input id="minVoltage" type="number" value={minVoltage} onChange={(e) => setMinVoltage(e.target.value)} placeholder="e.g., 36" />
+                      <Input 
+                        id="minVoltage" 
+                        type="number" 
+                        value={minVoltage} 
+                        onChange={(e) => setMinVoltage(e.target.value)} 
+                        onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
+                        placeholder="e.g., 36" 
+                        required 
+                      />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="maxVoltage">
-                        Max Voltage (V)
+                        Max Voltage (V) <span className="text-red-500">*</span>
                         <InfoTooltip content="The battery voltage at 100% capacity. MUST match charger voltage." />
                       </Label>
-                      <Input id="maxVoltage" type="number" value={maxVoltage} onChange={(e) => setMaxVoltage(e.target.value)} placeholder="e.g., 54.6" />
+                      <Input 
+                        id="maxVoltage" 
+                        type="number" 
+                        value={maxVoltage} 
+                        onChange={(e) => setMaxVoltage(e.target.value)} 
+                        onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
+                        placeholder="e.g., 54.6" 
+                        required 
+                      />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="minEnergy">
-                        Min Energy (Wh)
+                        Min Energy (Wh) <span className="text-red-500">*</span>
                         <InfoTooltip content="Defines autonomy (range/runtime). Nominal Voltage x Ah = Wh." />
                       </Label>
-                      <Input id="minEnergy" type="number" value={minEnergy} onChange={(e) => setMinEnergy(e.target.value)} placeholder="e.g., 2000" />
+                      <Input 
+                        id="minEnergy" 
+                        type="number" 
+                        value={minEnergy} 
+                        onChange={(e) => setMinEnergy(e.target.value)} 
+                        onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
+                        placeholder="e.g., 2000" 
+                        required 
+                      />
                     </div>
 
                     <div className="space-y-2">
@@ -532,10 +584,18 @@ const DIYTool = () => {
 
                     <div className="space-y-2 md:col-span-2">
                       <Label htmlFor="minContinuousPower">
-                        Continuous Power (W)
+                        Continuous Power (W) <span className="text-red-500">*</span>
                         <InfoTooltip content="Average power consumption. Used for thermal safety calculations." />
                       </Label>
-                      <Input id="minContinuousPower" type="number" value={minContinuousPower} onChange={(e) => setMinContinuousPower(e.target.value)} placeholder="e.g., 3000" />
+                      <Input 
+                        id="minContinuousPower" 
+                        type="number" 
+                        value={minContinuousPower} 
+                        onChange={(e) => setMinContinuousPower(e.target.value)} 
+                        onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
+                        placeholder="e.g., 3000" 
+                        required 
+                      />
                     </div>
 
                     <div className="space-y-2">
@@ -580,6 +640,14 @@ const DIYTool = () => {
                       <InfoTooltip content="Uncheck to calculate only raw cell configuration." />
                     </Label>
                   </div>
+
+                  {(!minVoltage || !maxVoltage || !minEnergy || !minContinuousPower) && (
+                    <div className="p-3 bg-blue-50 border border-blue-300 rounded-lg text-sm text-blue-800 mb-4">
+                      <strong>Required fields are marked with <span className="text-red-500">*</span></strong>
+                      <p className="text-xs mt-1 text-blue-600">Min/Max Voltage, Min Energy, and Continuous Power must be filled to generate configurations.</p>
+                    </div>
+                  )}
+
                   <Button onClick={handleGenerate} className="w-full" size="lg" disabled={isLoading}>
                     {isLoading ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Calculating...</> : <><Zap className="mr-2 h-5 w-5" /> Generate Design</>}
                   </Button>

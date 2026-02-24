@@ -170,21 +170,25 @@ class CellData(BaseModel):
 
 
 class Requirements(BaseModel):
-    # O frontend pode enviar strings ou números, o Pydantic converte
-    min_voltage: float = 50
-    max_voltage: float = 80
-    min_energy: float = 3000.0  # Default valor razoável
-    min_continuous_power: float = 2000.0  # Default valor razoável
-    peak_power: float = 3000.0
-    max_weight: float = 50.0  # Default valor alto
-    max_price: float = 10000.0  # Default valor alto
-    max_width: float = 150.0  # Default valor estreito
-    max_length: float = 700.0  # Default longo valor
-    max_height: float = 200.0  # Default alto valor
-    ambient_temp: float = 25.0
-    debug: bool = False
+    # Campos obrigatórios (sem Optional, sem default)
+    min_voltage: float
+    max_voltage: float
+    min_energy: float
+    min_continuous_power: float
+    
+    # Campos com defaults (tecnicamente obrigatórios mas sempre enviados pelo frontend)
+    debug: bool = True
     include_components: bool = True
     use_custom_db: bool = False
+    
+    # Campos opcionais (com Optional e default None ou valor padrão)
+    peak_power: Optional[float] = None
+    max_weight: Optional[float] = None
+    max_price: Optional[float] = None
+    max_width: Optional[float] = None
+    max_length: Optional[float] = None
+    max_height: Optional[float] = None
+    ambient_temp: float = 25.0  # Opcional com default de 25°C 
 
 
 class Dimensions(BaseModel):

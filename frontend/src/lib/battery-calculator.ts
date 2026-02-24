@@ -92,16 +92,19 @@ type Bms = ComponentDB['bms'][0];
 type Shunt = ComponentDB['shunts'][0];
 
 export interface Requirements {
+  // Campos obrigatórios
   Min_Max_Voltage: number;
   Max_Max_Voltage: number;
   Min_Rated_Energy: number;
   Continuous_Power: number;
-  Battery_max_weight: number;
-  Max_Price: number;
-  max_x: number;
-  max_y: number;
-  max_z: number;
-  T_amb: number;
+  
+  // Campos opcionais
+  Battery_max_weight?: number;
+  Max_Price?: number;
+  max_x?: number;
+  max_y?: number;
+  max_z?: number;
+  T_amb?: number;  // Default 25 se não fornecido
 }
 
 export interface Configuration {
@@ -327,8 +330,9 @@ function computeCellConfigurations(
     const impedance = cell.Impedance * 1e-3;
     const capacity = cell.Capacity * 1e-3;
 
+    // Apenas valida altura se max_z foi fornecido
     const requiredHeight = cell.Cell_Height + 30;
-    if (requiredHeight > requirements.max_z) continue;
+    if (requirements.max_z !== undefined && requiredHeight > requirements.max_z) continue;
 
     const minSeriesFromVoltage = Math.ceil(requirements.Min_Max_Voltage / cell.NominalVoltage);
     const maxSeriesFromVoltage = Math.floor(requirements.Max_Max_Voltage / cell.NominalVoltage);
@@ -358,8 +362,15 @@ function computeCellConfigurations(
         const peakPower = batteryVoltage * peakCurrent;
         const cellsPrice = cell.Price * totalCells;
 
-        if (!configGeometryValidation(cell, series, parallel, requirements.max_x, requirements.max_y)) continue;
-        if (batteryWeight > requirements.Battery_max_weight) continue;
+        // Validações de geometria apenas se max_x e max_y foram fornecidos
+        if (requirements.max_x !== undefined && requirements.max_y !== undefined) {
+          if (!configGeometryValidation(cell, series, parallel, requirements.max_x, requirements.max_y)) continue;
+        }
+        
+        // Validações opcionais
+        if (requirements.Battery_max_weight !== undefined && batteryWeight > requirements.Battery_max_weight) continue;
+        
+        // Validações obrigatórias
         if (continuousPower < requirements.Continuous_Power) continue;
         if (batteryEnergy < requirements.Min_Rated_Energy) continue;
 
@@ -370,7 +381,10 @@ function computeCellConfigurations(
         const relayVoltageRating = Math.ceil(1.25 * maxVoltage);
         const relay = selectComponent(componentDB.relays, relayVoltageRating, relayCurrentRating);
 
-        const cable = selectCable(componentDB.cables, peakCurrent, maxVoltage, requirements.T_amb);
+        // Cable selecionado apenas se T_amb foi fornecido
+        const cable = requirements.T_amb !== undefined 
+          ? selectCable(componentDB.cables, peakCurrent, maxVoltage, requirements.T_amb)
+          : null;
         const bms = selectBMS(componentDB.bms, series, peakCurrent);
         const shunt = selectComponent(componentDB.shunts, maxVoltage, peakCurrent);
 
@@ -381,7 +395,8 @@ function computeCellConfigurations(
         if (bms) totalPrice += bms.master_price;
         if (shunt) totalPrice += shunt.price;
 
-        if (totalPrice > requirements.Max_Price) continue;
+        // Apenas valida preço se Max_Price foi fornecido
+        if (requirements.Max_Price !== undefined && totalPrice > requirements.Max_Price) continue;
 
         configs.push({
           cell: cell,
@@ -418,18 +433,39 @@ function computeCellConfigurations(
 // --- MAIN EXPORT ---
 
 export function calculateBatteryDesign(inputData: any) {
+  // Campos obrigatórios - sem fallback
   const requirements: Requirements = {
-    Min_Max_Voltage: parseFloat(inputData.min_voltage || '80'),
-    Max_Max_Voltage: parseFloat(inputData.max_voltage || '90'),
-    Min_Rated_Energy: parseFloat(inputData.min_energy || '3000'),
-    Continuous_Power: parseFloat(inputData.min_continuous_power || '3000'),
-    Battery_max_weight: parseFloat(inputData.max_weight || '65'),
-    Max_Price: parseFloat(inputData.max_price || '5000'),
-    max_x: parseFloat(inputData.max_width || '900'),
-    max_y: parseFloat(inputData.max_length || '340'),
-    max_z: parseFloat(inputData.max_height || '250'),
-    T_amb: parseFloat(inputData.ambient_temp || '35'),
+    Min_Max_Voltage: parseFloat(inputData.min_voltage),
+    Max_Max_Voltage: parseFloat(inputData.max_voltage),
+    Min_Rated_Energy: parseFloat(inputData.min_energy),
+    Continuous_Power: parseFloat(inputData.min_continuous_power),
   };
+
+  // Validação de campos obrigatórios
+  if (isNaN(requirements.Min_Max_Voltage) || isNaN(requirements.Max_Max_Voltage) ||
+      isNaN(requirements.Min_Rated_Energy) || isNaN(requirements.Continuous_Power)) {
+    throw new Error('Missing required fields: min_voltage, max_voltage, min_energy, or min_continuous_power');
+  }
+
+  // Campos opcionais - apenas adiciona se existir
+  if (inputData.max_weight) {
+    requirements.Battery_max_weight = parseFloat(inputData.max_weight);
+  }
+  if (inputData.max_price) {
+    requirements.Max_Price = parseFloat(inputData.max_price);
+  }
+  if (inputData.max_width) {
+    requirements.max_x = parseFloat(inputData.max_width);
+  }
+  if (inputData.max_length) {
+    requirements.max_y = parseFloat(inputData.max_length);
+  }
+  if (inputData.max_height) {
+    requirements.max_z = parseFloat(inputData.max_height);
+  }
+  if (inputData.ambient_temp) {
+    requirements.T_amb = parseFloat(inputData.ambient_temp);
+  }
 
   const { configs } = computeCellConfigurations(requirements, CELL_CATALOGUE, COMPONENT_DB);
 

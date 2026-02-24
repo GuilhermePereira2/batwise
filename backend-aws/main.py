@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, sta
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional, Dict
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
+from pydantic import ValidationError
 import os
 import json
 import csv
@@ -263,6 +264,16 @@ async def calculate_endpoint(
 
         return res_dict
 
+    except ValidationError as ve:
+        # Erro de validação do Pydantic (campos obrigatórios faltando)
+        error_messages = []
+        for error in ve.errors():
+            field = error['loc'][-1] if error['loc'] else 'unknown'
+            msg = error['msg']
+            error_messages.append(f"{field}: {msg}")
+        
+        error_detail = "Missing or invalid required fields: " + ", ".join(error_messages)
+        raise HTTPException(status_code=422, detail=error_detail)
     except json.JSONDecodeError:
         raise HTTPException(
             status_code=400, detail="Configuração JSON inválida")

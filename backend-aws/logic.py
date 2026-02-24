@@ -227,8 +227,8 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
     print(f"Starting calculation with {len(cell_catalogue)} cells...")
 
     for cell in cell_catalogue:
-        # Check Altura
-        if (cell.Cell_Height + HEIGHT_MARGIN_MM) > req.max_height:
+        # Check Altura (apenas se max_height foi fornecido)
+        if req.max_height is not None and (cell.Cell_Height + HEIGHT_MARGIN_MM) > req.max_height:
             continue
 
         min_series = math.ceil(req.min_voltage / (cell.NominalVoltage-0.7))
@@ -247,7 +247,9 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                           cell.MaxContinuousDischargeRate) * cell.NominalVoltage
             min_p_power = math.ceil(
                 req.min_continuous_power / (series * cell_power)) if cell_power > 0 else 1
-            start_p = max(min_p_power, 1)
+            
+            min_p_energy = math.ceil(req.min_energy / (series * cell.Capacity * 1e-3 * cell.NominalVoltage)) if cell.Capacity > 0 else 1
+            start_p = max(min_p_power, min_p_energy, 1)
 
             if cell.Cell_Stack and cell.Cell_Stack.lstrip().startswith('P'):
                 start_p = 1
@@ -283,17 +285,22 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                 total_cells = series * parallel
                 bat_weight = (cell.Weight * 1e-3) * total_cells
 
-                if req.include_components:
-                    if bat_weight > (req.max_weight*0.7):
-                        continue
-                else:
-                    if bat_weight > req.max_weight:
-                        continue
+                # Validação de peso (apenas se max_weight foi fornecido)
+                if req.max_weight is not None:
+                    if req.include_components:
+                        if bat_weight > (req.max_weight*0.7):
+                            continue
+                    else:
+                        if bat_weight > req.max_weight:
+                            continue
 
-                layout = config_geometry_validation_fast(
-                    cell, series, parallel, req.max_width, req.max_length)
-                if not layout:
-                    continue
+                # Validação de geometria (apenas se max_width e max_length foram fornecidos)
+                layout = None  # Default se geometria não for validada
+                if req.max_width is not None and req.max_length is not None:
+                    layout = config_geometry_validation_fast(
+                        cell, series, parallel, req.max_width, req.max_length)
+                    if not layout:
+                        continue
 
                 # Componentes
                 peak_current = (cell.Capacity * 1e-3 *
@@ -359,7 +366,8 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                     total_price += fuse_price + relay_price + cable_price + \
                         bms_price + shunt_price
 
-                if total_price > req.max_price:
+                # Validação de preço (apenas se max_price foi fornecido)
+                if req.max_price is not None and total_price > req.max_price:
                     continue
 
                 bat_capacity = (cell.Capacity * 1e-3) * parallel
