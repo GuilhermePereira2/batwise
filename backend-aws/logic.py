@@ -124,6 +124,35 @@ def config_geometry_validation_fast(cell: CellData, series: int, parallel: int, 
     l_cell_spacing = cell.Cell_Width + SPACING_WIDTH_MM
 
     factors = get_integer_factors(total_cells)
+    
+    # Se max_x ou max_y são infinitos, preferir layout quadrado
+    if max_x == float('inf') or max_y == float('inf'):
+        if max_x == float('inf') and max_y != float('inf'):
+            # max_y é a restrição, encontrar layoutque se encaixe em y
+            for dim_y in [e_cell_spacing, l_cell_spacing]:
+                for nx, ny in factors:
+                    if ny * dim_y <= max_y:
+                        return (nx, ny)
+        elif max_y == float('inf') and max_x != float('inf'):
+            # max_x é a restrição, encontrar layout que se encaixe em x
+            for dim_x in [e_cell_spacing, l_cell_spacing]:
+                for nx, ny in factors:
+                    if nx * dim_x <= max_x:
+                        return (nx, ny)
+        else:
+            print("Both max_x and max_y are infinite, preferring square layout.")
+            print(f"Total cells: {total_cells}, Factors: {factors}")
+            # Ambos são infinitos, preferir layout quadrado
+            sqrt_cells = math.isqrt(total_cells)
+            closest_pair = None
+            min_diff = float('inf')
+            for nx, ny in factors:
+                diff = abs(nx - ny)
+                if diff < min_diff:
+                    min_diff = diff
+                    closest_pair = (nx, ny)
+            return closest_pair if closest_pair else (1, total_cells)
+    
     dim_ops = [(e_cell_spacing, l_cell_spacing),
                (l_cell_spacing, e_cell_spacing)]
 
@@ -300,7 +329,12 @@ def compute_cell_configurations(req: Any, cell_catalogue: List[CellData], compon
                     layout = config_geometry_validation_fast(
                         cell, series, parallel, req.max_width, req.max_length)
                     if not layout:
+                        print(f"Config layout failed geometry: Series={series}, Parallel={parallel}, Cell={cell.CellModelNo}")
                         continue
+                else:
+                    layout = config_geometry_validation_fast(
+                        cell, series, parallel, float('inf'), float('inf'))
+                    print(f"Config layout (no geometry constraints): Series={series}, Parallel={parallel}, Cell={cell.CellModelNo}, Layout={layout}")
 
                 # Componentes
                 peak_current = (cell.Capacity * 1e-3 *
