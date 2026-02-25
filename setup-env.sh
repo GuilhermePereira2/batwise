@@ -90,6 +90,9 @@ case $CHOICE in
   3)
     echo ""
     echo "✅ Cenário 3: Frontend Local + Backend/Database Online"
+    echo ""
+    echo "Para dar deploy do backend online, sam build e sam deploy (AWS) ou git push (Railway)."
+    echo ""
     
     # Criar apenas frontend/.env com VITE_API_URL online (backend vars estão online)
     grep "^VITE_API_URL=https://" "$ENV_EXAMPLE" > frontend/.env
