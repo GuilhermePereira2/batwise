@@ -168,6 +168,9 @@ const BatteryPack = ({ config }: BatteryPackProps) => {
     const packDepthUnits = packBackEdge - packFrontEdge;
     const packCenterZ = (packFrontEdge + packBackEdge) / 2;
     
+    // Altura do pack
+    const packHeightUnits = Cell_Height * scale;
+    
     // Posições das setas (mesma distância do pack para ambas)
     const arrowYPosition = 0.0;
     const arrowOffset = 3.0; // Distância fixa do pack
@@ -176,10 +179,14 @@ const BatteryPack = ({ config }: BatteryPackProps) => {
     const widthArrowZ = packBackEdge + arrowOffset;
     // Posição X para seta de profundidade (na lateral direita do pack)
     const depthArrowX = packRightEdge + arrowOffset;
+    // Posição para seta de altura (lateral esquerda atrás)
+    const heightArrowX = packRightEdge + arrowOffset ;
+    const heightArrowZ = packBackEdge + arrowOffset ;
     
     // Labels com dimensões em cm
     const widthCm = (totalWidth / 10).toFixed(1);
     const depthCm = (totalDepth / 10).toFixed(1);
+    const heightCm = (Cell_Height / 10).toFixed(1);
 
     return (
         <group>
@@ -196,6 +203,13 @@ const BatteryPack = ({ config }: BatteryPackProps) => {
                 position={[depthArrowX, arrowYPosition, packCenterZ]}
                 rotation={[0, Math.PI / 2, 0]}
                 label={`${depthCm} cm`}
+            />
+            {/* Seta de altura - vertical na lateral esquerda */}
+            <DimensionArrow 
+                length={packHeightUnits}
+                position={[heightArrowX, packHeightUnits / 2, heightArrowZ]}
+                rotation={[0, 0, Math.PI / 2]}
+                label={`${heightCm} cm`}
             />
         </group>
     );
