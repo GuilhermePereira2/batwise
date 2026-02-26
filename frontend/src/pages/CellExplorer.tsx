@@ -222,10 +222,8 @@ const CellExplorer = () => {
 
                 const cellStackOptions = new Set<string>();
                 Object.entries(counts).forEach(([fmt, count]) => {
-                    if (count > 5) {
+                    if (count > 0) {
                         cellStackOptions.add(fmt);
-                    } else {
-                        cellStackOptions.add("Cylindrical");
                     }
                 });
 
@@ -235,8 +233,8 @@ const CellExplorer = () => {
 
                 const options: FilterOptions = {
                     brands: getOptions('Brand'),
-                    chemistries: getOptions('Composition'), // Data key 'Composition' maps to state 'chemistries'
-                    cellStacks: Array.from(cellStackOptions).sort(),
+                    chemistries: getOptions('Composition'),
+                    cellStacks: Array.from(cellStackOptions),
                     connections: getOptions('Connection'),
                 };
                 setFilterOptions(options);
@@ -289,9 +287,7 @@ const CellExplorer = () => {
 
             if (filterValues.cellStack.length > 0) {
                 const rawFormat = getFormatFromStack(cell.Cell_Stack);
-                // Se a contagem deste formato for <= 5, ele é considerado "Others"
-                const category = (formatCounts[rawFormat] || 0) > 5 ? rawFormat : "Cylindrical";
-                if (!filterValues.cellStack.includes(category)) return false;
+                if (!filterValues.cellStack.includes(rawFormat)) return false;
             }
             if (cell.Capacity < filterValues.capacity[0] || cell.Capacity > filterValues.capacity[1]) return false;
             if (cell.Weight < filterValues.weight[0] || cell.Weight > filterValues.weight[1]) return false;
