@@ -383,11 +383,11 @@ const CellExplorer = () => {
             const safeVolumeL = volumeL === 0 ? 0.001 : volumeL;
             const energyDensityWhL = energyWh / safeVolumeL;
             const powerDensityWL = powerW / safeVolumeL;
-            const energyDensityWhKg = energyWh / (cell.Weight / 1000000);
-            const powerDensityWKg = powerW / (cell.Weight / 1000000);
+            const energyDensityWhKg = energyWh / (cell.Weight / 1000);
+            const powerDensityWKg = powerW / (cell.Weight / 1000);
 
             // Create computed values object
-            const computed = {
+            const computed = {  
                 capacityAh,
                 energyWh,
                 powerW,
@@ -969,8 +969,8 @@ const CellDetailModal = ({ cell, isOpen, onClose }: { cell: Cell, isOpen: boolea
     const safeVolumeL = volumeL === 0 ? 1 : volumeL;
     const energyDensityWhL = energyWh / safeVolumeL;
     const powerDensityWL = powerW / safeVolumeL;
-    const energyDensityWhKg = energyWh / (cell.Weight / 1000000);
-    const powerDensityWKg = powerW / (cell.Weight / 1000000);
+    const energyDensityWhKg = energyWh / (cell.Weight / 1000);
+    const powerDensityWKg = powerW / (cell.Weight / 1000);
     // --- Fim dos Cálculos ---
 
     return (

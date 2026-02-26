@@ -589,4 +589,4 @@ handler = Mangum(app)
 if __name__ == "__main__":
     # Corre o servidor na porta definida no .env (default 8000)
     port = int(os.getenv("BACKEND_PORT", "8000"))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
