@@ -257,6 +257,7 @@ class Token(BaseModel):
     user_name: str
     credits: int
     trial_started_at: Optional[str] = None
+    admin: bool = False
 
 
 class UserResponse(BaseModel):
@@ -267,6 +268,7 @@ class UserResponse(BaseModel):
     updated_at: Optional[str] = None
     trial_started_at: Optional[str] = None
     is_verified: bool = False
+    admin: bool = False
 
     class Config:
         from_attributes = True

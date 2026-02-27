@@ -73,7 +73,7 @@ class DynamoDBUserHandler:
 
         # 2. Se já existe e está verificado, lançamos erro
         if existing_user and existing_user.get('is_verified'):
-            raise ValueError("Email already registered and verified")
+            raise ValueError(f"This email already exists and is verified. Please log in or use a different email address.")
 
         # 3. Se não existe, criamos um novo ID. Se existe (não verificado), mantemos o mesmo userId
         user_id = existing_user['userId'] if existing_user else str(
@@ -90,7 +90,8 @@ class DynamoDBUserHandler:
             'verification_token': token,
             'created_at': existing_user['created_at'] if existing_user else datetime.utcnow().isoformat(),
             'updated_at': datetime.utcnow().isoformat(),
-            'company': company
+            'company': company,
+            'admin': False
         }
 
         users_table.put_item(Item=item)
@@ -219,6 +220,32 @@ class DynamoDBUserHandler:
             )
             return True
         return False
+
+    @staticmethod
+    def update_verification_token(email: str, token: str) -> bool:
+        """
+        Atualiza o token de verificação de um utilizador
+
+        Args:
+            email: Email do utilizador
+            token: Novo token de verificação
+
+        Returns:
+            True se atualizado com sucesso, False caso contrário
+        """
+        try:
+            user = DynamoDBUserHandler.get_user_by_email(email)
+            if user:
+                users_table.update_item(
+                    Key={'userId': user['userId']},
+                    UpdateExpression="SET verification_token = :token",
+                    ExpressionAttributeValues={':token': token}
+                )
+                return True
+            return False
+        except ClientError as e:
+            print(f"❌ Erro ao atualizar token: {e}")
+            return False
 
     @staticmethod
     def delete_user(email: str) -> bool:

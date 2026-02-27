@@ -104,7 +104,12 @@ def check_trial_status(user: dict):
     """
     Verifica se o user está em trial e se já passaram 15 dias.
     Se expirou, coloca os créditos a 0.
+    Admin users não expiram.
     """
+    # Admin users não expiram
+    if user.get("admin"):
+        return user
+    
     if user.get("trial_started_at") and user.get("credits") > 0:
         # Converter string ISO para objeto datetime
         try:
@@ -248,10 +253,15 @@ async def calculate_endpoint(
                 user = db_users.get_user_by_email(email)
 
                 if user:
-                    if user['credits'] > 0:
+                    # Admin users não pagam créditos
+                    if user.get('admin'):
+                        print(f"👑 Admin user detectado: {email}. Sem dedução de créditos.")
+                        remaining = user['credits']
+                    elif user['credits'] > 0:
                         remaining = db_users.deduct_credit(email)
                         print(f"💰 Crédito deduzido. Restantes: {remaining}")
                     else:
+                        print(f"⚠️  Sem créditos restantes para {email}. Acesso negado.")
                         # Se chegou aqui com 0 créditos (backend check final)
                         raise HTTPException(
                             status_code=403, detail="Insufficient credits")
@@ -287,17 +297,22 @@ async def calculate_endpoint(
 
 # 2. Configuração do Servidor de Email (Lê das variáveis de ambiente)
 # Se usares Gmail, precisas de criar uma "App Password" na conta Google
+mail_from = os.getenv("MAIL_FROM", "general@watt-builder.com")
+mail_from_name = "WattBuilder"
+
 conf = ConnectionConfig(
     MAIL_USERNAME=os.getenv("MAIL_USERNAME"),
     MAIL_PASSWORD=os.getenv("MAIL_PASSWORD"),
-    MAIL_FROM=os.getenv("MAIL_FROM"),
+    MAIL_FROM=mail_from,
+    MAIL_FROM_NAME=mail_from_name,
     MAIL_PORT=int(os.getenv("MAIL_PORT", 587)),  # Zoho usa 465 para SSL
     # Ou .com se a tua conta for global
     MAIL_SERVER=os.getenv("MAIL_SERVER", "smtp.zoho.eu"),
     MAIL_STARTTLS=True,  # Desativar para Porta 465
     MAIL_SSL_TLS=False,   # Ativar para Porta 465
     USE_CREDENTIALS=True,
-    VALIDATE_CERTS=True
+    VALIDATE_CERTS=True,
+    SUPPRESS_SEND=False
 )
 
 # 3. Endpoint para enviar o email
@@ -320,7 +335,8 @@ async def send_contact_email(contact: ContactRequest):
             subject=f"WattBuilder Contacto: {contact.name}",
             recipients=["general@watt-builder.com"],  # O TEU EMAIL AQUI
             body=email_body,
-            subtype=MessageType.html
+            subtype=MessageType.html,
+            reply_to=[contact.email]  # ✅ Reply-To com o email do utilizador
         )
 
         fm = FastMail(conf)
@@ -354,6 +370,29 @@ async def signup(user: UserCreate):
             "FRONTEND_URL", "https://www.preview.watt-builder.com")
         token = new_user['verification_token']
         verify_link = f"{frontend_url}/verify-email?token={token}&email={user.email}"
+
+        # Plain text version (importante para spam filters)
+        email_text = f"""
+Welcome to WattBuilder!
+
+Hi {user.full_name},
+
+Welcome to WattBuilder! We're excited to have you on board.
+Please confirm your email address to activate your account and start building.
+
+Click the link below to verify your email:
+{verify_link}
+
+This link is valid for 24 hours.
+
+If you didn't create an account with WattBuilder, you can safely ignore this email.
+Your account will not be activated.
+
+For security reasons, never share this link with anyone.
+
+Best regards,
+The WattBuilder Team
+        """
 
         email_body = f"""
                 <div style="font-family: Arial, Helvetica, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937;">
@@ -402,7 +441,8 @@ async def signup(user: UserCreate):
             subject="Verify your WattBuilder Account",
             recipients=[user.email],
             body=email_body,
-            subtype=MessageType.html
+            subtype=MessageType.html,
+            reply_to=[mail_from]  # ✅ CRÍTICO: Reply-To header
         )
 
         fm = FastMail(conf)
@@ -436,7 +476,9 @@ def login(creds: UserLogin):
 
     if not user.get('is_verified', False):
         raise HTTPException(
-            status_code=403, detail="Please verify your email before logging in.")
+            status_code=403, 
+            detail="Email not verified. Please check your inbox and click the verification link. If you didn't receive it, use the resend option.",
+        )
 
     # Criar token
     access_token = security.create_access_token(
@@ -449,13 +491,19 @@ def login(creds: UserLogin):
         "token_type": "bearer",
         "user_name": user['full_name'],
         "credits": user['credits'],
-        "trial_started_at": user.get('trial_started_at')
+        "trial_started_at": user.get('trial_started_at'),
+        "admin": user.get('admin', False)
     }
 
 
 @app.post("/auth/deduct-credit")
 def deduct_credit(current_user: dict = Depends(get_current_user)):
+    # Admin users não têm créditos deduzidos
+    if current_user.get('admin'):
+        return {"remaining_credits": current_user['credits'], "admin": True}
+    
     if current_user['credits'] <= 0:
+        print(f"⚠️  Sem créditos restantes para {current_user['email']}. Acesso negado.")
         raise HTTPException(status_code=403, detail="Insufficient credits")
 
     try:
@@ -561,7 +609,8 @@ async def forgot_password(request: PasswordResetRequest):
             subject="WattBuilder Password Reset",
             recipients=[request.email],
             body=email_body,
-            subtype=MessageType.html
+            subtype=MessageType.html,
+            reply_to=[mail_from]  # ✅ CRÍTICO: Reply-To header
         )
 
         try:
@@ -582,6 +631,89 @@ def reset_password_confirm(data: PasswordResetConfirm):
         return {"message": "Password updated successfully"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# 🔄 Resend Verification Email
+@app.post("/auth/resend-verification-email")
+async def resend_verification_email(data: dict):  # recebe {'email': '...'}
+    email = data.get('email')
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+    
+    user = db_users.get_user_by_email(email)
+    
+    # Por segurança, respondemos sempre "OK" mesmo que o email não exista
+    if user and not user.get('is_verified', False):
+        try:
+            # Sempre gerar um NOVO token (não usar o antigo)
+            token = str(uuid.uuid4())
+            
+            # Guardar o novo token na DB
+            db_users.update_verification_token(email, token)
+            
+            frontend_url = os.getenv("FRONTEND_URL", "https://www.preview.watt-builder.com")
+            verify_link = f"{frontend_url}/verify-email?token={token}&email={email}"
+            
+            email_body = f"""
+                <div style="font-family: Arial, Helvetica, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937;">
+                    <h2 style="color: #111827;">Verify your email address</h2>
+
+                    <p>Hi {user['full_name']},</p>
+
+                    <p>
+                        Welcome to WattBuilder! We're excited to have you on board.
+                        Please confirm your email address to activate your account and start building.
+                    </p>
+
+                    <p style="text-align: center; margin: 32px 0;">
+                        <a href="{verify_link}"
+                        style="
+                                background-color: #f97316;
+                                color: #ffffff;
+                                padding: 12px 24px;
+                                text-decoration: none;
+                                font-weight: bold;
+                                border-radius: 6px;
+                                display: inline-block;
+                        ">
+                            Verify Email
+                        </a>
+                    </p>
+
+                    <p>
+                        This link is valid for <strong>24 hours</strong>.
+                    </p>
+
+                    <p style="font-size: 14px; color: #6b7280;">
+                        If you didn't create an account with WattBuilder, you can safely ignore this email.
+                        Your account will not be activated.
+                    </p>
+
+                    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;">
+
+                    <p style="font-size: 12px; color: #9ca3af;">
+                        For security reasons, never share this link with anyone.
+                    </p>
+                </div>
+                """
+            
+            message = MessageSchema(
+                subject="Verify your WattBuilder Account",
+                recipients=[email],
+                body=email_body,
+                subtype=MessageType.html,
+                reply_to=[mail_from]
+            )
+
+            fm = FastMail(conf)
+            await fm.send_message(message)
+            
+        except Exception as e:
+            # Silentiosamente falha sem revelar informações
+            pass
+    
+    # Respondemos sempre sucesso por segurança
+    return {"message": "If an account exists and is not verified, a verification email has been sent."}
 
 
 handler = Mangum(app)

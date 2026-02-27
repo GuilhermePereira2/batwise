@@ -36,7 +36,7 @@ def validate_cells():
     for i, cell in enumerate(cells):
         # Verificar se é cilíndrica
         cell_stack = cell.get("Cell_Stack", "")
-        is_cylindrical = cell_stack.startswith("C -")
+        is_cylindrical = not any(keyword in cell_stack for keyword in ["Prismatic", "Pouch"])
         
         if is_cylindrical:
             cell_thickness = cell.get("Cell_Thickness")
