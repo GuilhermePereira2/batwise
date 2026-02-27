@@ -187,7 +187,8 @@ const DIYTool = () => {
     }
 
     // 2. Verificação de créditos (agora para todos os utilizadores logados)
-    if (user.credits <= 0) {
+    // Admin users têm créditos ilimitados e não precisam desta verificação
+    if (!user.admin && user.credits <= 0) {
       toast({
         title: "Insufficient Credits",
         description: "You have 0 credits. Please contact support to get more.",
@@ -642,9 +643,9 @@ const DIYTool = () => {
                   </div>
 
                   {(!minVoltage || !maxVoltage || !minEnergy || !minContinuousPower) && (
-                    <div className="p-3 bg-blue-50 border border-blue-300 rounded-lg text-sm text-blue-800 mb-4">
+                    <div className="p-3 bg-orange-50 border border-orange-300 rounded-lg text-sm text-orange-800 mb-4">
                       <strong>Required fields are marked with <span className="text-red-500">*</span></strong>
-                      <p className="text-xs mt-1 text-blue-600">Min/Max Voltage, Min Energy, and Continuous Power must be filled to generate configurations.</p>
+                      <p className="text-xs mt-1 text-orange-600">Min/Max Voltage, Min Energy, and Continuous Power must be filled to generate configurations.</p>
                     </div>
                   )}
 

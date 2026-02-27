@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom"; // Adicionado
 import { Button } from "@/components/ui/button";
 import { Menu, X, LogIn, User, LogOut, Coins, UserCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import logo from "@/assets/wattbuilder-logo-orange.svg";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,8 +57,8 @@ const Navigation = () => {
     <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border">
       <div className="container px-4 mx-auto max-w-7xl">
         <div className="flex items-center justify-between h-16">
-          <Link to="/" className="text-2xl font-bold text-foreground">
-            Watt Builder
+          <Link to="/" className="inline-flex items-center" aria-label="Watt Builder Home">
+            <img src={logo} alt="Watt Builder" className="h-7 w-auto" />
           </Link>
 
           {/* Desktop Navigation */}

@@ -10,6 +10,7 @@ import { LogIn, Mail, Lock, Loader2, ArrowLeft, Eye, EyeOff, AlertTriangle } fro
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { getApiUrl } from "@/lib/config";
+import { resendVerificationEmail } from "@/lib/auth-api";
 
 const Login = () => {
     // Estados do Formulário
@@ -20,6 +21,10 @@ const Login = () => {
     // Novos Estados para UI
     const [showPassword, setShowPassword] = useState(false);
     const [capsLockActive, setCapsLockActive] = useState(false);
+    
+    // Estados para verificação de email
+    const [showResendVerification, setShowResendVerification] = useState(false);
+    const [isResendingEmail, setIsResendingEmail] = useState(false);
 
     const { toast } = useToast();
     const navigate = useNavigate();
@@ -29,6 +34,39 @@ const Login = () => {
     const checkCapsLock = (event: React.KeyboardEvent<HTMLInputElement>) => {
         const capsLockOn: boolean = event.getModifierState('CapsLock');
         setCapsLockActive(capsLockOn);
+    };
+
+    // Função para reenviar email de verificação
+    const handleResendVerification = async () => {
+        if (!email) {
+            toast({
+                title: "Email required",
+                description: "Please enter your email address.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        setIsResendingEmail(true);
+        try {
+            await resendVerificationEmail(email);
+
+            toast({
+                title: "Verification email sent!",
+                description: "Please check your inbox and click the verification link.",
+            });
+
+            setShowResendVerification(false);
+
+        } catch (error: any) {
+            toast({
+                title: "Resend failed",
+                description: error.message,
+                variant: "destructive"
+            });
+        } finally {
+            setIsResendingEmail(false);
+        }
     };
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -46,6 +84,11 @@ const Login = () => {
             if (!response.ok) {
                 if (response.status === 401) {
                     throw new Error("Invalid email or password.");
+                }
+                if (response.status === 403) {
+                    // Email não verificado
+                    setShowResendVerification(true);
+                    throw new Error("Email not verified. Please check your inbox or resend the verification email.");
                 }
                 throw new Error("Something went wrong. Please try again.");
             }
@@ -181,6 +224,27 @@ const Login = () => {
                                         "Sign In"
                                     )}
                                 </Button>
+
+                                {/* Botão para Reenviar Email de Verificação */}
+                                {showResendVerification && (
+                                    <Button 
+                                        type="button" 
+                                        variant="outline" 
+                                        className="w-full"
+                                        onClick={handleResendVerification}
+                                        disabled={isResendingEmail}
+                                    >
+                                        {isResendingEmail ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Resending...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Mail className="mr-2 h-4 w-4" /> Resend Verification Email
+                                            </>
+                                        )}
+                                    </Button>
+                                )}
                             </form>
                         </CardContent>
                         <CardFooter className="flex flex-col space-y-4 border-t bg-muted/20 p-6">

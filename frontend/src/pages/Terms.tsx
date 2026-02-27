@@ -40,7 +40,7 @@ const Terms = () => {
                         </CardHeader>
                         <CardContent className="text-sm text-muted-foreground leading-relaxed space-y-4">
                             <p>
-                                Welcome to <strong>Watt Builder</strong> ("Company", "we", "our", "us"). These Terms and Conditions ("Terms", "Terms and Conditions") govern your relationship with our website and services (the "Service").
+                                Welcome to <strong>Watt Builder</strong>. These Terms and Conditions govern your relationship with our website and services.
                             </p>
                             <p>
                                 By accessing or using the Service, you agree to be bound by these Terms. If you disagree with any part of the terms, then you may not access the Service.

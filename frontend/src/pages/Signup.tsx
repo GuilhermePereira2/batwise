@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { UserPlus, Mail, Lock, User, Loader2, ArrowLeft, Eye, EyeOff, AlertTriangle, Building, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/config";
+import { resendVerificationEmail } from "@/lib/auth-api";
 
 const Signup = () => {
     const [name, setName] = useState("");
@@ -28,6 +29,10 @@ const Signup = () => {
     // ESTADO DO CAPS LOCK
     const [capsLockActive, setCapsLockActive] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
+    
+    // Estado para email já existente
+    const [emailExists, setEmailExists] = useState(false);
+    const [isResendingEmail, setIsResendingEmail] = useState(false);
 
     const { toast } = useToast();
     const navigate = useNavigate();
@@ -58,6 +63,7 @@ const Signup = () => {
     const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
+        setEmailExists(false); // Resetar estado
 
         // <-- NOVA VALIDAÇÃO DOS TERMOS
         if (!acceptTerms) {
@@ -96,14 +102,28 @@ const Signup = () => {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.detail || "Registration failed");
+                const errorDetail = errorData.detail || "Registration failed";
+                
+                // Detectar se é email já existente
+                if (errorDetail.toLowerCase().includes("already registered") || 
+                    errorDetail.toLowerCase().includes("already exists") ||
+                    errorDetail.toLowerCase().includes("email already")) {
+                    setEmailExists(true);
+                    toast({
+                        title: "Account already exists",
+                        description: `An account with email ${email} is already registered. Please log in or use a different email.`,
+                        variant: "destructive"
+                    });
+                } else {
+                    throw new Error(errorDetail);
+                }
+            } else {
+                setIsSubmitted(true);
+                toast({
+                    title: "Account created!",
+                    description: "Verification email sent. Please check your inbox.",
+                });
             }
-
-            setIsSubmitted(true);
-            toast({
-                title: "Account created!",
-                description: "Verification email sent. Please check your inbox.",
-            });
 
         } catch (error: any) {
             console.error("Signup error:", error);
@@ -114,6 +134,36 @@ const Signup = () => {
             });
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleResendVerification = async () => {
+        if (!email) {
+            toast({
+                title: "Email required",
+                description: "Email address is missing.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        setIsResendingEmail(true);
+        try {
+            await resendVerificationEmail(email);
+
+            toast({
+                title: "Email sent!",
+                description: "Check your inbox for the verification link.",
+            });
+
+        } catch (error: any) {
+            toast({
+                title: "Failed to resend",
+                description: error.message,
+                variant: "destructive"
+            });
+        } finally {
+            setIsResendingEmail(false);
         }
     };
 
@@ -204,12 +254,32 @@ const Signup = () => {
                                                 id="email"
                                                 type="email"
                                                 placeholder="name@example.com"
-                                                className="pl-9"
+                                                className={`pl-9 ${emailExists ? 'border-destructive' : ''}`}
                                                 value={email}
-                                                onChange={(e) => setEmail(e.target.value)}
+                                                onChange={(e) => {
+                                                    setEmail(e.target.value);
+                                                    setEmailExists(false); // Resetar aviso ao mudar email
+                                                }}
                                                 required
                                             />
                                         </div>
+                                        
+                                        {/* Aviso quando email já existe */}
+                                        {emailExists && (
+                                            <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-md">
+                                                <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                                                <div className="flex-1 text-sm">
+                                                    <p className="text-destructive font-medium">Account already exists with this email</p>
+                                                    <p className="text-destructive/80 text-xs mt-1">
+                                                        This email is already registered.{" "}
+                                                        <Link to="/login" className="underline font-medium hover:text-destructive">
+                                                            Sign in instead
+                                                        </Link>
+                                                        {" "}or use a different email address.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="space-y-2">
@@ -317,9 +387,15 @@ const Signup = () => {
                         <CardFooter className="flex flex-col space-y-4 border-t bg-muted/20 p-6 text-center">
                             <div className="text-sm text-muted-foreground">
                                 {isSubmitted ? (
-                                    <Link to="/signup" onClick={() => setIsSubmitted(false)} className="text-accent hover:underline font-medium">
-                                        Did not receive the email? Try again
-                                    </Link>
+                                    <Button
+                                        type="button"
+                                        variant="link"
+                                        onClick={handleResendVerification}
+                                        disabled={isResendingEmail}
+                                        className="h-auto p-0 text-accent font-medium cursor-pointer disabled:cursor-not-allowed"
+                                    >
+                                        {isResendingEmail ? "Sending..." : "Did not receive the email? Try again"}
+                                    </Button>
                                 ) : (
                                     <>
                                         Already have an account?{" "}

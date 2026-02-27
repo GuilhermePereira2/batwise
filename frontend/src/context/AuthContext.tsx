@@ -11,6 +11,7 @@ interface User {
     company?: string;
     created_at?: string;
     trial_started_at?: string | null; // <--- FUNDAMENTAL para a lógica do trial
+    admin?: boolean; // <--- Campo para identificar utilizadores admin
 }
 
 interface AuthContextType {

@@ -223,7 +223,10 @@ const CellExplorer = () => {
                 const cellStackOptions = new Set<string>();
                 Object.entries(counts).forEach(([fmt, count]) => {
                     if (count > 0) {
-                        cellStackOptions.add(fmt);
+                        // Trim e depois verifica se é apenas números
+                        const trimmedFmt = fmt.trim();
+                        const displayFmt = /^\d/.test(trimmedFmt) ? `Cylindrical - ${trimmedFmt}` : trimmedFmt;
+                        cellStackOptions.add(displayFmt);
                     }
                 });
 
@@ -231,10 +234,30 @@ const CellExplorer = () => {
                     ...new Set(data.map(c => c[key] as string).filter(Boolean))
                 ].sort();
 
+                const sortCellStacks = (a: string, b: string) => {
+                    const aTrimmed = a.trim();
+                    const bTrimmed = b.trim();
+                    const aIsCylindrical = aTrimmed.startsWith("Cylindrical");
+                    const bIsCylindrical = bTrimmed.startsWith("Cylindrical");
+                    
+                    // Cilíndricos no final
+                    if (aIsCylindrical !== bIsCylindrical) return aIsCylindrical ? 1 : -1;
+                    
+                    // Se ambos são cilíndricos, ordena por número
+                    if (aIsCylindrical) {
+                        const aNum = parseInt(aTrimmed.replace("Cylindrical - ", ""));
+                        const bNum = parseInt(bTrimmed.replace("Cylindrical - ", ""));
+                        return aNum - bNum;
+                    }
+                    
+                    // Outros, ordena alfabeticamente
+                    return aTrimmed.localeCompare(bTrimmed, undefined, { numeric: true, sensitivity: "base" });
+                };
+
                 const options: FilterOptions = {
                     brands: getOptions('Brand'),
                     chemistries: getOptions('Composition'),
-                    cellStacks: Array.from(cellStackOptions),
+                    cellStacks: Array.from(cellStackOptions).sort(sortCellStacks),
                     connections: getOptions('Connection'),
                 };
                 setFilterOptions(options);
@@ -287,7 +310,10 @@ const CellExplorer = () => {
 
             if (filterValues.cellStack.length > 0) {
                 const rawFormat = getFormatFromStack(cell.Cell_Stack);
-                if (!filterValues.cellStack.includes(rawFormat)) return false;
+                const trimmedFormat = rawFormat.trim();
+                // Se rawFormat é apenas números, compara com "Cylindrical - rawFormat"
+                const selectedFormat = /^\d/.test(trimmedFormat) ? `Cylindrical - ${trimmedFormat}` : trimmedFormat;
+                if (!filterValues.cellStack.includes(selectedFormat)) return false;
             }
             if (cell.Capacity < filterValues.capacity[0] || cell.Capacity > filterValues.capacity[1]) return false;
             if (cell.Weight < filterValues.weight[0] || cell.Weight > filterValues.weight[1]) return false;

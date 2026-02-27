@@ -1,4 +1,6 @@
 
+import logo from "@/assets/wattbuilder-logo-orange.svg";
+
 const Header = () => {
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
@@ -8,9 +10,8 @@ const Header = () => {
     <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border">
       <div className="container px-4 mx-auto max-w-6xl">
         <div className="flex items-center justify-between h-16">
-          <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="text-2xl font-bold text-foreground">
-            Watt Builder
-
+          <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="inline-flex items-center" aria-label="Watt Builder Home">
+            <img src={logo} alt="Watt Builder" className="h-7 w-auto" />
           </button>
 
           <nav className="flex items-center gap-6">

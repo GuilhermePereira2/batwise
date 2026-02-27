@@ -5,10 +5,11 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowLeft, Battery, Zap, Scale, ExternalLink, Loader2, Microscope, FlaskConical, ClipboardCheck, BarChart3 } from "lucide-react";
+import { ArrowLeft, Battery, Zap, Scale, ExternalLink, Loader2, Microscope, FlaskConical, ClipboardCheck, BarChart3, Box } from "lucide-react";
 import { getApiUrl } from "@/lib/config";
 import { createCellSlug } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { Cell3DViewer } from "@/components/Cell3DViewer";
 
 // Interface igual à do Explorer
 interface Cell {
@@ -138,14 +139,18 @@ const CellDetails = () => {
                         <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-4">
                             {cell.Brand} <span className="text-accent">{cell.CellModelNo}</span>
                         </h1>
-                        <p className="text-xl text-muted-foreground">High-performance {cell.Cell_Stack} cell for advanced applications.</p>
+                        <p className="text-lg text-muted-foreground">
+                            High-performance {cell.Cell_Stack && /C\s*-\s*\d+/.test(cell.Cell_Stack) 
+                                ? cell.Cell_Stack.replace(/C\s*-\s*/, 'Cylindrical ') + ' Cell'
+                                : cell.Cell_Stack?.replace(/C\s*-\s*/, '') + ' Cell' || ''} for advanced applications.
+                        </p>
                     </div>
 
                     {/* Main Grid */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
                         {/* Left Column: Key Specs & Dimensions */}
-                        <div className="lg:col-span-2 space-y-8">
+                        <div className="space-y-8">
                             <Card>
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2"><Battery className="text-accent" /> Electrical Specifications</CardTitle>
@@ -193,39 +198,53 @@ const CellDetails = () => {
                                     </div>
                                 </CardContent>
                             </Card>
-                        </div>
 
-                        {/* Right Column: Physical & Actions */}
-                        <div className="space-y-8">
-                            <Card className="bg-muted/30 border-accent/20">
+                            <Card>
                                 <CardHeader>
-                                    <CardTitle className="flex items-center gap-2"><Scale className="text-accent" /> Physical</CardTitle>
+                                    <CardTitle className="flex items-center gap-2"><Scale className="text-accent" /> Physical Specifications</CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="flex justify-between border-b pb-2">
-                                        <span className="text-muted-foreground">Weight</span>
-                                        <span className="font-semibold">{cell.Weight} g</span>
+                                <CardContent className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <p className="text-sm text-muted-foreground">Weight</p>
+                                        <p className="text-xl font-semibold">{cell.Weight} g</p>
                                     </div>
-                                    <div className="flex justify-between border-b pb-2">
-                                        <span className="text-muted-foreground">Height</span>
-                                        <span className="font-semibold">{cell.Cell_Height} mm</span>
+                                    <div className="space-y-1">
+                                        <p className="text-sm text-muted-foreground">Height</p>
+                                        <p className="text-xl font-semibold">{cell.Cell_Height} mm</p>
                                     </div>
-                                    <div className="flex justify-between border-b pb-2">
-                                        <span className="text-muted-foreground">Width</span>
-                                        <span className="font-semibold">{cell.Cell_Width} mm</span>
+                                    <div className="space-y-1">
+                                        <p className="text-sm text-muted-foreground">Width</p>
+                                        <p className="text-xl font-semibold">{cell.Cell_Width} mm</p>
                                     </div>
-                                    <div className="flex justify-between border-b pb-2">
-                                        <span className="text-muted-foreground">Thickness</span>
-                                        <span className="font-semibold">{cell.Cell_Thickness} mm</span>
+                                    <div className="space-y-1">
+                                        <p className="text-sm text-muted-foreground">Thickness</p>
+                                        <p className="text-xl font-semibold">{cell.Cell_Thickness} mm</p>
                                     </div>
-                                    <div className="pt-2">
-                                        <p className="text-sm text-muted-foreground mb-1">Volumetric Energy Density</p>
+                                    <div className="space-y-1">
+                                        <p className="text-sm text-muted-foreground">Volumetric Energy Density</p>
                                         <p className="text-xl font-semibold">{energyDensityWhL.toFixed(0)} Wh/L</p>
                                     </div>
-                                    <div className="pt-2">
-                                        <p className="text-sm text-muted-foreground mb-1">Gravimetric Energy Density</p>
-                                        <p className="text-xl font-semibold">{energyDensityWhKg.toFixed(3)} Wh/kg</p>
+                                    <div className="space-y-1">
+                                        <p className="text-sm text-muted-foreground">Gravimetric Energy Density</p>
+                                        <p className="text-xl font-semibold">{energyDensityWhKg.toFixed(0)} Wh/kg</p>
                                     </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        {/* Right Column: 3D Model & Actions */}
+                        <div className="space-y-8">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2"><Box className="text-accent" /> 3D Model with Dimensions</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <Cell3DViewer 
+                                        width={cell.Cell_Width} 
+                                        height={cell.Cell_Height} 
+                                        thickness={cell.Cell_Thickness}
+                                        arrowOffset={0.5}
+                                    />
                                 </CardContent>
                             </Card>
 
