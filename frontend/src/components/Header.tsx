@@ -1,5 +1,5 @@
 
-import logo from "@/assets/wattbuilder-logo-orange.svg";
+import logo from "@/assets/wattbuilder-logo-black.svg";
 
 const Header = () => {
   const scrollToSection = (id: string) => {
