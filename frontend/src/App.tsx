@@ -13,7 +13,6 @@ import BatteryForm from "./pages/BatteryForm";
 import NotFound from "./pages/NotFound";
 import CellExplorer from "@/pages/CellExplorer";
 import BlogPost from "./pages/BlogPost";
-import Index from "./pages/Index";
 import CellDetails from "./pages/CellDetails";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";

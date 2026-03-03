@@ -1,5 +1,6 @@
 import { Mail } from "lucide-react";
 import { Link } from "react-router-dom";
+import wattBuilderLogo from "../assets/wattbuilder-only-logo-white.svg";
 
 const Footer = () => {
   return (
@@ -10,7 +11,7 @@ const Footer = () => {
 
           {/* ESQUERDA: Marca e Copyright */}
           <div className="text-center md:text-left shrink-0">
-            <h3 className="text-2xl font-bold mb-2">Watt Builder</h3>
+            <img src={wattBuilderLogo} alt="Watt Builder" className="h-10 mb-2" />
             <p className="text-primary-foreground/80 text-sm">
               © 2026 Watt Builder.<br />All rights reserved.
             </p>

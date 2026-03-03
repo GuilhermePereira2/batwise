@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom"; // Adicionado
 import { Button } from "@/components/ui/button";
 import { Menu, X, LogIn, User, LogOut, Coins, UserCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import logo from "@/assets/wattbuilder-logo-black.svg";
+import logo from "@/assets/wattbuilder-logo-orange.svg";
 import {
   DropdownMenu,
   DropdownMenuContent,
