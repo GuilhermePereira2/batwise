@@ -332,40 +332,6 @@ const DIYTool = () => {
     <div className="min-h-screen flex flex-col font-sans">
       <Navigation />
 
-      {/* Hero Section */}
-      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden mt-16 bg-gradient-to-br from-background via-muted/30 to-background">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-accent/5 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
-        </div>
-
-        <div className="container relative z-10 px-4 py-20 mx-auto text-center animate-fade-in">
-          <div className="flex justify-center mb-6">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 rounded-full text-accent font-medium">
-              <Sparkles size={18} />
-              <span>Free Battery Designer</span>
-            </div>
-          </div>
-
-          <h1 className="text-5xl md:text-7xl font-bold text-foreground mb-6 leading-tight">
-            Design your own battery<br />in seconds.
-          </h1>
-
-          <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto">
-            Enter your specs, we calculate cells, BMS, and safety limits for you.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button onClick={scrollToCalculator} size="lg" className="text-lg">
-              Start Designing <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button variant="outline" size="lg" className="text-lg" asChild>
-              <Link to="/pricing">Learn More</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
       {/* Interactive Calculator Section */}
       <section id="calculator" className="py-24 bg-background">
         <div className="container px-4 mx-auto max-w-6xl">
