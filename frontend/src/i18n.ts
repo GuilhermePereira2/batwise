@@ -15,7 +15,7 @@ i18n
             pt: { translation: ptTranslation },
             en: { translation: enTranslation }
         },
-        fallbackLng: 'pt', // PT como default
+        fallbackLng: 'en', // EN como default
         debug: false, // Muda para true se precisares de ver logs no development
         interpolation: {
             escapeValue: false, // React já protege contra XSS
