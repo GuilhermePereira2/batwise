@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom"; // Adicionado useNavigate
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogIn, User, LogOut, Coins, UserCircle, ChevronDown } from "lucide-react"; // Adicionado ChevronDown
+import { Menu, X, LogIn, User, LogOut, Coins, UserCircle, ChevronDown } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import logo from "@/assets/wattbuilder-logo-orange.svg";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,34 +18,27 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isToolsOpen, setIsToolsOpen] = useState(false); // Novo estado para o menu mobile de ferramentas
+  const [isToolsOpen, setIsToolsOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate(); // Inicializar o navigate
+  const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
+  const { t } = useTranslation();
 
-  // Removido o Cell Explorer e Battery Builder daqui
   const menuItems = [
-    { label: "Home", path: "/" },
-    { label: "Services", path: "/business" },
-    { label: "Blog", path: "/blog" },
-    { label: "Contact", path: "/contact" },
+    { label: t("nav.home"), path: "/" },
+    { label: t("nav.services"), path: "/business" },
+    { label: t("nav.blog"), path: "/blog" },
+    { label: t("nav.contact"), path: "/contact" },
   ];
 
   const isActive = (path: string) => location.pathname === path;
 
-  // --- NOVA FUNÇÃO DE LOGOUT COM REDIRECIONAMENTO ---
   const handleLogout = async () => {
-    // Definimos as rotas que não podem ser vistas sem estar logado
     const protectedRoutes = ["/profile"];
-
-    // Chamamos o logout do context
     await logout();
-
-    // Se a página atual for uma rota protegida, mandamos o utilizador para a Home
     if (protectedRoutes.includes(location.pathname)) {
       navigate("/");
     }
-    // Caso contrário, ele fica na mesma página (ex: se estiver no Blog ou Home)
   };
 
   const getInitials = (name: string) => {
@@ -77,22 +72,22 @@ const Navigation = () => {
             {/* Dropdown Free Tools Desktop */}
             <div className="relative group">
               <button className="flex items-center gap-1 transition-colors text-foreground hover:text-accent py-2">
-                Free Tools <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
+                {t("nav.freeTools")} <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
               </button>
 
               <div className="absolute top-[calc(100%-0.5rem)] left-0 mt-1 w-56 p-2 bg-background border border-border rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                 <Link to="/simulator" className="flex flex-col p-3 rounded-lg hover:bg-muted transition-colors">
-                  <span className="font-semibold text-[#FF6600]">Smart Home Sizer</span>
-                  <span className="text-xs text-muted-foreground mt-0.5">Residential ROI simulator</span>
+                  <span className="font-semibold text-[#FF6600]">{t("nav.smartHomeSizer")}</span>
+                  <span className="text-xs text-muted-foreground mt-0.5">{t("nav.smartHomeSizerDesc")}</span>
                 </Link>
                 <div className="h-px bg-border/50 my-1 mx-2" />
                 <Link to="/diy" className="flex flex-col p-3 rounded-lg hover:bg-muted transition-colors">
-                  <span className="font-medium text-foreground">Battery Builder</span>
-                  <span className="text-xs text-muted-foreground mt-0.5">Custom battery pack design</span>
+                  <span className="font-medium text-foreground">{t("nav.batteryBuilder")}</span>
+                  <span className="text-xs text-muted-foreground mt-0.5">{t("nav.batteryBuilderDesc")}</span>
                 </Link>
                 <Link to="/cell-explorer" className="flex flex-col p-3 rounded-lg hover:bg-muted transition-colors">
-                  <span className="font-medium text-foreground">Cell Explorer</span>
-                  <span className="text-xs text-muted-foreground mt-0.5">Cell database & testing</span>
+                  <span className="font-medium text-foreground">{t("nav.cellExplorer")}</span>
+                  <span className="text-xs text-muted-foreground mt-0.5">{t("nav.cellExplorerDesc")}</span>
                 </Link>
               </div>
             </div>
@@ -114,8 +109,9 @@ const Navigation = () => {
 
           {/* Desktop Auth Area */}
           <div className="hidden lg:flex items-center gap-3">
+            <LanguageSwitcher />
             <Button asChild>
-              <Link to="/diy">Try for Free</Link>
+              <Link to="/simulator">{t("nav.tryForFree")}</Link>
             </Button>
 
             {isAuthenticated && user ? (
@@ -142,37 +138,39 @@ const Navigation = () => {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="cursor-default bg-muted/50">
                     <Coins className="mr-2 h-4 w-4 text-yellow-500" />
-                    <span>Credits: <strong>{user.credits}</strong></span>
+                    <span>{t("nav.credits")}: <strong>{user.credits}</strong></span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link to="/profile" className="cursor-pointer flex items-center w-full">
                       <UserCircle className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
+                      <span>{t("nav.profile")}</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  {/* Alterado de logout para handleLogout */}
                   <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer focus:text-red-600">
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
+                    <span>{t("nav.logOut")}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
               <Button variant="ghost" asChild>
-                <Link to="/login">Log In</Link>
+                <Link to="/login">{t("nav.logIn")}</Link>
               </Button>
             )}
           </div>
 
           {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="lg:hidden p-2 text-foreground"
-          >
-            {isOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          <div className="flex items-center gap-2 lg:hidden">
+            <LanguageSwitcher />
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-2 text-foreground"
+            >
+              {isOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Navigation */}
@@ -197,18 +195,18 @@ const Navigation = () => {
                   onClick={() => setIsToolsOpen(!isToolsOpen)}
                   className="flex items-center justify-between w-full py-2 text-foreground hover:text-accent transition-colors"
                 >
-                  Free Tools <ChevronDown className={`w-4 h-4 transition-transform ${isToolsOpen ? "rotate-180" : ""}`} />
+                  {t("nav.freeTools")} <ChevronDown className={`w-4 h-4 transition-transform ${isToolsOpen ? "rotate-180" : ""}`} />
                 </button>
                 {isToolsOpen && (
                   <div className="flex flex-col gap-2 pl-4 mt-1 border-l-2 border-border/50 ml-2">
                     <Link to="/simulator" onClick={() => setIsOpen(false)} className="py-2 text-[#FF6600] font-medium text-sm">
-                      Smart Home Sizer
+                      {t("nav.smartHomeSizer")}
                     </Link>
                     <Link to="/diy" onClick={() => setIsOpen(false)} className="py-2 text-muted-foreground hover:text-foreground text-sm">
-                      Battery Builder
+                      {t("nav.batteryBuilder")}
                     </Link>
                     <Link to="/cell-explorer" onClick={() => setIsOpen(false)} className="py-2 text-muted-foreground hover:text-foreground text-sm">
-                      Cell Explorer
+                      {t("nav.cellExplorer")}
                     </Link>
                   </div>
                 )}
@@ -241,31 +239,31 @@ const Navigation = () => {
                       <div>
                         <p className="text-sm font-medium">{user.name}</p>
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Coins className="w-3 h-3 text-yellow-500" /> {user.credits} Credits
+                          <Coins className="w-3 h-3 text-yellow-500" /> {user.credits} {t("nav.credits")}
                         </p>
                       </div>
                     </div>
                     <Button variant="ghost" asChild className="justify-start">
                       <Link to="/profile" onClick={() => setIsOpen(false)}>
-                        <UserCircle className="w-4 h-4 mr-2" /> Profile
+                        <UserCircle className="w-4 h-4 mr-2" /> {t("nav.profile")}
                       </Link>
                     </Button>
                     <Button variant="ghost" onClick={() => { handleLogout(); setIsOpen(false); }} className="justify-start text-red-600 hover:text-red-600">
-                      <LogOut className="w-4 h-4 mr-2" /> Log Out
+                      <LogOut className="w-4 h-4 mr-2" /> {t("nav.logOut")}
                     </Button>
                   </>
                 ) : (
                   <>
                     <Button variant="ghost" asChild className="w-full justify-start">
                       <Link to="/login" onClick={() => setIsOpen(false)}>
-                        <LogIn className="w-4 h-4 mr-2" /> Log In
+                        <LogIn className="w-4 h-4 mr-2" /> {t("nav.logIn")}
                       </Link>
                     </Button>
                   </>
                 )}
                 <Button asChild className="w-full">
-                  <Link to="/diy" onClick={() => setIsOpen(false)}>
-                    Try for Free
+                  <Link to="/simulator" onClick={() => setIsOpen(false)}>
+                    {t("nav.tryForFree")}
                   </Link>
                 </Button>
               </div>

@@ -1,0 +1,94 @@
+{
+    "nav": {
+        "home": "Home",
+        "services": "Services",
+        "blog": "Blog",
+        "contact": "Contact",
+        "freeTools": "Free Tools",
+        "smartHomeSizer": "Smart Home Sizer",
+        "smartHomeSizerDesc": "Residential battery advisor",
+        "batteryBuilder": "Battery Builder",
+        "batteryBuilderDesc": "Custom battery pack design",
+        "cellExplorer": "Cell Explorer",
+        "cellExplorerDesc": "Cell database and testing",
+        "tryForFree": "Try For Free",
+        "logIn": "Log In",
+        "logOut": "Log Out",
+        "profile": "Profile",
+        "credits": "Credits"
+    },
+    "home": {
+        "hero": {
+            "badge": "Smart Energy Optimization",
+            "title_prefix": "The Perfect Battery for ",
+            "title_highlight": "Your Home",
+            "subtitle": "Simulate your consumption profile, compare the best batteries on the market, and discover your return on investment in seconds.",
+            "cta": "Simulate My Home"
+        },
+        "features": {
+            "profile_title": "Personalized Profile",
+            "profile_desc": "Calculations based on your home, household size, and current energy bill.",
+            "market_title": "Top Brands on the Market",
+            "market_desc": "Database featuring the best available inverters and batteries.",
+            "roi_title": "ROI Calculation",
+            "roi_desc": "Optimization algorithm that shows exactly when your system pays for itself."
+        },
+        "brands": {
+            "title": "Comparing the market leaders"
+        },
+        "pro_tools": {
+            "title": "Tools for Professionals",
+            "subtitle": "Are you an engineer, maker, or integrator? Continue using our advanced tools for battery design and cell exploration.",
+            "cell_title": "Cell Explorer",
+            "cell_desc": "Database & professional testing services",
+            "cell_li1": "Extensive cell database",
+            "cell_li2": "Independent performance data",
+            "cell_li3": "Custom cell testing requests",
+            "cell_btn": "Explore Cells",
+            "builder_title": "Battery Builder",
+            "builder_desc": "Free tool to design custom battery packs",
+            "builder_li1": "Easy-to-use calculator",
+            "builder_li2": "Instant configuration suggestions",
+            "builder_li3": "Component recommendations",
+            "builder_btn": "Start Designing",
+            "services_title": "Our Services",
+            "services_desc": "Advanced software and consulting services",
+            "services_li1": "Advanced simulations & modeling",
+            "services_li2": "Expert consulting services",
+            "services_li3": "Production-ready designs",
+            "services_btn": "Learn More"
+        },
+        "cta_section": {
+            "title": "Ready to get started?",
+            "subtitle": "Join thousands of makers and engineers designing better batteries",
+            "btn": "Try Battery Builder Now"
+        }
+    },
+    "simulator": {
+        "waitlist": {
+            "badge": "Launching Soon",
+            "title_prefix": "Smart Battery Sizing, ",
+            "title_highlight": "Simplified.",
+            "subtitle": "We're putting the finishing touches on our simulator. Enter your email to get <1>free early access</1> and discover the exact return on investment for your home battery.",
+            "success_msg": "You're on the list! We'll be in touch.",
+            "placeholder": "Enter your email address",
+            "btn_loading": "Joining...",
+            "btn_submit": "Get Free Access",
+            "spam_notice": "No spam. Unsubscribe at any time.",
+            "toast_error_title": "Error joining waitlist",
+            "toast_error_desc": "Something went wrong. Please try again later."
+        },
+        "flowchart": {
+            "title": "How do we calculate your perfect battery?",
+            "subtitle": "No guesswork. Complete transparency. Here is how our algorithm works:",
+            "step1_title": "1. Your Inputs",
+            "step1_desc": "You provide your monthly energy consumption, solar production (if any), and current electricity tariff.",
+            "step2_title": "2. Hardware Match",
+            "step2_desc": "We cross-reference your data with our proprietary database of the top 20 batteries and inverters on the market.",
+            "step3_title": "3. Optimization Engine",
+            "step3_desc": "Our algorithm simulates thousands of charge/discharge cycles to find the exact setup that maximizes your savings.",
+            "step4_title": "4. Your ROI",
+            "step4_desc": "You get a clear, unbiased report showing exactly which battery to buy and when it will pay for itself."
+        }
+    }
+}

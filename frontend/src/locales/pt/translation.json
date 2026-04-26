@@ -1,0 +1,94 @@
+{
+    "nav": {
+        "home": "Início",
+        "services": "Serviços",
+        "blog": "Blog",
+        "contact": "Contacto",
+        "freeTools": "Ferramentas Gratuitas",
+        "smartHomeSizer": "Smart Home Sizer",
+        "smartHomeSizerDesc": "Conselheiro de baterias residenciais",
+        "batteryBuilder": "Battery Builder",
+        "batteryBuilderDesc": "Design customizado de packs",
+        "cellExplorer": "Cell Explorer",
+        "cellExplorerDesc": "Database de células e testes",
+        "tryForFree": "Testar Grátis",
+        "logIn": "Entrar",
+        "logOut": "Sair",
+        "profile": "Perfil",
+        "credits": "Créditos"
+    },
+    "home": {
+        "hero": {
+            "badge": "Otimização Inteligente de Energia",
+            "title_prefix": "A Bateria Ideal para a ",
+            "title_highlight": "Sua Casa",
+            "subtitle": "Simule o seu perfil de consumo, compare as melhores baterias do mercado e descubra o seu retorno sobre o investimento em segundos.",
+            "cta": "Simular a Minha Casa"
+        },
+        "features": {
+            "profile_title": "Perfil Personalizado",
+            "profile_desc": "Cálculos baseados na sua casa, número de pessoas e/ou fatura atual.",
+            "market_title": "Melhores Marcas do Mercado",
+            "market_desc": "Base de dados com os melhores inversores e baterias disponíveis.",
+            "roi_title": "Cálculo do retorno do investimento",
+            "roi_desc": "Algoritmo de otimização que mostra exatamente quando o sistema se paga."
+        },
+        "brands": {
+            "title": "A comparar os líderes do mercado"
+        },
+        "pro_tools": {
+            "title": "Ferramentas para Profissionais",
+            "subtitle": "É um engenheiro, maker ou integrador? Continue a utilizar as nossas ferramentas avançadas de design e exploração de células.",
+            "cell_title": "Cell Explorer",
+            "cell_desc": "Base de dados e serviços de teste profissionais",
+            "cell_li1": "Extensa base de dados de células",
+            "cell_li2": "Dados de performance independentes",
+            "cell_li3": "Pedidos de testes de células à medida",
+            "cell_btn": "Explorar Células",
+            "builder_title": "Battery Builder",
+            "builder_desc": "Ferramenta gratuita para desenhar packs customizados",
+            "builder_li1": "Calculadora fácil de usar",
+            "builder_li2": "Sugestões de configuração instantâneas",
+            "builder_li3": "Recomendações de componentes",
+            "builder_btn": "Começar a Desenhar",
+            "services_title": "Os Nossos Serviços",
+            "services_desc": "Software avançado e serviços de consultoria",
+            "services_li1": "Simulações avançadas e modelação",
+            "services_li2": "Serviços especializados de consultoria",
+            "services_li3": "Designs prontos para produção",
+            "services_btn": "Saber Mais"
+        },
+        "cta_section": {
+            "title": "Pronto para começar?",
+            "subtitle": "Junte-se a milhares de makers e engenheiros a desenhar melhores baterias",
+            "btn": "Testar Battery Builder Agora"
+        }
+    },
+    "simulator": {
+        "waitlist": {
+            "badge": "Lançamento em Breve",
+            "title_prefix": "Dimensionamento Inteligente, ",
+            "title_highlight": "Simplificado.",
+            "subtitle": "Estamos a dar os últimos retoques no nosso simulador. Insira o seu email para ter <1>acesso antecipado gratuito</1> e descobrir o retorno exato do investimento para a sua casa.",
+            "success_msg": "Está na lista! Entraremos em contacto.",
+            "placeholder": "Insira o seu endereço de email",
+            "btn_loading": "A aderir...",
+            "btn_submit": "Obter Acesso Gratuito",
+            "spam_notice": "Sem spam. Cancele a subscrição a qualquer momento.",
+            "error_title": "Erro ao aderir à lista de espera",
+            "error_desc": "Algo correu mal. Por favor, tente novamente mais tarde."
+        },
+        "flowchart": {
+            "title": "Como calculamos a bateria perfeita?",
+            "subtitle": "Sem adivinhações. Transparência total. Eis como funciona o nosso algoritmo:",
+            "step1_title": "1. Os seus Dados",
+            "step1_desc": "Fornece o seu consumo mensal, produção solar (se tiver) e tarifa atual de eletricidade.",
+            "step2_title": "2. Correspondência de Hardware",
+            "step2_desc": "Cruzamos os seus dados com a nossa base de dados proprietária das 20 melhores baterias e inversores do mercado.",
+            "step3_title": "3. Motor de Otimização",
+            "step3_desc": "O nosso algoritmo simula milhares de ciclos de carga/descarga para encontrar a configuração exata que maximiza as suas poupanças.",
+            "step4_title": "4. O seu ROI",
+            "step4_desc": "Recebe um relatório claro e imparcial mostrando exatamente qual bateria comprar e quando se pagará a si própria."
+        }
+    }
+}

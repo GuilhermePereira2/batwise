@@ -2,12 +2,14 @@ import { useState } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input"; // Assumindo que tens um componente Input do shadcn/ui
+import { Input } from "@/components/ui/input";
 import { ArrowRight, ArrowDown, Home, Database, Cpu, LineChart, CheckCircle2, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/config";
+import { useTranslation, Trans } from "react-i18next";
 
 const Simulator = () => {
+    const { t } = useTranslation();
     const { toast } = useToast();
     const [email, setEmail] = useState("");
     const [isSubmitted, setIsSubmitted] = useState(false);
@@ -22,7 +24,7 @@ const Simulator = () => {
         try {
             const url = getApiUrl("send-contact-email");
 
-            // Formatamos o payload para ser aceite pelo endpoint de contacto existente
+            // O conteúdo da mensagem em si pode ficar na língua principal da vossa equipa (PT/EN)
             const payload = {
                 name: "WAITINGLIST Contact",
                 email: email,
@@ -47,8 +49,8 @@ const Simulator = () => {
         } catch (error) {
             console.error("Waitlist submission error:", error);
             toast({
-                title: "Error joining waitlist",
-                description: "Something went wrong. Please try again later.",
+                title: t("simulator.waitlist.toast_error_title"),
+                description: t("simulator.waitlist.toast_error_desc"),
                 variant: "destructive",
             });
         } finally {
@@ -68,23 +70,26 @@ const Simulator = () => {
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF6600] opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF6600]"></span>
                         </span>
-                        Launching Soon
+                        {t("simulator.waitlist.badge")}
                     </div>
 
                     <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
-                        Smart Battery Sizing, <br />
-                        <span className="text-[#FF6600]">Simplified.</span>
+                        {t("simulator.waitlist.title_prefix")} <br />
+                        <span className="text-[#FF6600]">{t("simulator.waitlist.title_highlight")}</span>
                     </h1>
 
                     <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-                        We're putting the finishing touches on our B2C simulator. Enter your email to get <strong>free early access</strong> and discover the exact return on investment for your home battery.
+                        <Trans
+                            i18nKey="simulator.waitlist.subtitle"
+                            components={{ 1: <strong /> }}
+                        />
                     </p>
 
                     <div className="max-w-md mx-auto">
                         {isSubmitted ? (
                             <div className="flex items-center justify-center gap-3 p-6 bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 rounded-xl border border-green-200 dark:border-green-900 animate-slide-up">
                                 <CheckCircle2 className="w-6 h-6" />
-                                <span className="font-medium text-lg">You're on the list! We'll be in touch.</span>
+                                <span className="font-medium text-lg">{t("simulator.waitlist.success_msg")}</span>
                             </div>
                         ) : (
                             <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
@@ -92,7 +97,7 @@ const Simulator = () => {
                                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
                                     <Input
                                         type="email"
-                                        placeholder="Enter your email address"
+                                        placeholder={t("simulator.waitlist.placeholder")}
                                         required
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
@@ -105,11 +110,11 @@ const Simulator = () => {
                                     disabled={isLoading}
                                     className="h-12 px-8 bg-[#FF6600] hover:bg-[#FF6600]/90 text-white font-medium"
                                 >
-                                    {isLoading ? "Joining..." : "Get Free Access"}
+                                    {isLoading ? t("simulator.waitlist.btn_loading") : t("simulator.waitlist.btn_submit")}
                                 </Button>
                             </form>
                         )}
-                        <p className="text-xs text-muted-foreground mt-4">No spam. Unsubscribe at any time.</p>
+                        <p className="text-xs text-muted-foreground mt-4">{t("simulator.waitlist.spam_notice")}</p>
                     </div>
                 </section>
 
@@ -117,24 +122,22 @@ const Simulator = () => {
                 <section className="container px-4 mx-auto max-w-6xl">
                     <div className="text-center mb-12">
                         <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4">
-                            How do we calculate your perfect battery?
+                            {t("simulator.flowchart.title")}
                         </h2>
                         <p className="text-muted-foreground">
-                            No guesswork. Complete transparency. Here is how our algorithm works:
+                            {t("simulator.flowchart.subtitle")}
                         </p>
                     </div>
 
-                    {/* Desktop Flowchart (Horizontal) / Mobile (Vertical) */}
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-2">
-
                         {/* Step 1 */}
                         <div className="flex-1 w-full md:w-auto bg-card border rounded-xl p-6 text-center shadow-sm relative">
                             <div className="mx-auto w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4 text-accent">
                                 <Home className="w-6 h-6" />
                             </div>
-                            <h3 className="font-bold mb-2">1. Your Inputs</h3>
+                            <h3 className="font-bold mb-2">{t("simulator.flowchart.step1_title")}</h3>
                             <p className="text-sm text-muted-foreground">
-                                You provide your monthly energy consumption, solar production (if any), and current electricity tariff.
+                                {t("simulator.flowchart.step1_desc")}
                             </p>
                         </div>
 
@@ -146,9 +149,9 @@ const Simulator = () => {
                             <div className="mx-auto w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mb-4 text-accent">
                                 <Database className="w-6 h-6" />
                             </div>
-                            <h3 className="font-bold mb-2">2. Hardware Match</h3>
+                            <h3 className="font-bold mb-2">{t("simulator.flowchart.step2_title")}</h3>
                             <p className="text-sm text-muted-foreground">
-                                We cross-reference your data with our proprietary database of the top 20 batteries and inverters on the market.
+                                {t("simulator.flowchart.step2_desc")}
                             </p>
                         </div>
 
@@ -161,9 +164,9 @@ const Simulator = () => {
                             <div className="mx-auto w-12 h-12 bg-[#FF6600]/10 rounded-full flex items-center justify-center mb-4 text-[#FF6600]">
                                 <Cpu className="w-6 h-6" />
                             </div>
-                            <h3 className="font-bold mb-2">3. Optimization Engine</h3>
+                            <h3 className="font-bold mb-2">{t("simulator.flowchart.step3_title")}</h3>
                             <p className="text-sm text-muted-foreground">
-                                Our algorithm simulates thousands of charge/discharge cycles to find the exact setup that maximizes your savings.
+                                {t("simulator.flowchart.step3_desc")}
                             </p>
                         </div>
 
@@ -175,12 +178,11 @@ const Simulator = () => {
                             <div className="mx-auto w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mb-4 text-green-600">
                                 <LineChart className="w-6 h-6" />
                             </div>
-                            <h3 className="font-bold mb-2">4. Your ROI</h3>
+                            <h3 className="font-bold mb-2">{t("simulator.flowchart.step4_title")}</h3>
                             <p className="text-sm text-muted-foreground">
-                                You get a clear, unbiased report showing exactly which battery to buy and when it will pay for itself.
+                                {t("simulator.flowchart.step4_desc")}
                             </p>
                         </div>
-
                     </div>
                 </section>
             </main>
