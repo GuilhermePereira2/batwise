@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom"; // Adicionado useNavigate
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogIn, User, LogOut, Coins, UserCircle } from "lucide-react";
+import { Menu, X, LogIn, User, LogOut, Coins, UserCircle, ChevronDown } from "lucide-react"; // Adicionado ChevronDown
 import { useAuth } from "@/context/AuthContext";
 import logo from "@/assets/wattbuilder-logo-orange.svg";
 import {
@@ -16,14 +16,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isToolsOpen, setIsToolsOpen] = useState(false); // Novo estado para o menu mobile de ferramentas
   const location = useLocation();
   const navigate = useNavigate(); // Inicializar o navigate
   const { user, logout, isAuthenticated } = useAuth();
 
+  // Removido o Cell Explorer e Battery Builder daqui
   const menuItems = [
     { label: "Home", path: "/" },
-    { label: "Cell Explorer", path: "/cell-explorer" },
-    { label: "Battery Builder", path: "/diy" },
     { label: "Services", path: "/business" },
     { label: "Blog", path: "/blog" },
     { label: "Contact", path: "/contact" },
@@ -63,7 +63,42 @@ const Navigation = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-8">
-            {menuItems.map((item) => (
+            {/* Renderiza o Home primeiro */}
+            <Link
+              to={menuItems[0].path}
+              className={`transition-colors ${isActive(menuItems[0].path)
+                ? "text-accent font-medium"
+                : "text-foreground hover:text-accent"
+                }`}
+            >
+              {menuItems[0].label}
+            </Link>
+
+            {/* Dropdown Free Tools Desktop */}
+            <div className="relative group">
+              <button className="flex items-center gap-1 transition-colors text-foreground hover:text-accent py-2">
+                Free Tools <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
+              </button>
+
+              <div className="absolute top-[calc(100%-0.5rem)] left-0 mt-1 w-56 p-2 bg-background border border-border rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <Link to="/simulator" className="flex flex-col p-3 rounded-lg hover:bg-muted transition-colors">
+                  <span className="font-semibold text-[#FF6600]">Smart Home Sizer</span>
+                  <span className="text-xs text-muted-foreground mt-0.5">Residential ROI simulator</span>
+                </Link>
+                <div className="h-px bg-border/50 my-1 mx-2" />
+                <Link to="/diy" className="flex flex-col p-3 rounded-lg hover:bg-muted transition-colors">
+                  <span className="font-medium text-foreground">Battery Builder</span>
+                  <span className="text-xs text-muted-foreground mt-0.5">Custom battery pack design</span>
+                </Link>
+                <Link to="/cell-explorer" className="flex flex-col p-3 rounded-lg hover:bg-muted transition-colors">
+                  <span className="font-medium text-foreground">Cell Explorer</span>
+                  <span className="text-xs text-muted-foreground mt-0.5">Cell database & testing</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* Renderiza os restantes (Services, Blog, Contact) */}
+            {menuItems.slice(1).map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
@@ -144,7 +179,43 @@ const Navigation = () => {
         {isOpen && (
           <nav className="lg:hidden py-4 border-t border-border animate-fade-in">
             <div className="flex flex-col gap-4">
-              {menuItems.map((item) => (
+              {/* Home Mobile */}
+              <Link
+                to={menuItems[0].path}
+                onClick={() => setIsOpen(false)}
+                className={`py-2 transition-colors ${isActive(menuItems[0].path)
+                  ? "text-accent font-medium"
+                  : "text-foreground hover:text-accent"
+                  }`}
+              >
+                {menuItems[0].label}
+              </Link>
+
+              {/* Dropdown Free Tools Mobile */}
+              <div className="flex flex-col">
+                <button
+                  onClick={() => setIsToolsOpen(!isToolsOpen)}
+                  className="flex items-center justify-between w-full py-2 text-foreground hover:text-accent transition-colors"
+                >
+                  Free Tools <ChevronDown className={`w-4 h-4 transition-transform ${isToolsOpen ? "rotate-180" : ""}`} />
+                </button>
+                {isToolsOpen && (
+                  <div className="flex flex-col gap-2 pl-4 mt-1 border-l-2 border-border/50 ml-2">
+                    <Link to="/simulator" onClick={() => setIsOpen(false)} className="py-2 text-[#FF6600] font-medium text-sm">
+                      Smart Home Sizer
+                    </Link>
+                    <Link to="/diy" onClick={() => setIsOpen(false)} className="py-2 text-muted-foreground hover:text-foreground text-sm">
+                      Battery Builder
+                    </Link>
+                    <Link to="/cell-explorer" onClick={() => setIsOpen(false)} className="py-2 text-muted-foreground hover:text-foreground text-sm">
+                      Cell Explorer
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {/* Restantes Itens Mobile */}
+              {menuItems.slice(1).map((item) => (
                 <Link
                   key={item.path}
                   to={item.path}
@@ -179,7 +250,6 @@ const Navigation = () => {
                         <UserCircle className="w-4 h-4 mr-2" /> Profile
                       </Link>
                     </Button>
-                    {/* Alterado de logout para handleLogout no mobile também */}
                     <Button variant="ghost" onClick={() => { handleLogout(); setIsOpen(false); }} className="justify-start text-red-600 hover:text-red-600">
                       <LogOut className="w-4 h-4 mr-2" /> Log Out
                     </Button>

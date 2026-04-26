@@ -21,6 +21,7 @@ import Profile from "./pages/Profile";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import Terms from "./pages/Terms";
+import Simulator from "./pages/Simulator";
 
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ const App = () => (
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/simulator" element={<Simulator />} />
           <Route path="/profile" element={<Profile />} />
         </Routes>
       </BrowserRouter>
