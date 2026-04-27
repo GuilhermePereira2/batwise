@@ -37,7 +37,7 @@
             "title": "A comparar os líderes do mercado"
         },
         "pro_tools": {
-            "title": "Ferramentas para Profissionais",
+            "title": "Outras Ferramentas",
             "subtitle": "É um engenheiro, maker ou integrador? Continue a utilizar as nossas ferramentas avançadas de design e exploração de células.",
             "cell_title": "Cell Explorer",
             "cell_desc": "Base de dados e serviços de teste profissionais",
@@ -80,7 +80,7 @@
         },
         "flowchart": {
             "title": "Como calculamos a bateria perfeita?",
-            "subtitle": "Sem adivinhações. Transparência total. Eis como funciona o nosso algoritmo:",
+            "subtitle": "Sem adivinhas. Transparência total. Eis como funciona o nosso algoritmo:",
             "step1_title": "1. Os seus Dados",
             "step1_desc": "Fornece o seu consumo mensal, produção solar (se tiver) e tarifa atual de eletricidade.",
             "step2_title": "2. Correspondência de Hardware",

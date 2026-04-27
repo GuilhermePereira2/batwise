@@ -77,7 +77,7 @@ const Navigation = () => {
 
               <div className="absolute top-[calc(100%-0.5rem)] left-0 mt-1 w-56 p-2 bg-background border border-border rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                 <Link to="/simulator" className="flex flex-col p-3 rounded-lg hover:bg-muted transition-colors">
-                  <span className="font-semibold text-[#FF6600]">{t("nav.smartHomeSizer")}</span>
+                  <span className="font-medium text-foreground">{t("nav.smartHomeSizer")}</span>
                   <span className="text-xs text-muted-foreground mt-0.5">{t("nav.smartHomeSizerDesc")}</span>
                 </Link>
                 <div className="h-px bg-border/50 my-1 mx-2" />
