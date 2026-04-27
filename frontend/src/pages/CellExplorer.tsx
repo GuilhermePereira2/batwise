@@ -239,17 +239,17 @@ const CellExplorer = () => {
                     const bTrimmed = b.trim();
                     const aIsCylindrical = aTrimmed.startsWith("Cylindrical");
                     const bIsCylindrical = bTrimmed.startsWith("Cylindrical");
-                    
+
                     // Cilíndricos no final
                     if (aIsCylindrical !== bIsCylindrical) return aIsCylindrical ? 1 : -1;
-                    
+
                     // Se ambos são cilíndricos, ordena por número
                     if (aIsCylindrical) {
                         const aNum = parseInt(aTrimmed.replace("Cylindrical - ", ""));
                         const bNum = parseInt(bTrimmed.replace("Cylindrical - ", ""));
                         return aNum - bNum;
                     }
-                    
+
                     // Outros, ordena alfabeticamente
                     return aTrimmed.localeCompare(bTrimmed, undefined, { numeric: true, sensitivity: "base" });
                 };
@@ -409,7 +409,7 @@ const CellExplorer = () => {
             const powerDensityWKg = powerW / (cell.Weight / 1000);
 
             // Create computed values object
-            const computed = {  
+            const computed = {
                 capacityAh,
                 energyWh,
                 powerW,
@@ -481,28 +481,6 @@ const CellExplorer = () => {
     return (
         <div className="min-h-screen flex flex-col">
             <Navigation />
-
-            {/* Hero Section */}
-            <section id="cell-explorer-top" className="relative min-h-[60vh] flex items-center justify-center overflow-hidden mt-16 bg-gradient-to-br from-background via-muted/30 to-background">
-                <div className="absolute inset-0 overflow-hidden">
-                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl animate-pulse" />
-                    <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
-                </div>
-                <div className="container relative z-10 px-4 py-20 mx-auto text-center animate-fade-in">
-                    <div className="flex justify-center mb-6">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 rounded-full text-accent font-medium">
-                            <Database size={18} />
-                            <span>Cell Database Explorer</span>
-                        </div>
-                    </div>
-                    <h1 className="text-5xl md:text-7xl font-bold text-foreground mb-6 leading-tight">
-                        Explore our<br />Battery Cell Database
-                    </h1>
-                    <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto">
-                        Search, filter, and compare battery cells for your next project.
-                    </p>
-                </div>
-            </section>
 
             {/* Main Content Area with Sidebar Layout */}
             <section className="py-24 bg-background">
