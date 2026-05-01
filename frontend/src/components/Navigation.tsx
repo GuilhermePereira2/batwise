@@ -27,7 +27,6 @@ const Navigation = () => {
   const menuItems = [
     { label: t("nav.home"), path: "/" },
     { label: t("nav.services"), path: "/business" },
-    { label: t("nav.blog"), path: "/blog" },
     { label: t("nav.contact"), path: "/contact" },
   ];
 

@@ -1,0 +1,30 @@
+[
+    {
+        "Brand": "EVE",
+        "CellModelNo": "LF32",
+        "Composition": "LFP",
+        "Cell_Stack": "C",
+        "MaxContinuousDischargeRate": 1,
+        "MaxContinuousChargeRate": 1,
+        "NominalVoltage": 3.2,
+        "ChargeVoltage": 3.65,
+        "Capacity": 32000,
+        "TheMaxDischargeCurrentOfTheTabs": 60,
+        "Impedance": 1.5,
+        "Weight": 735,
+        "Cell_Thickness": 26.7,
+        "Cell_Width": 148.3,
+        "Cell_Height": 94.3,
+        "TabsThickness": 0.15,
+        "TabsWidth": 6,
+        "TabsLength": 2,
+        "DistanceBetweenTwoTabs": 0,
+        "VolumeEnergyDensity": 0.342857143,
+        "PowerEnergyDensity": 156.097561,
+        "Cycles": 3500,
+        "Price": 19.75,
+        "OriginCountry": "China",
+        "Connection": "Screw",
+        "link": "https://amzn.to/4b8u9bB"
+    }
+]
