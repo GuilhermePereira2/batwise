@@ -289,3 +289,4 @@ class SimulatorRequest(BaseModel):
     input: dict
     tariff: dict
     assumptions: dict
+    solar: Optional[dict] = None

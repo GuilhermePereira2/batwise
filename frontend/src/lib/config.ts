@@ -7,7 +7,7 @@ export const getApiUrl = (endpoint: string) => {
 
     // 2. Se não existir (estás no teu PC), usa localhost
     if (!base) {
-        base = "http://127.0.0.1:8000";
+        base = "http://127.0.0.1:8001";
     }
 
     // 3. Remove a barra final se existir (para evitar erros de //)

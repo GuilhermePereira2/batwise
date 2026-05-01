@@ -11,7 +11,8 @@
                 "capacity_kwh": 5.12,
                 "usable_capacity_kwh": 5.12,
                 "power_kw": 5.12,
-                "dod": 1.0
+                "dod": 1.0,
+                "battery_type": "high_voltage"
             },
             "pricing": {
                 "unit_price": 3200,
@@ -29,7 +30,8 @@
                 "capacity_kwh": 13.5,
                 "usable_capacity_kwh": 13.5,
                 "power_kw": 5.0,
-                "dod": 1.0
+                "dod": 1.0,
+                "battery_type": "integrated_ac"
             },
             "pricing": {
                 "unit_price": 8500,
@@ -37,21 +39,6 @@
             },
             "links": {
                 "url": "https://www.tesla.com/powerwall"
-            }
-        }
-    ],
-    "inverters": [
-        {
-            "id": "inv-001",
-            "brand": "Fronius",
-            "model": "Symo GEN24 5.0 Plus",
-            "specs": {
-                "power_kw": 5.0,
-                "is_hybrid": true
-            },
-            "pricing": {
-                "unit_price": 2100,
-                "currency": "EUR"
             }
         }
     ]

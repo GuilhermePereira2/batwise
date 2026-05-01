@@ -1,0 +1,40 @@
+{
+    "schema_version": "1.0.0",
+    "generated_at": "2026-05-01T12:00:00Z",
+    "default_compatible": true,
+    "description": "Compatibility matrix for home batteries, inverters and solar panels. For now every component combination is assumed compatible unless a future rule says otherwise.",
+    "rules": [
+        {
+            "battery_id": "*",
+            "inverter_id": "*",
+            "solar_panel_id": "*",
+            "compatible": true,
+            "status": "assumed_compatible",
+            "notes": "Temporary default while the real compatibility matrix is being completed."
+        },
+        {
+            "battery_id": "bat-001",
+            "inverter_id": "inv-001",
+            "solar_panel_id": "*",
+            "compatible": true,
+            "status": "example_verified",
+            "notes": "Example explicit battery + inverter pair. Any listed panel is accepted for now."
+        },
+        {
+            "battery_id": "bat-002",
+            "inverter_id": "inv-004",
+            "solar_panel_id": "*",
+            "compatible": true,
+            "status": "example_verified",
+            "notes": "Example explicit battery + inverter pair. Any listed panel is accepted for now."
+        },
+        {
+            "battery_id": "*",
+            "inverter_id": "inv-002",
+            "solar_panel_id": "pv-002",
+            "compatible": true,
+            "status": "example_verified",
+            "notes": "Example explicit inverter + panel pair. Replace with real string sizing and manufacturer data later."
+        }
+    ]
+}

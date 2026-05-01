@@ -20,6 +20,7 @@ from mangum import Mangum
 from cells_loader import Database
 from datetime import datetime, timedelta
 import uuid
+from HomeBatterys.ideal_battery_capacity import optimize_home_battery
 
 # Carregar variáveis de ambiente antes de importar módulos que dependem delas
 from env_loader import load_backend_env
@@ -722,57 +723,49 @@ async def resend_verification_email(data: dict):  # recebe {'email': '...'}
 
 
 def load_catalog():
-    path = os.path.join(os.path.dirname(__file__), "data/catalog.json")
-    with open(path, "r") as f:
-        return json.load(f)
+    data_dir = os.path.join(os.path.dirname(__file__), "data")
+    batteries_path = os.path.join(data_dir, "home_batteries.json")
+    inverters_path = os.path.join(data_dir, "home_inverters.json")
+    panels_path = os.path.join(data_dir, "home_solar_panels.json")
+    compatibility_path = os.path.join(data_dir, "home_component_compatibility.json")
+
+    catalog = {
+        "schema_version": "1.0.0",
+        "currency": "EUR",
+        "batteries": [],
+        "inverters": [],
+        "solar_panels": [],
+        "compatibility": {"default_compatible": True, "rules": []},
+    }
+
+    with open(batteries_path, "r") as f:
+        batteries_data = json.load(f)
+        catalog["batteries"] = batteries_data.get("batteries", [])
+        catalog["currency"] = batteries_data.get("currency", catalog["currency"])
+
+    with open(inverters_path, "r") as f:
+        catalog["inverters"] = json.load(f).get("inverters", [])
+
+    with open(panels_path, "r") as f:
+        catalog["solar_panels"] = json.load(f).get("solar_panels", [])
+
+    with open(compatibility_path, "r") as f:
+        catalog["compatibility"] = json.load(f)
+
+    return catalog
 
 
 @app.post("/api/simulator/size")
 async def size_battery(req: SimulatorRequest):
     catalog = load_catalog()
-
-    # 1. Normalização
-    annual_consumption_kwh = 0
-    if req.mode == 'house':
-        occupants = int(req.input.get('occupants', 1))
-        annual_consumption_kwh = 1500 + (occupants * 1000)
-    else:
-        # Correção: Agora lê o monthly_avg enviado pelo frontend
-        monthly_avg = float(req.input.get('monthly_avg', 0))
-        annual_consumption_kwh = monthly_avg * 12
-
-    # 2. Dimensionamento Simples (Matching)
-    # Procurar baterias que cubram pelo menos 50% do consumo diário médio
-    daily_avg = annual_consumption_kwh / 365
-    target_capacity = daily_avg * 0.6
-
-    recommendations = []
-    # Lógica de matching simplificada (Top 3)
-    for bat in catalog['batteries'][:3]:
-        inv = catalog['inverters'][0]  # Placeholder: pega o primeiro inversor
-        capex = bat['pricing']['unit_price'] + inv['pricing']['unit_price']
-
-        # Estimativa de poupança (Simplista para MVP)
-        # 300 ciclos/ano * 0.20€/kWh
-        annual_savings = (bat['specs']['usable_capacity_kwh'] * 300) * 0.20
-
-        recommendations.append({
-            "battery": bat,
-            "inverter": inv,
-            "capex_total_eur": capex,
-            "savings_annual_eur": round(annual_savings, 2),
-            "payback_years": round(capex / annual_savings, 1) if annual_savings > 0 else 0
-        })
-
-    return {
-        "summary": {
-            "annual_consumption_estimated": annual_consumption_kwh,
-            "daily_avg_kwh": round(daily_avg, 2)
-        },
-        "recommendations": recommendations,
-        "assumptions_used": req.assumptions,
-        "notes": ["Cálculo baseado em perfis médios estatísticos.", "Preços de catálogo não incluem instalação."]
-    }
+    return optimize_home_battery(
+        mode=req.mode,
+        input_data=req.input,
+        tariff=req.tariff,
+        solar=req.solar or {},
+        assumptions=req.assumptions,
+        catalog=catalog,
+    )
 
 handler = Mangum(app)
 

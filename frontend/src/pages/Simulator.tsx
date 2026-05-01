@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { getApiUrl } from '@/lib/config';
 import {
-    Battery, Home, FileText, Zap,
+    Battery, Home, FileText, Zap, Sun,
     ChevronRight, ChevronLeft, Loader2,
     CheckCircle2, TrendingUp, Wallet
 } from 'lucide-react';
@@ -122,7 +123,7 @@ export default function Simulator() {
     const runSimulation = async () => {
         setLoading(true);
         try {
-            const response = await fetch('/api/simulator/size', {
+            const response = await fetch(getApiUrl('api/simulator/size'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -564,6 +565,43 @@ export default function Simulator() {
                     {/* Step 3: Results */}
                     {step === 3 && results && (
                         <div className="space-y-8 animate-in zoom-in-95 duration-500">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <Card className="border-gray-200 bg-white">
+                                    <CardContent className="p-5">
+                                        <p className="text-sm text-gray-500">Capacidade ideal</p>
+                                        <div className="mt-2 flex items-baseline gap-2">
+                                            <span className="text-3xl font-extrabold text-black">{results.summary?.ideal_capacity_kwh ?? 0}</span>
+                                            <span className="text-sm text-gray-500">kWh</span>
+                                        </div>
+                                        <p className="mt-2 text-xs text-gray-500">Útil: {results.summary?.ideal_usable_capacity_kwh ?? 0} kWh</p>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border-gray-200 bg-white">
+                                    <CardContent className="p-5">
+                                        <p className="text-sm text-gray-500">Poupança estimada</p>
+                                        <div className="mt-2 flex items-baseline gap-2">
+                                            <span className="text-3xl font-extrabold text-black">{Math.round(results.summary?.savings_annual_eur ?? 0)}</span>
+                                            <span className="text-sm text-gray-500">€/ano</span>
+                                        </div>
+                                        <p className="mt-2 text-xs text-gray-500">
+                                            Payback: {results.summary?.payback_years ? `${results.summary.payback_years} anos` : 'não aplicável'}
+                                        </p>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border-gray-200 bg-white">
+                                    <CardContent className="p-5">
+                                        <p className="text-sm text-gray-500">Consumo anual</p>
+                                        <div className="mt-2 flex items-baseline gap-2">
+                                            <span className="text-3xl font-extrabold text-black">{Math.round(results.summary?.annual_consumption_estimated ?? 0)}</span>
+                                            <span className="text-sm text-gray-500">kWh</span>
+                                        </div>
+                                        <p className="mt-2 text-xs text-gray-500">Média diária: {results.summary?.daily_avg_kwh ?? 0} kWh</p>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 {results.recommendations.map((rec: any, idx: number) => (
                                     <Card key={idx} className={`relative overflow-hidden transition-all hover:scale-105 bg-white ${idx === 0 ? 'border-orange-600 border-2 shadow-xl' : 'border-gray-200'}`}>
@@ -573,13 +611,53 @@ export default function Simulator() {
                                             </div>
                                         )}
                                         <CardHeader className="pb-2">
-                                            <Badge className="w-fit mb-2 bg-black text-white hover:bg-black">{rec.battery.brand}</Badge>
-                                            <CardTitle className="text-xl">{rec.battery.model}</CardTitle>
+                                            <Badge className="w-fit mb-2 bg-black text-white hover:bg-black">Sistema completo</Badge>
+                                            <CardTitle className="text-xl">{rec.battery.brand} {rec.battery.model}</CardTitle>
                                         </CardHeader>
                                         <CardContent className="space-y-4">
                                             <div className="flex items-baseline gap-1 border-b border-gray-100 pb-4">
                                                 <span className="text-3xl font-extrabold">{rec.capex_total_eur.toLocaleString()}€</span>
-                                                <span className="text-gray-400 text-sm">est.</span>
+                                                <span className="text-gray-400 text-sm">instalado est.</span>
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                <div className="rounded-lg border border-gray-200 p-3">
+                                                    <div className="flex items-start gap-3">
+                                                        <Battery className="w-5 h-5 mt-0.5 text-orange-600" />
+                                                        <div>
+                                                            <p className="text-xs uppercase text-gray-400 font-semibold">Bateria</p>
+                                                            <p className="text-base font-bold leading-tight">{rec.battery.brand} {rec.battery.model}</p>
+                                                            <p className="text-xs text-gray-500">{rec.simulated_capacity_kwh} kWh úteis simulados</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {rec.inverter && (
+                                                    <div className="rounded-lg border border-gray-200 p-3">
+                                                        <div className="flex items-start gap-3">
+                                                            <Zap className="w-5 h-5 mt-0.5 text-orange-600" />
+                                                            <div>
+                                                                <p className="text-xs uppercase text-gray-400 font-semibold">Inversor</p>
+                                                                <p className="text-base font-bold leading-tight">{rec.inverter.brand} {rec.inverter.model}</p>
+                                                                <p className="text-xs text-gray-500">{rec.inverter.specs?.power_kw} kW</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {rec.solar_panels && (
+                                                    <div className="rounded-lg border border-gray-200 p-3">
+                                                        <div className="flex items-start gap-3">
+                                                            <Sun className="w-5 h-5 mt-0.5 text-orange-600" />
+                                                            <div>
+                                                                <p className="text-xs uppercase text-gray-400 font-semibold">Painéis solares</p>
+                                                                <p className="text-base font-bold leading-tight">
+                                                                    {rec.solar_panels.quantity} x {rec.solar_panels.panel.brand} {rec.solar_panels.panel.model}
+                                                                </p>
+                                                                <p className="text-xs text-gray-500">{rec.solar_panels.array_power_kwp} kWp</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
 
                                             <div className="space-y-3 pt-2">
@@ -589,8 +667,11 @@ export default function Simulator() {
                                                 </div>
                                                 <div className="flex items-center text-sm text-black">
                                                     <Wallet className="w-4 h-4 mr-2 text-orange-600" />
-                                                    <span>Payback: <strong>{rec.payback_years} anos</strong></span>
+                                                    <span>Payback: <strong>{rec.payback_years ? `${rec.payback_years} anos` : 'não aplicável'}</strong></span>
                                                 </div>
+                                                <p className="text-xs text-gray-500">
+                                                    Inclui hardware ({Math.round(rec.hardware_total_eur || 0).toLocaleString()}€) + margem de instalação ({Math.round(rec.installation_margin_eur || 0).toLocaleString()}€).
+                                                </p>
                                             </div>
 
                                             <Button className={`w-full mt-4 ${idx === 0 ? 'bg-black text-white hover:bg-gray-800' : 'bg-white border-2 border-black text-black hover:bg-gray-50'}`}>
@@ -604,8 +685,9 @@ export default function Simulator() {
                             <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 text-sm text-gray-500">
                                 <h4 className="font-bold text-black mb-2">Notas da Simulação:</h4>
                                 <ul className="list-disc ml-4 space-y-1">
-                                    <li>Eficiência do sistema considerada: 90%.</li>
-                                    <li>Os valores de capex são estimativos e não incluem instalação.</li>
+                                    {(results.notes || []).map((note: string, index: number) => (
+                                        <li key={index}>{note}</li>
+                                    ))}
                                 </ul>
                             </div>
 

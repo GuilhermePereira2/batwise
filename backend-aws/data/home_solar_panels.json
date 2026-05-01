@@ -1,0 +1,67 @@
+{
+    "schema_version": "1.0.0",
+    "generated_at": "2026-05-01T12:00:00Z",
+    "currency": "EUR",
+    "solar_panels": [
+        {
+            "id": "pv-001",
+            "brand": "REC",
+            "model": "Alpha Pure-R 430",
+            "specs": {
+                "power_w": 430,
+                "efficiency_pct": 22.3,
+                "technology": "HJT",
+                "type": "monocrystalline",
+                "dimensions_mm": {
+                    "length": 1730,
+                    "width": 1118,
+                    "height": 30
+                },
+                "weight_kg": 21.5
+            },
+            "pricing": {
+                "unit_price": 210,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.recgroup.com/en-us/rec-alpha-pure-r"
+            }
+        },
+        {
+            "id": "pv-002",
+            "brand": "Jinko Solar",
+            "model": "Tiger Neo 440W",
+            "specs": {
+                "power_w": 440,
+                "efficiency_pct": 22.0,
+                "technology": "N-type TOPCon",
+                "type": "monocrystalline"
+            },
+            "pricing": {
+                "unit_price": 145,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.jinkosolar.com/"
+            }
+        },
+        {
+            "id": "pv-003",
+            "brand": "Trina Solar",
+            "model": "Vertex S+ 450W",
+            "specs": {
+                "power_w": 450,
+                "efficiency_pct": 22.5,
+                "technology": "N-type TOPCon",
+                "type": "monocrystalline"
+            },
+            "pricing": {
+                "unit_price": 155,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.trinasolar.com/"
+            }
+        }
+    ]
+}

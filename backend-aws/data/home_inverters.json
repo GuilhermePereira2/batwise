@@ -1,0 +1,102 @@
+{
+    "schema_version": "1.0.0",
+    "generated_at": "2026-05-01T12:00:00Z",
+    "currency": "EUR",
+    "inverters": [
+        {
+            "id": "inv-001",
+            "brand": "Fronius",
+            "model": "Symo GEN24 5.0 Plus",
+            "specs": {
+                "power_kw": 5.0,
+                "is_hybrid": true,
+                "phases": 3,
+                "battery_type": "high_voltage",
+                "connection": "dc_coupled"
+            },
+            "pricing": {
+                "unit_price": 2100,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.fronius.com/en/help-center/solar-energy/products/solar-inverters/gen24/symo-gen24-plus/fronius-symo-gen24-5-0-plus"
+            }
+        },
+        {
+            "id": "inv-002",
+            "brand": "GoodWe",
+            "model": "GW5K-ET Plus+",
+            "specs": {
+                "power_kw": 5.0,
+                "is_hybrid": true,
+                "phases": 3,
+                "battery_type": "high_voltage",
+                "connection": "dc_coupled"
+            },
+            "pricing": {
+                "unit_price": 1650,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://en.goodwe.com/et-plus-series-three-phase-hybrid-solar-inverter"
+            }
+        },
+        {
+            "id": "inv-003",
+            "brand": "SMA",
+            "model": "Sunny Boy Storage 5.0",
+            "specs": {
+                "power_kw": 5.0,
+                "is_hybrid": false,
+                "phases": 1,
+                "battery_type": "high_voltage",
+                "connection": "ac_coupled"
+            },
+            "pricing": {
+                "unit_price": 1900,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.sma.de/en/products/battery-inverters/sunny-boy-storage-37-50-60"
+            }
+        },
+        {
+            "id": "inv-004",
+            "brand": "SolarEdge",
+            "model": "Home Hub Inverter 5.0",
+            "specs": {
+                "power_kw": 5.0,
+                "is_hybrid": true,
+                "phases": 1,
+                "battery_type": "high_voltage",
+                "connection": "dc_coupled"
+            },
+            "pricing": {
+                "unit_price": 1850,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.solaredge.com/en/products/residential/pv-inverters/solaredge-home-hub-inverters"
+            }
+        },
+        {
+            "id": "inv-005",
+            "brand": "Victron Energy",
+            "model": "MultiPlus-II 48/5000",
+            "specs": {
+                "power_kw": 4.0,
+                "is_hybrid": false,
+                "phases": 1,
+                "battery_type": "48v",
+                "connection": "inverter_charger"
+            },
+            "pricing": {
+                "unit_price": 1250,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.victronenergy.com/inverters-chargers/multiplus-ii"
+            }
+        }
+    ]
+}

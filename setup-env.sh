@@ -55,7 +55,7 @@ case $CHOICE in
     echo ""
     echo "Próximos passos:"
     echo "1. Em um terminal, inicia o Backend:"
-    echo "   cd backend && python main.py"
+    echo "   cd backend-aws && python3 main.py"
     echo ""
     echo "2. Em outro terminal, inicia o Frontend:"
     echo "   cd frontend && npm run dev"
@@ -83,7 +83,7 @@ case $CHOICE in
     echo "  SECRET_KEY=<chave_gerada_com_openssl>"
     echo ""
     echo "Depois:"
-    echo "1. cd backend && python main.py"
+    echo "1. cd backend-aws && python3 main.py"
     echo "2. cd frontend && npm run dev"
     ;;
     
