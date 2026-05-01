@@ -175,12 +175,12 @@ class Requirements(BaseModel):
     max_voltage: float
     min_energy: float
     min_continuous_power: float
-    
+
     # Campos com defaults (tecnicamente obrigatórios mas sempre enviados pelo frontend)
     debug: bool = True
     include_components: bool = True
     use_custom_db: bool = False
-    
+
     # Campos opcionais (com Optional e default None ou valor padrão)
     peak_power: Optional[float] = None
     max_weight: Optional[float] = None
@@ -188,7 +188,7 @@ class Requirements(BaseModel):
     max_width: Optional[float] = None
     max_length: Optional[float] = None
     max_height: Optional[float] = None
-    ambient_temp: float = 25.0  # Opcional com default de 25°C 
+    ambient_temp: float = 25.0  # Opcional com default de 25°C
 
 
 class Dimensions(BaseModel):
@@ -282,3 +282,10 @@ class PasswordResetConfirm(BaseModel):
     email: EmailStr
     token: str
     new_password: str
+
+
+class SimulatorRequest(BaseModel):
+    mode: str  # 'house' | 'bill'
+    input: dict
+    tariff: dict
+    assumptions: dict

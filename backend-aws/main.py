@@ -2,7 +2,7 @@ import token
 from urllib import request
 from dynamodb_handler import DynamoDBUserHandler
 from logic import compute_cell_configurations
-from models import Requirements, PasswordResetConfirm, PasswordResetRequest, ContactRequest, DesignResponse, CellData, UserCreate, UserLogin, Token, UserResponse
+from models import SimulatorRequest, Requirements, PasswordResetConfirm, PasswordResetRequest, ContactRequest, DesignResponse, CellData, UserCreate, UserLogin, Token, UserResponse
 import security
 import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, status, Header
@@ -109,7 +109,7 @@ def check_trial_status(user: dict):
     # Admin users não expiram
     if user.get("admin"):
         return user
-    
+
     if user.get("trial_started_at") and user.get("credits") > 0:
         # Converter string ISO para objeto datetime
         try:
@@ -255,13 +255,15 @@ async def calculate_endpoint(
                 if user:
                     # Admin users não pagam créditos
                     if user.get('admin'):
-                        print(f"👑 Admin user detectado: {email}. Sem dedução de créditos.")
+                        print(
+                            f"👑 Admin user detectado: {email}. Sem dedução de créditos.")
                         remaining = user['credits']
                     elif user['credits'] > 0:
                         remaining = db_users.deduct_credit(email)
                         print(f"💰 Crédito deduzido. Restantes: {remaining}")
                     else:
-                        print(f"⚠️  Sem créditos restantes para {email}. Acesso negado.")
+                        print(
+                            f"⚠️  Sem créditos restantes para {email}. Acesso negado.")
                         # Se chegou aqui com 0 créditos (backend check final)
                         raise HTTPException(
                             status_code=403, detail="Insufficient credits")
@@ -281,8 +283,9 @@ async def calculate_endpoint(
             field = error['loc'][-1] if error['loc'] else 'unknown'
             msg = error['msg']
             error_messages.append(f"{field}: {msg}")
-        
-        error_detail = "Missing or invalid required fields: " + ", ".join(error_messages)
+
+        error_detail = "Missing or invalid required fields: " + \
+            ", ".join(error_messages)
         raise HTTPException(status_code=422, detail=error_detail)
     except json.JSONDecodeError:
         raise HTTPException(
@@ -366,7 +369,8 @@ async def signup(user: UserCreate):
             credits=5
         )
 
-        frontend_url = os.getenv("FRONTEND_URL", "https://www.watt-builder.com")
+        frontend_url = os.getenv(
+            "FRONTEND_URL", "https://www.watt-builder.com")
         token = new_user['verification_token']
         verify_link = f"{frontend_url}/verify-email?token={token}&email={user.email}"
 
@@ -475,7 +479,7 @@ def login(creds: UserLogin):
 
     if not user.get('is_verified', False):
         raise HTTPException(
-            status_code=403, 
+            status_code=403,
             detail="Email not verified. Please check your inbox and click the verification link. If you didn't receive it, use the resend option.",
         )
 
@@ -500,9 +504,10 @@ def deduct_credit(current_user: dict = Depends(get_current_user)):
     # Admin users não têm créditos deduzidos
     if current_user.get('admin'):
         return {"remaining_credits": current_user['credits'], "admin": True}
-    
+
     if current_user['credits'] <= 0:
-        print(f"⚠️  Sem créditos restantes para {current_user['email']}. Acesso negado.")
+        print(
+            f"⚠️  Sem créditos restantes para {current_user['email']}. Acesso negado.")
         raise HTTPException(status_code=403, detail="Insufficient credits")
 
     try:
@@ -638,21 +643,22 @@ async def resend_verification_email(data: dict):  # recebe {'email': '...'}
     email = data.get('email')
     if not email:
         raise HTTPException(status_code=400, detail="Email is required")
-    
+
     user = db_users.get_user_by_email(email)
-    
+
     # Por segurança, respondemos sempre "OK" mesmo que o email não exista
     if user and not user.get('is_verified', False):
         try:
             # Sempre gerar um NOVO token (não usar o antigo)
             token = str(uuid.uuid4())
-            
+
             # Guardar o novo token na DB
             db_users.update_verification_token(email, token)
-            
-            frontend_url = os.getenv("FRONTEND_URL", "https://www.watt-builder.com")
+
+            frontend_url = os.getenv(
+                "FRONTEND_URL", "https://www.watt-builder.com")
             verify_link = f"{frontend_url}/verify-email?token={token}&email={email}"
-            
+
             email_body = f"""
                 <div style="font-family: Arial, Helvetica, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937;">
                     <h2 style="color: #111827;">Verify your email address</h2>
@@ -695,7 +701,7 @@ async def resend_verification_email(data: dict):  # recebe {'email': '...'}
                     </p>
                 </div>
                 """
-            
+
             message = MessageSchema(
                 subject="Verify your WattBuilder Account",
                 recipients=[email],
@@ -706,14 +712,67 @@ async def resend_verification_email(data: dict):  # recebe {'email': '...'}
 
             fm = FastMail(conf)
             await fm.send_message(message)
-            
+
         except Exception as e:
             # Silentiosamente falha sem revelar informações
             pass
-    
+
     # Respondemos sempre sucesso por segurança
     return {"message": "If an account exists and is not verified, a verification email has been sent."}
 
+
+def load_catalog():
+    path = os.path.join(os.path.dirname(__file__), "data/catalog.json")
+    with open(path, "r") as f:
+        return json.load(f)
+
+
+@app.post("/api/simulator/size")
+async def size_battery(req: SimulatorRequest):
+    catalog = load_catalog()
+
+    # 1. Normalização
+    annual_consumption_kwh = 0
+    if req.mode == 'house':
+        occupants = int(req.input.get('occupants', 1))
+        annual_consumption_kwh = 1500 + (occupants * 1000)
+    else:
+        # Correção: Agora lê o monthly_avg enviado pelo frontend
+        monthly_avg = float(req.input.get('monthly_avg', 0))
+        annual_consumption_kwh = monthly_avg * 12
+
+    # 2. Dimensionamento Simples (Matching)
+    # Procurar baterias que cubram pelo menos 50% do consumo diário médio
+    daily_avg = annual_consumption_kwh / 365
+    target_capacity = daily_avg * 0.6
+
+    recommendations = []
+    # Lógica de matching simplificada (Top 3)
+    for bat in catalog['batteries'][:3]:
+        inv = catalog['inverters'][0]  # Placeholder: pega o primeiro inversor
+        capex = bat['pricing']['unit_price'] + inv['pricing']['unit_price']
+
+        # Estimativa de poupança (Simplista para MVP)
+        # 300 ciclos/ano * 0.20€/kWh
+        annual_savings = (bat['specs']['usable_capacity_kwh'] * 300) * 0.20
+
+        recommendations.append({
+            "battery": bat,
+            "inverter": inv,
+            "capex_total_eur": capex,
+            "savings_annual_eur": round(annual_savings, 2),
+            "payback_years": round(capex / annual_savings, 1) if annual_savings > 0 else 0
+        })
+
+    return {
+        "summary": {
+            "annual_consumption_estimated": annual_consumption_kwh,
+            "daily_avg_kwh": round(daily_avg, 2)
+        },
+        "recommendations": recommendations,
+        "assumptions_used": req.assumptions,
+        "notes": ["Cálculo baseado em perfis médios estatísticos.", "Preços de catálogo não incluem instalação."]
+    }
 
 handler = Mangum(app)
 

@@ -1,0 +1,58 @@
+{
+    "schema_version": "1.0.0",
+    "generated_at": "2026-05-01T12:00:00Z",
+    "currency": "EUR",
+    "batteries": [
+        {
+            "id": "bat-001",
+            "brand": "BYD",
+            "model": "Battery-Box Premium HVS 5.1",
+            "specs": {
+                "capacity_kwh": 5.12,
+                "usable_capacity_kwh": 5.12,
+                "power_kw": 5.12,
+                "dod": 1.0
+            },
+            "pricing": {
+                "unit_price": 3200,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.bydbatterybox.com/"
+            }
+        },
+        {
+            "id": "bat-002",
+            "brand": "Tesla",
+            "model": "Powerwall 2",
+            "specs": {
+                "capacity_kwh": 13.5,
+                "usable_capacity_kwh": 13.5,
+                "power_kw": 5.0,
+                "dod": 1.0
+            },
+            "pricing": {
+                "unit_price": 8500,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.tesla.com/powerwall"
+            }
+        }
+    ],
+    "inverters": [
+        {
+            "id": "inv-001",
+            "brand": "Fronius",
+            "model": "Symo GEN24 5.0 Plus",
+            "specs": {
+                "power_kw": 5.0,
+                "is_hybrid": true
+            },
+            "pricing": {
+                "unit_price": 2100,
+                "currency": "EUR"
+            }
+        }
+    ]
+}
