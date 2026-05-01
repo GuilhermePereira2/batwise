@@ -50,6 +50,42 @@ export default function Simulator() {
     const [loading, setLoading] = useState(false);
     const [mode, setMode] = useState<InputMode | null>(null);
     const [results, setResults] = useState<any>(null);
+    const [selectedRecommendation, setSelectedRecommendation] = useState<any>(null);
+    const [reportEmail, setReportEmail] = useState('');
+    const [isSendingReportEmail, setIsSendingReportEmail] = useState(false);
+
+    const handleSendReportEmail = async () => {
+        if (!reportEmail.trim()) {
+            alert('Por favor, insira um email.');
+            return;
+        }
+
+        setIsSendingReportEmail(true);
+        try {
+            const response = await fetch(getApiUrl('send-contact-email'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: 'Relatório Tecnico Completo',
+                    email: reportEmail.trim(),
+                    subject: 'Relatório Tecnico Completo',
+                    message: reportEmail.trim(),
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Erro no envio do email');
+            }
+
+            alert('Pedido enviado! Iremos responder em breve.');
+            setReportEmail('');
+        } catch (error) {
+            console.error('Erro no envio de relatório:', error);
+            alert('Erro ao enviar o pedido. Verifique o email ou tente novamente mais tarde.');
+        } finally {
+            setIsSendingReportEmail(false);
+        }
+    };
 
     // Prevenção de crash: Merge seguro com localStorage
     const [formData, setFormData] = useState(() => {
@@ -146,6 +182,22 @@ export default function Simulator() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleRequestQuote = (recommendation: any) => {
+        const products = [];
+        if (recommendation.battery) {
+            products.push(`Bateria: ${recommendation.battery.quantity} x ${recommendation.battery.model}`);
+        }
+        if (recommendation.solar_panels) {
+            products.push(`Painéis solares: ${recommendation.solar_panels.quantity} x ${recommendation.solar_panels.panel.brand} ${recommendation.solar_panels.panel.model}`);
+        }
+        const body = `Olá, gostaria de solicitar um orçamento para a instalação dos seguintes produtos sugeridos pela simulação:\n\n${products.join('\n')}\n\nLocal da casa: ${formData.solar.city}, ${formData.house.area_m2} m²\n\nObrigado.`;
+        const subject = 'Solicitação de Orçamento para instalação';
+        localStorage.setItem('Message', body);
+        localStorage.setItem('message', body);
+        localStorage.setItem('subject', subject);
+        window.location.href = '/contact';
     };
 
     return (
@@ -573,7 +625,6 @@ export default function Simulator() {
                                             <span className="text-3xl font-extrabold text-black">{results.summary?.ideal_capacity_kwh ?? 0}</span>
                                             <span className="text-sm text-gray-500">kWh</span>
                                         </div>
-                                        <p className="mt-2 text-xs text-gray-500">Útil: {results.summary?.ideal_usable_capacity_kwh ?? 0} kWh</p>
                                     </CardContent>
                                 </Card>
 
@@ -584,9 +635,6 @@ export default function Simulator() {
                                             <span className="text-3xl font-extrabold text-black">{Math.round(results.summary?.savings_annual_eur ?? 0)}</span>
                                             <span className="text-sm text-gray-500">€/ano</span>
                                         </div>
-                                        <p className="mt-2 text-xs text-gray-500">
-                                            Payback: {results.summary?.payback_years ? `${results.summary.payback_years} anos` : 'não aplicável'}
-                                        </p>
                                     </CardContent>
                                 </Card>
 
@@ -597,14 +645,17 @@ export default function Simulator() {
                                             <span className="text-3xl font-extrabold text-black">{Math.round(results.summary?.annual_consumption_estimated ?? 0)}</span>
                                             <span className="text-sm text-gray-500">kWh</span>
                                         </div>
-                                        <p className="mt-2 text-xs text-gray-500">Média diária: {results.summary?.daily_avg_kwh ?? 0} kWh</p>
                                     </CardContent>
                                 </Card>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 {results.recommendations.map((rec: any, idx: number) => (
-                                    <Card key={idx} className={`relative overflow-hidden transition-all hover:scale-105 bg-white ${idx === 0 ? 'border-orange-600 border-2 shadow-xl' : 'border-gray-200'}`}>
+                                    <Card
+                                        key={idx}
+                                        onClick={() => setSelectedRecommendation(rec)}
+                                        className={`cursor-pointer relative overflow-hidden transition-all hover:scale-105 bg-white ${idx === 0 ? 'border-orange-600 border-2 shadow-xl' : 'border-gray-200'}`}
+                                    >
                                         {idx === 0 && (
                                             <div className="absolute top-0 right-0 bg-orange-600 text-white px-3 py-1 text-xs font-bold rounded-bl-lg">
                                                 MELHOR ESCOLHA
@@ -617,7 +668,7 @@ export default function Simulator() {
                                         <CardContent className="space-y-4">
                                             <div className="flex items-baseline gap-1 border-b border-gray-100 pb-4">
                                                 <span className="text-3xl font-extrabold">{rec.capex_total_eur.toLocaleString()}€</span>
-                                                <span className="text-gray-400 text-sm">instalado est.</span>
+                                                <span className="text-gray-400 text-sm">est.</span>
                                             </div>
 
                                             <div className="space-y-3">
@@ -674,13 +725,120 @@ export default function Simulator() {
                                                 </p>
                                             </div>
 
-                                            <Button className={`w-full mt-4 ${idx === 0 ? 'bg-black text-white hover:bg-gray-800' : 'bg-white border-2 border-black text-black hover:bg-gray-50'}`}>
+                                            <Button
+                                                onClick={(e) => e.stopPropagation()}
+                                                className={`w-full mt-4 ${idx === 0 ? 'bg-black text-white hover:bg-gray-800' : 'bg-white border-2 border-black text-black hover:bg-gray-50'}`}
+                                            >
                                                 Solicitar Orçamento
                                             </Button>
                                         </CardContent>
                                     </Card>
                                 ))}
                             </div>
+
+                            {selectedRecommendation && (
+                                <div
+                                    className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-start justify-center p-6 overflow-y-auto"
+                                    onClick={() => setSelectedRecommendation(null)}
+                                >
+                                    <div className="relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                                        <div className="flex items-start justify-between gap-4 p-6 border-b border-gray-200">
+                                            <div>
+                                                <p className="text-sm text-gray-500">Detalhes da recomendação</p>
+                                                <h2 className="text-2xl font-bold">{selectedRecommendation.battery.brand} {selectedRecommendation.battery.model}</h2>
+                                                <p className="text-sm text-gray-500 mt-1">Capacidade simulada: {selectedRecommendation.simulated_capacity_kwh} kWh úteis</p>
+                                            </div>
+                                            <Button variant="ghost" onClick={() => setSelectedRecommendation(null)} className="text-gray-500 hover:text-black">
+                                                <ChevronLeft className="w-6 h-6" />
+                                            </Button>
+                                        </div>
+
+                                        <div className="p-6 space-y-6">
+                                            <div className="grid gap-6 lg:grid-cols-3">
+                                                <div className="rounded-3xl border border-gray-200 p-5 bg-gray-50">
+                                                    <p className="text-xs uppercase text-gray-400 font-semibold mb-2">Investimento estimado</p>
+                                                    <p className="text-3xl font-bold">{selectedRecommendation.capex_total_eur.toLocaleString()}€</p>
+                                                    <p className="text-sm text-gray-500 mt-1">inclui hardware e instalação</p>
+                                                </div>
+                                                <div className="rounded-3xl border border-gray-200 p-5 bg-gray-50">
+                                                    <p className="text-xs uppercase text-gray-400 font-semibold mb-2">Poupança anual</p>
+                                                    <p className="text-3xl font-bold">{selectedRecommendation.savings_annual_eur}€</p>
+                                                    <p className="text-sm text-gray-500 mt-1">economia prevista por ano</p>
+                                                </div>
+                                                <div className="rounded-3xl border border-gray-200 p-5 bg-gray-50">
+                                                    <p className="text-xs uppercase text-gray-400 font-semibold mb-2">Payback</p>
+                                                    <p className="text-3xl font-bold">{selectedRecommendation.payback_years ? `${selectedRecommendation.payback_years} anos` : 'não aplicável'}</p>
+                                                    <p className="text-sm text-gray-500 mt-1">tempo de retorno do investimento</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid gap-6 lg:grid-cols-2">
+                                                <div className="rounded-3xl border border-gray-200 p-6">
+                                                    <h3 className="text-lg font-bold mb-4">Bateria</h3>
+                                                    <p className="text-sm text-gray-500 mb-2">{selectedRecommendation.battery.brand} {selectedRecommendation.battery.model}</p>
+                                                    <div className="space-y-2 text-sm">
+                                                        <p><span className="font-semibold">Capacidade útil:</span> {selectedRecommendation.simulated_capacity_kwh} kWh</p>
+                                                        <p><span className="font-semibold">Tensão:</span> {selectedRecommendation.battery.specs?.voltage || 'N/A'}</p>
+                                                        <p><span className="font-semibold">Ciclos estimados:</span> {selectedRecommendation.battery.specs?.cycles || 'N/A'}</p>
+                                                    </div>
+                                                </div>
+
+                                                {selectedRecommendation.inverter && (
+                                                    <div className="rounded-3xl border border-gray-200 p-6">
+                                                        <h3 className="text-lg font-bold mb-4">Inversor</h3>
+                                                        <p className="text-sm text-gray-500 mb-2">{selectedRecommendation.inverter.brand} {selectedRecommendation.inverter.model}</p>
+                                                        <div className="space-y-2 text-sm">
+                                                            <p><span className="font-semibold">Potência:</span> {selectedRecommendation.inverter.specs?.power_kw || 'N/A'} kW</p>
+                                                            <p><span className="font-semibold">Eficiência:</span> {selectedRecommendation.inverter.specs?.efficiency || 'N/A'}</p>
+                                                            <p><span className="font-semibold">Tipo:</span> {selectedRecommendation.inverter.specs?.type || 'N/A'}</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {selectedRecommendation.solar_panels && (
+                                                <div className="rounded-3xl border border-gray-200 p-6">
+                                                    <h3 className="text-lg font-bold mb-4">Painéis solares</h3>
+                                                    <p className="text-sm text-gray-500 mb-2">{selectedRecommendation.solar_panels.quantity} x {selectedRecommendation.solar_panels.panel.brand} {selectedRecommendation.solar_panels.panel.model}</p>
+                                                    <div className="space-y-2 text-sm">
+                                                        <p><span className="font-semibold">Potência total:</span> {selectedRecommendation.solar_panels.array_power_kwp} kWp</p>
+                                                        <p><span className="font-semibold">Potência por painel:</span> {selectedRecommendation.solar_panels.panel.power_w || 'N/A'} W</p>
+                                                        <p><span className="font-semibold">Área estimada:</span> {selectedRecommendation.solar_panels.quantity * (selectedRecommendation.solar_panels.panel.area_m2 || 0)} m²</p>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <div className="rounded-3xl border border-gray-200 p-6 bg-gray-50 text-sm text-gray-600">
+                                                <p><span className="font-semibold">Hardware:</span> {Math.round(selectedRecommendation.hardware_total_eur || 0).toLocaleString()}€</p>
+                                                <p><span className="font-semibold">Margem de instalação:</span> {Math.round(selectedRecommendation.installation_margin_eur || 0).toLocaleString()}€</p>
+                                                <p><span className="font-semibold">Custo unitário médio:</span> {selectedRecommendation.unit_cost_eur ? `${selectedRecommendation.unit_cost_eur.toLocaleString()}€` : 'N/A'}</p>
+                                            </div>
+
+                                            <div className="flex flex-col gap-3 sm:flex-row">
+                                                <Button className="flex-1 bg-white border-2 border-black text-black hover:bg-gray-50" onClick={() => setSelectedRecommendation(null)}>
+                                                    Fechar Detalhes
+                                                </Button>
+                                                <Button className="flex-1 bg-black text-white hover:bg-gray-800" onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const products = [];
+                                                    if (selectedRecommendation.battery) {
+                                                        products.push(`Bateria: ${selectedRecommendation.battery.quantity} x ${selectedRecommendation.battery.model}`);
+                                                    }
+                                                    if (selectedRecommendation.solar_panels) {
+                                                        products.push(`Painéis solares: ${selectedRecommendation.solar_panels.quantity} x ${selectedRecommendation.solar_panels.panel.brand} ${selectedRecommendation.solar_panels.panel.model}`);
+                                                    }
+                                                    const body = `Olá, gostaria de solicitar um orçamento para a instalação dos seguintes produtos sugeridos pela simulação:\n\n${products.join('\n')}\n\nLocal da casa: ${formData.solar.city}, ${formData.house.area_m2} m²\n\nObrigado.`;
+                                                    const subject = 'Solicitação de Orçamento para instalação';
+                                                    localStorage.setItem('Message', body);
+                                                    window.location.href = '/contact';
+                                                }}>
+                                                    Solicitar Orçamento
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 text-sm text-gray-500">
                                 <h4 className="font-bold text-black mb-2">Notas da Simulação:</h4>
@@ -701,10 +859,12 @@ export default function Simulator() {
                     <section className="mt-24 p-10 bg-orange-50 rounded-3xl text-black relative overflow-hidden">
                         <div className="relative z-10 max-w-xl">
                             <h2 className="text-2xl font-bold mb-4">Deseja um Relatório Técnico Completo?</h2>
-                            <p className="text-gray-700 mb-6">A nossa equipa realiza um estudo detalhado de sombreamento e perfil de carga específico para a sua empresa ou habitação.</p>
+                            <p className="text-gray-700 mb-6">A nossa equipa realiza um estudo detalhado e perfil de carga específico para a sua empresa ou habitação.</p>
                             <div className="flex flex-col sm:flex-row gap-3">
-                                <Input placeholder="Seu email principal" className="bg-white border-gray-200 text-black placeholder:text-gray-400 focus-visible:ring-orange-600" />
-                                <Button className="bg-orange-600 hover:bg-orange-700 px-8 text-white">Receber PDF</Button>
+                                <Input value={reportEmail} onChange={(e) => setReportEmail(e.target.value)} placeholder="Email" className="bg-white border-gray-200 text-black placeholder:text-gray-400 focus-visible:ring-orange-600" />
+                                <Button onClick={handleSendReportEmail} disabled={isSendingReportEmail} className="bg-orange-600 hover:bg-orange-700 px-8 text-white">
+                                    {isSendingReportEmail ? <Loader2 className="animate-spin w-4 h-4" /> : 'Receber Informação'}
+                                </Button>
                             </div>
                         </div>
                         <Battery className="absolute -right-10 -bottom-10 w-64 h-64 text-orange-200/20 rotate-12" />
