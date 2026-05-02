@@ -208,7 +208,7 @@ export default function Simulator() {
                 <div className="max-w-4xl mx-auto px-4">
 
                     {/* Progress Header */}
-                    <div className="text-center mb-10">
+                    <div className="text-center mb-10 mt-20">
                         <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
                             Simulador de Independência Energética
                         </h1>
@@ -828,7 +828,6 @@ export default function Simulator() {
                                                         products.push(`Painéis solares: ${selectedRecommendation.solar_panels.quantity} x ${selectedRecommendation.solar_panels.panel.brand} ${selectedRecommendation.solar_panels.panel.model}`);
                                                     }
                                                     const body = `Olá, gostaria de solicitar um orçamento para a instalação dos seguintes produtos sugeridos pela simulação:\n\n${products.join('\n')}\n\nLocal da casa: ${formData.solar.city}, ${formData.house.area_m2} m²\n\nObrigado.`;
-                                                    const subject = 'Solicitação de Orçamento para instalação';
                                                     localStorage.setItem('Message', body);
                                                     window.location.href = '/contact';
                                                 }}>

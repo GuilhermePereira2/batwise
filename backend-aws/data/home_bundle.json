@@ -1,0 +1,377 @@
+{
+    "schema_version": "1.0.0",
+    "generated_at": "2026-05-01T14:30:00Z",
+    "currency": "EUR",
+    "solutions": [
+        {
+            "bundle_id": "sol-huawei-001",
+            "bundle_name": "Huawei LUNA2000 7kWh Power System",
+            "brand": "HUAWEI",
+            "model": "LUNA2000-7-S1",
+            "description": "Sistema completo de armazenamento de com inversor híbrido inteligente.",
+            "total_specs": {
+                "total_capacity_kwh": 6.9,
+                "max_discharge_power_kw": 3.5,
+                "system_type": "ac_coupled",
+                "phase_type": "single_three_phase",
+                "n_batteries": 1,
+                "n_inverters": 1,
+                "max_parallel_boundles": 4,
+                "size_mm": {
+                    "thickness": 255,
+                    "width": 590,
+                    "height": 510
+                },
+                "weight_kg": 80
+            },
+            "components": {
+                "battery_ref": "bat-001",
+                "inverter_ref": "inv-001",
+                "battery_details": {
+                    "capacity_kwh": 6.9,
+                    "usable_capacity_kwh": 6.9,
+                    "power_kw": 3.5,
+                    "dod": 1.0,
+                    "chemistry": "LFP",
+                    "size_mm": {
+                        "thickness": 255,
+                        "width": 590,
+                        "height": 150
+                    },
+                    "weight_kg": 68,
+                    "operating_temperature_c": {
+                        "min": -20,
+                        "max": 55
+                    },
+                    "environment": "indoor & outdoor",
+                    "max_series_connection": 3,
+                    "warranty_years": 15,
+                    "battery_type": "high_voltage"
+                },
+                "inverter_details": {
+                    "power_kw": 21.0,
+                    "is_hybrid": true,
+                    "phases": 1.3,
+                    "connection": "ac_coupled",
+                    "dimensions_mm": {
+                        "width": 590,
+                        "height": 150,
+                        "depth": 255
+                    },
+                    "operating_temperature_c": {
+                        "min": -20,
+                        "max": 55
+                    },
+                    "environment": "indoor & outdoor",
+                    "max_series_connection": 3,
+                    "warranty_years": 15,
+                    "battery_type": "high_voltage",
+                    "weight": 10.0
+                }
+            },
+            "pricing": {
+                "bundle_price": 4741.39,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.vncasainteligente.pt/energias-renovaveis-/solar-fotovoltaica-/baterias/bateria-litio-huawei-luna2000-7-s1-de-69kwh-bateria-huawei-luna2000-7-s1-de-69-kwh-escalonavel-ate-3-modulos-por-modulo-de-contr"
+            }
+        },
+        {
+            "bundle_id": "sol-huawei-002",
+            "bundle_name": "Huawei LUNA2000 14kWh Power System",
+            "brand": "HUAWEI",
+            "model": "LUNA2000-14-S1",
+            "description": "Sistema completo de armazenamento de com inversor híbrido inteligente.",
+            "total_specs": {
+                "total_capacity_kwh": 13.8,
+                "max_discharge_power_kw": 7.0,
+                "system_type": "ac_coupled",
+                "phase_type": "single_three_phase",
+                "n_batteries": 2,
+                "n_inverters": 1,
+                "max_parallel_bundles": 4,
+                "size_mm": {
+                    "thickness": 255,
+                    "width": 590,
+                    "height": 870
+                },
+                "weight_kg": 148
+            },
+            "components": {
+                "battery_ref": "bat-001",
+                "inverter_ref": "inv-001",
+                "battery_details": {
+                    "capacity_kwh": 6.9,
+                    "usable_capacity_kwh": 6.9,
+                    "power_kw": 3.5,
+                    "dod": 1.0,
+                    "chemistry": "LFP",
+                    "size_mm": {
+                        "thickness": 255,
+                        "width": 590,
+                        "height": 150
+                    },
+                    "weight_kg": 68,
+                    "operating_temperature_c": {
+                        "min": -20,
+                        "max": 55
+                    },
+                    "environment": "indoor & outdoor",
+                    "max_series_connection": 3,
+                    "warranty_years": 15,
+                    "battery_type": "high_voltage"
+                },
+                "inverter_details": {
+                    "power_kw": 21.0,
+                    "is_hybrid": true,
+                    "phases": 1.3,
+                    "connection": "ac_coupled",
+                    "dimensions_mm": {
+                        "width": 590,
+                        "height": 150,
+                        "depth": 255
+                    },
+                    "operating_temperature_c": {
+                        "min": -20,
+                        "max": 55
+                    },
+                    "environment": "indoor & outdoor",
+                    "max_series_connection": 3,
+                    "warranty_years": 15,
+                    "battery_type": "high_voltage",
+                    "weight": 10.0
+                }
+            },
+            "pricing": {
+                "bundle_price": 8146.03,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.vncasainteligente.pt/energias-renovaveis-/solar-fotovoltaica-/baterias/bateria-litio-huawei-luna2000-7-s1-de-138kwh-bateria-huawei-luna2000-7-s1-de-138-kwh-escalonavel-ate-3-modulos-por-modulo-de-con"
+            }
+        },
+        {
+            "bundle_id": "sol-huawei-003",
+            "bundle_name": "Huawei LUNA2000 21kWh Power System",
+            "brand": "HUAWEI",
+            "model": "LUNA2000-21-S1",
+            "description": "Sistema completo de armazenamento de com inversor híbrido inteligente.",
+            "total_specs": {
+                "total_capacity_kwh": 20.7,
+                "max_discharge_power_kw": 10.5,
+                "system_type": "ac_coupled",
+                "phase_type": "single_three_phase",
+                "n_batteries": 3,
+                "n_inverters": 1,
+                "max_parallel_boundles": 4,
+                "size_mm": {
+                    "thickness": 255,
+                    "width": 590,
+                    "height": 1230
+                },
+                "weight_kg": 216
+            },
+            "components": {
+                "battery_ref": "bat-001",
+                "inverter_ref": "inv-001",
+                "battery_details": {
+                    "capacity_kwh": 6.9,
+                    "usable_capacity_kwh": 6.9,
+                    "power_kw": 3.5,
+                    "dod": 1.0,
+                    "chemistry": "LFP",
+                    "size_mm": {
+                        "thickness": 255,
+                        "width": 590,
+                        "height": 150
+                    },
+                    "weight_kg": 68,
+                    "operating_temperature_c": {
+                        "min": -20,
+                        "max": 55
+                    },
+                    "environment": "indoor & outdoor",
+                    "max_series_connection": 3,
+                    "warranty_years": 15,
+                    "battery_type": "high_voltage"
+                },
+                "inverter_details": {
+                    "power_kw": 21.0,
+                    "is_hybrid": true,
+                    "phases": 1.3,
+                    "connection": "ac_coupled",
+                    "dimensions_mm": {
+                        "width": 590,
+                        "height": 150,
+                        "depth": 255
+                    },
+                    "operating_temperature_c": {
+                        "min": -20,
+                        "max": 55
+                    },
+                    "environment": "indoor & outdoor",
+                    "max_series_connection": 3,
+                    "warranty_years": 15,
+                    "battery_type": "high_voltage",
+                    "weight": 10.0
+                }
+            },
+            "pricing": {
+                "bundle_price": 11550.67,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.vncasainteligente.pt/energias-renovaveis-/solar-fotovoltaica-/baterias/bateria-litio-huawei-luna2000-7-s1-de-207kwh-bateria-huawei-luna2000-7-s1-de-207-kwh"
+            }
+        },
+        {
+            "bundle_id": "sol-Tesla-001",
+            "bundle_name": "Tesla Powerwall 3 13.5kWh Power System",
+            "brand": "TESLA",
+            "model": "Powerwall 3",
+            "description": "Sistema completo de armazenamento com inversor híbrido inteligente.",
+            "total_specs": {
+                "total_capacity_kwh": 13.5,
+                "max_discharge_power_kw": 11.04,
+                "system_type": "ac_coupled",
+                "phase_type": "single_phase",
+                "n_batteries": 1,
+                "n_inverters": 1,
+                "max_parallel_boundles": 4,
+                "size_mm": {
+                    "thickness": 193,
+                    "width": 609,
+                    "height": 1105
+                },
+                "weight_kg": 130
+            },
+            "components": {
+                "battery_ref": "Null",
+                "inverter_ref": "Null",
+                "battery_details": {
+                    "capacity_kwh": 13.5,
+                    "usable_capacity_kwh": 13.5,
+                    "power_kw": 5,
+                    "dod": 1.0,
+                    "chemistry": "LFP",
+                    "size_mm": {
+                        "thickness": 193,
+                        "width": 609,
+                        "height": 1105
+                    },
+                    "weight_kg": 130,
+                    "operating_temperature_c": {
+                        "min": -20,
+                        "max": 50
+                    },
+                    "environment": "indoor & outdoor",
+                    "max_series_connection": 1,
+                    "warranty_years": 10,
+                    "battery_type": "high_voltage"
+                },
+                "inverter_details": {
+                    "power_kw": 11.04,
+                    "is_hybrid": true,
+                    "phases": 1.0,
+                    "connection": "ac_coupled",
+                    "dimensions_mm": {
+                        "width": 609,
+                        "height": 1105,
+                        "depth": 193
+                    },
+                    "operating_temperature_c": {
+                        "min": -20,
+                        "max": 50
+                    },
+                    "environment": "indoor & outdoor",
+                    "max_series_connection": 1,
+                    "warranty_years": 10,
+                    "battery_type": "high_voltage",
+                    "weight": 130.0
+                }
+            },
+            "pricing": {
+                "bundle_price": 7133.73,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://tienda-solar.es/pt/baterias-de-litio/1924-tesla-powerwall-3-135-kwh-inversor-solar-e-bateria-de-litio-all-in-one?srsltid=AfmBOoqOuhVu_0VwT_nNRwdm7Yv2-dYW56HBxVeYZu_NrQN1Ea0YTR1THYM"
+            }
+        },
+        {
+            "bundle_id": "sol-Emphase-001",
+            "bundle_name": "Emphase 5kWh Power System",
+            "brand": "Emphase",
+            "model": "IQ Battery 5P with FlexPhase",
+            "description": "Sistema completo de armazenamento de com inversor híbrido inteligente.",
+            "total_specs": {
+                "total_capacity_kwh": 5,
+                "max_discharge_power_kw": 3.84,
+                "system_type": "ac_coupled",
+                "phase_type": "single_three_phase",
+                "n_batteries": 5,
+                "n_inverters": 1,
+                "max_parallel_boundles": 1,
+                "size_mm": {
+                    "thickness": 188,
+                    "width": 550,
+                    "height": 980
+                },
+                "weight_kg": 83
+            },
+            "components": {
+                "battery_ref": "bat-001",
+                "inverter_ref": "inv-001",
+                "battery_details": {
+                    "capacity_kwh": 6.9,
+                    "usable_capacity_kwh": 6.9,
+                    "power_kw": 3.5,
+                    "dod": 1.0,
+                    "chemistry": "LFP",
+                    "size_mm": {
+                        "thickness": 188,
+                        "width": 550,
+                        "height": 980
+                    },
+                    "weight_kg": 83,
+                    "operating_temperature_c": {
+                        "min": -20,
+                        "max": 55
+                    },
+                    "environment": "indoor & outdoor",
+                    "max_series_connection": 1,
+                    "warranty_years": 15,
+                    "battery_type": "low_voltage"
+                },
+                "inverter_details": {
+                    "power_kw": 3.84,
+                    "is_hybrid": true,
+                    "phases": 1.3,
+                    "connection": "ac_coupled",
+                    "dimensions_mm": {
+                        "width": 550,
+                        "height": 980,
+                        "depth": 188
+                    },
+                    "operating_temperature_c": {
+                        "min": -20,
+                        "max": 55
+                    },
+                    "environment": "indoor & outdoor",
+                    "max_series_connection": 1,
+                    "warranty_years": 15,
+                    "battery_type": "low_voltage",
+                    "weight": 83.0
+                }
+            },
+            "pricing": {
+                "bundle_price": 3402.6,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://aurensol.com/pt/products/bateria-litio-enphase-iq-battery-5p-5kwh?variant=51502764917077&utm_medium=product_sync&utm_source=google&utm_content=sag_organic&utm_campaign=sag_organic&srsltid=AfmBOoq1nC8mWncq8XAX10hUAPQSVIRCmD7yV0gNC1zg5JfO1W0O7teZlWw"
+            }
+        }
+    ]
+}

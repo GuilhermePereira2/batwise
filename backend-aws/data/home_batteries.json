@@ -5,40 +5,342 @@
     "batteries": [
         {
             "id": "bat-001",
-            "brand": "BYD",
-            "model": "Battery-Box Premium HVS 5.1",
+            "brand": "HUAWEI",
+            "model": "LUNA2000-7-E1",
             "specs": {
-                "capacity_kwh": 5.12,
-                "usable_capacity_kwh": 5.12,
-                "power_kw": 5.12,
+                "capacity_kwh": 6.9,
+                "usable_capacity_kwh": 6.9,
+                "power_kw": 3.5,
                 "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 255,
+                    "width": 590,
+                    "height": 150
+                },
+                "weight_kg": 68,
+                "operating_temperature_c": {
+                    "min": -20,
+                    "max": 55
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 3,
+                "max_parallel_connection": 4,
+                "warranty_years": 15,
                 "battery_type": "high_voltage"
             },
             "pricing": {
-                "unit_price": 3200,
+                "unit_price": 3404.64,
                 "currency": "EUR"
             },
             "links": {
-                "url": "https://www.bydbatterybox.com/"
+                "url": "https://www.vncasainteligente.pt/energias-renovaveis-/solar-fotovoltaica-/baterias/modulo-de-bateria-litio-huawei-luna2000-7-s1-de-69kwh-modulo-de-bateria-huawei-luna2000-7-s1-de-69-kwh-requer-o-controlador-e-ba"
             }
         },
         {
             "id": "bat-002",
-            "brand": "Tesla",
-            "model": "Powerwall 2",
+            "brand": "BYD",
+            "model": "BYD Premium B-Box LVL 15.4",
             "specs": {
-                "capacity_kwh": 13.5,
-                "usable_capacity_kwh": 13.5,
-                "power_kw": 5.0,
-                "dod": 1.0,
-                "battery_type": "integrated_ac"
+                "capacity_kwh": 15.4,
+                "usable_capacity_kwh": 15.4,
+                "power_kw": 12,
+                "dod": 0.9,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 575,
+                    "width": 650,
+                    "height": 500
+                },
+                "weight_kg": 164,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 64,
+                "warranty_years": 10,
+                "battery_type": "low_voltage"
             },
             "pricing": {
-                "unit_price": 8500,
+                "unit_price": 6429.69,
                 "currency": "EUR"
             },
             "links": {
-                "url": "https://www.tesla.com/powerwall"
+                "url": "https://tienda-solar.es/pt/baterias-de-litio/1297-tambores-byd-premium-b-box-lvl-154-lithium-lfp-48v-alta-capacidade?srsltid=AfmBOor2LknipF7fyvH35jrIg1z0SruX0LQXuxVbHh-I0KLuvngHpcBUmdc"
+            }
+        },
+        {
+            "id": "bat-003",
+            "brand": "BYD",
+            "model": "LVS 4kWh",
+            "specs": {
+                "capacity_kwh": 4,
+                "usable_capacity_kwh": 4,
+                "power_kw": 3.5,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 298,
+                    "width": 650,
+                    "height": 478
+                },
+                "weight_kg": 64,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 64,
+                "warranty_years": 15,
+                "battery_type": "low_voltage"
+            },
+            "pricing": {
+                "unit_price": 2217.39,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.damiasolar.com/pt/bateria-de-litio-byd-lvs-4kwh.html#/147-byd_conector_para_pdu_lvs_3_tamanys-conector_de_70_mm_para_pdu_lvs/155-bateria_liti_byd_suelta_400_lvs-com_bateria_de_litio_de_4kwh_max6_uni"
+            }
+        },
+        {
+            "id": "bat-004",
+            "brand": "GOODWE",
+            "model": "GoodWe Lynx U G3 5kWh",
+            "specs": {
+                "capacity_kwh": 5,
+                "usable_capacity_kwh": 5,
+                "power_kw": 5,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 160,
+                    "width": 460,
+                    "height": 580
+                },
+                "weight_kg": 50,
+                "operating_temperature_c": {
+                    "min": -20,
+                    "max": 55
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 30,
+                "warranty_years": -1,
+                "battery_type": "low_voltage"
+            },
+            "pricing": {
+                "unit_price": 1321.01,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://groupsumi.pt/energias-renovaveis/baterias-e-inversores/bateria-solar/bateria-de-baixa-voltagem-goodwe-lynx-u-serie-g3-de-5-kwh-lx-u5-0-30?gad_source=1&gad_campaignid=23318272007&gclid=CjwKCAjwntHPBhAaEiwA_Xp6RvKZHl-X4io1lctBTe3H0dIWtpm0ooihcWM3PlkTlY1iVbuQAId5WhoC8lsQAvD_BwE"
+            }
+        },
+        {
+            "id": "bat-005",
+            "brand": "SOLAREDGE",
+            "model": "SET1_BAT-05K48_RWS",
+            "specs": {
+                "capacity_kwh": 4.6,
+                "usable_capacity_kwh": 4.6,
+                "power_kw": 4,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 240,
+                    "width": 540,
+                    "height": 500
+                },
+                "weight_kg": 54.7,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 5,
+                "warranty_years": 10,
+                "battery_type": "low_voltage"
+            },
+            "pricing": {
+                "unit_price": 1777.31,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.senetic.pt/product/SET1_BAT-05K48_RWS"
+            }
+        },
+        {
+            "id": "bat-006",
+            "brand": "SOLAREDGE",
+            "model": "SET1_BAT-05K48_RWB",
+            "specs": {
+                "capacity_kwh": 4.6,
+                "usable_capacity_kwh": 4.6,
+                "power_kw": 4,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 240,
+                    "width": 540,
+                    "height": 500
+                },
+                "weight_kg": 54.7,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 5,
+                "warranty_years": 10,
+                "battery_type": "low_voltage"
+            },
+            "pricing": {
+                "unit_price": 1909.69,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.senetic.pt/product/SET1_BAT-05K48_RWB"
+            }
+        },
+        {
+            "id": "bat-007",
+            "brand": "SOLAREDGE",
+            "model": "SET2_BAT-05K48_RWS",
+            "specs": {
+                "capacity_kwh": 9.2,
+                "usable_capacity_kwh": 9.2,
+                "power_kw": 5,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 240,
+                    "width": 540,
+                    "height": 1120
+                },
+                "weight_kg": 109.4,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 2,
+                "warranty_years": 10,
+                "battery_type": "low_voltage"
+            },
+            "pricing": {
+                "unit_price": 3413.10,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.senetic.pt/product/SET2_BAT-05K48_RWS"
+            }
+        },
+        {
+            "id": "bat-007",
+            "brand": "SOLAREDGE",
+            "model": "SET2_BAT-05K48_RWB",
+            "specs": {
+                "capacity_kwh": 9.2,
+                "usable_capacity_kwh": 9.2,
+                "power_kw": 5,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 240,
+                    "width": 540,
+                    "height": 1120
+                },
+                "weight_kg": 109.4,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 2,
+                "warranty_years": 10,
+                "battery_type": "low_voltage"
+            },
+            "pricing": {
+                "unit_price": 3545.48,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.senetic.pt/product/SET2_BAT-05K48_RWB"
+            }
+        },
+        {
+            "id": "bat-008",
+            "brand": "SOLAREDGE",
+            "model": "SET3_BAT-05K48_RWS",
+            "specs": {
+                "capacity_kwh": 13.8,
+                "usable_capacity_kwh": 13.8,
+                "power_kw": 5,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 240,
+                    "width": 540,
+                    "height": 1620
+                },
+                "weight_kg": 164.1,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "low_voltage"
+            },
+            "pricing": {
+                "unit_price": 5048.90,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.senetic.pt/product/SET3_BAT-05K48_RWS"
+            }
+        },
+        {
+            "id": "bat-008",
+            "brand": "SOLAREDGE",
+            "model": "SET3_BAT-05K48_RWB",
+            "specs": {
+                "capacity_kwh": 13.8,
+                "usable_capacity_kwh": 13.8,
+                "power_kw": 5,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 240,
+                    "width": 540,
+                    "height": 1620
+                },
+                "weight_kg": 164.1,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "low_voltage"
+            },
+            "pricing": {
+                "unit_price": 5181.27,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.senetic.pt/product/SET3_BAT-05K48_RWB"
             }
         }
     ]

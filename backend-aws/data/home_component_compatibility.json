@@ -18,7 +18,7 @@
             "solar_panel_id": "*",
             "compatible": true,
             "status": "example_verified",
-            "notes": "Example explicit battery + inverter pair. Any listed panel is accepted for now."
+            "notes": "HUAWUEI Example explicit battery + inverter pair. Any listed panel is accepted for now."
         },
         {
             "battery_id": "bat-002",

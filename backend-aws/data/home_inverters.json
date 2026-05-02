@@ -5,21 +5,34 @@
     "inverters": [
         {
             "id": "inv-001",
-            "brand": "Fronius",
-            "model": "Symo GEN24 5.0 Plus",
+            "brand": "HUAWEI",
+            "model": "LUNA2000-C1",
             "specs": {
-                "power_kw": 5.0,
+                "power_kw": 21.0,
                 "is_hybrid": true,
-                "phases": 3,
+                "phases": 1.3,
+                "connection": "dc_coupled",
+                "dimensions_mm": {
+                    "width": 590,
+                    "height": 150,
+                    "depth": 255
+                },
+                "operating_temperature_c": {
+                    "min": -20,
+                    "max": 55
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 3,
+                "warranty_years": 15,
                 "battery_type": "high_voltage",
-                "connection": "dc_coupled"
+                "weight": 10.0
             },
             "pricing": {
-                "unit_price": 2100,
+                "unit_price": 1336.75,
                 "currency": "EUR"
             },
             "links": {
-                "url": "https://www.fronius.com/en/help-center/solar-energy/products/solar-inverters/gen24/symo-gen24-plus/fronius-symo-gen24-5-0-plus"
+                "url": "https://www.vncasainteligente.pt/energias-renovaveis-/solar-fotovoltaica-/baterias/modulo-de-bateria-litio-huawei-luna2000-7-s1-de-69kwh-modulo-de-bateria-huawei-luna2000-7-s1-de-69-kwh-requer-o-controlador-e-ba"
             }
         },
         {

@@ -1,7 +1,7 @@
 [
     {
-        "Brand": "EVE",
-        "CellModelNo": "LF32",
+        "Brand": "Huawei",
+        "CellModelNo": "BATERIA LÍTIO HUAWEI LUNA2000-7-S1 de 6.9KWH",
         "Composition": "LFP",
         "Cell_Stack": "C",
         "MaxContinuousDischargeRate": 1,
@@ -22,10 +22,10 @@
         "VolumeEnergyDensity": 0.342857143,
         "PowerEnergyDensity": 156.097561,
         "Cycles": 3500,
-        "Price": 19.75,
+        "Price": 4741.39,
         "OriginCountry": "China",
         "Connection": "Screw",
-        "link": "https://amzn.to/4b8u9bB"
+        "link": "https://www.vncasainteligente.pt/energias-renovaveis-/solar-fotovoltaica-/baterias/bateria-litio-huawei-luna2000-7-s1-de-69kwh-bateria-huawei-luna2000-7-s1-de-69-kwh-escalonavel-ate-3-modulos-por-modulo-de-contr"
     },
     {
         "Brand": "EVE",
