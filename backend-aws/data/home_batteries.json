@@ -242,7 +242,7 @@
             }
         },
         {
-            "id": "bat-007",
+            "id": "bat-008",
             "brand": "SOLAREDGE",
             "model": "SET2_BAT-05K48_RWB",
             "specs": {
@@ -276,7 +276,7 @@
             }
         },
         {
-            "id": "bat-008",
+            "id": "bat-009",
             "brand": "SOLAREDGE",
             "model": "SET3_BAT-05K48_RWS",
             "specs": {
@@ -310,7 +310,7 @@
             }
         },
         {
-            "id": "bat-008",
+            "id": "bat-010",
             "brand": "SOLAREDGE",
             "model": "SET3_BAT-05K48_RWB",
             "specs": {
@@ -341,6 +341,856 @@
             },
             "links": {
                 "url": "https://www.senetic.pt/product/SET3_BAT-05K48_RWB"
+            }
+        },
+        {
+            "id": "bat-011",
+            "brand": "Tesla",
+            "model": "Powerwall 2",
+            "specs": {
+                "capacity_kwh": 14.0,
+                "usable_capacity_kwh": 13.5,
+                "power_kw": 5.0,
+                "dod": 1.0,
+                "chemistry": "NMC",
+                "size_mm": {
+                    "thickness": 147,
+                    "width": 753,
+                    "height": 1150
+                },
+                "weight_kg": 114,
+                "operating_temperature_c": {
+                    "min": -20,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "integrated_ac"
+            },
+            "pricing": {
+                "unit_price": 7121.63,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://aurensol.com/pt/products/bateria-litio-tesla-powerwall-2-ac-13-5kwh?country=PT&srsltid=AfmBOoqg8QyRJft_w0iiVCyIxeHlpRaGnV42ZKrwyhyqVCfrywTIxvgld4w&utm_campaign=sag_organic&utm_content=sag_organic&utm_medium=product_sync&utm_source=google&variant=51503164850517"
+            }
+        },
+        {
+            "id": "bat-012",
+            "brand": "PYLONTECH",
+            "model": "US5000",
+            "specs": {
+                "capacity_kwh": 4.8,
+                "usable_capacity_kwh": 4.56,
+                "power_kw": 3.6,
+                "dod": 0.95,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 442,
+                    "width": 420,
+                    "height": 161
+                },
+                "weight_kg": 38,
+                "operating_temperature_c": {
+                    "min": -20,
+                    "max": 55
+                },
+                "environment": "indoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 16,
+                "warranty_years": 15,
+                "battery_type": "low_voltage"
+            },
+            "pricing": {
+                "unit_price": 874.00,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://tienda-solar.es/pt/baterias-de-litio/1087-bateria-de-litio-pylontech-us5000-48kwh-48v?utm_medium=cpc&utm_source=google&utm_campaign=20082823848&utm_term=&gad_source=1&gad_campaignid=20091742558&gclid=CjwKCAjw5NvPBhAoEiwA_2egfjRcggtq4POiVvEijVBf8EWjTQgz6xWMnpYATJELTFwleFsWy8kEzRoCdwAQAvD_BwE"
+            }
+        },
+        {
+            "id": "bat-013",
+            "brand": "LG ENERGY SOLUTION",
+            "model": "RESU 10H Prime",
+            "specs": {
+                "capacity_kwh": 9.6,
+                "usable_capacity_kwh": 9.6,
+                "power_kw": 5.0,
+                "dod": 1.0,
+                "chemistry": "NMC",
+                "size_mm": {
+                    "thickness": 295,
+                    "width": 504,
+                    "height": 817
+                },
+                "weight_kg": 111,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "high_voltage"
+            },
+            "pricing": {
+                "unit_price": 5009.40,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://suministrosdelsol.com/pt/baterias-lg-chem-resu/1009-lg-resu-10h-prime-nova-bateria-de-litio.html"
+            }
+        },
+        {
+            "id": "bat-014",
+            "brand": "ENPHASE",
+            "model": "IQ Battery 3T",
+            "specs": {
+                "capacity_kwh": 3.5,
+                "usable_capacity_kwh": 3.36,
+                "power_kw": 1.28,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 188,
+                    "width": 430,
+                    "height": 775
+                },
+                "weight_kg": 48.8,
+                "operating_temperature_c": {
+                    "min": -15,
+                    "max": 55
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 15,
+                "battery_type": "integrated_ac"
+            },
+            "pricing": {
+                "unit_price": 2238.50,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://wsolar.shop/pt/bateria-enphase-iq-3t-35kwh?srsltid=AfmBOoqJknkalEXqFVtjk5Os_LJ0W91KzVnMCKHON1e8r-_UOxVUbs1E"
+            }
+        },
+        {
+            "id": "bat-015",
+            "brand": "GROWATT",
+            "model": "ARK 2.5L-A1",
+            "specs": {
+                "capacity_kwh": 2.56,
+                "usable_capacity_kwh": 2.3,
+                "power_kw": 1.25,
+                "dod": 0.9,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 260,
+                    "width": 650,
+                    "height": 170
+                },
+                "weight_kg": 30,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 45
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 10,
+                "warranty_years": 10,
+                "battery_type": "low_voltage"
+            },
+            "pricing": {
+                "unit_price": 940.29,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://iluminashop.com/pt-pt/led-producto/material-eletrico/energia-solar-fotovoltaica/baterias/bateria-de-alta-tensao/modulo-de-bateria-de-litio-growatt-ark-2-5l-a1-lv/?srsltid=AfmBOooaxqZY15a8CuhvA7L169ODOcVZsPtfam2hZWyRuPp2aMN8RcVH"
+            }
+        },
+        {
+            "id": "bat-016",
+            "brand": "SUNGROW",
+            "model": "SBR096",
+            "specs": {
+                "capacity_kwh": 9.6,
+                "usable_capacity_kwh": 9.6,
+                "power_kw": 5.76,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 330,
+                    "width": 625,
+                    "height": 545
+                },
+                "weight_kg": 114,
+                "operating_temperature_c": {
+                    "min": -20,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 2,
+                "warranty_years": 10,
+                "battery_type": "high_voltage"
+            },
+            "pricing": {
+                "unit_price": 3430.17,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://www.mg-solar-shop.com/sungrow-sbr096-v13.2-battery-storage-9.6-kwh"
+            }
+        },
+        {
+            "id": "bat-017",
+            "brand": "DYNESS",
+            "model": "B4850",
+            "specs": {
+                "capacity_kwh": 2.4,
+                "usable_capacity_kwh": 2.16,
+                "power_kw": 1.2,
+                "dod": 0.9,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 360,
+                    "width": 480,
+                    "height": 90
+                },
+                "weight_kg": 22,
+                "operating_temperature_c": {
+                    "min": -20,
+                    "max": 50
+                },
+                "environment": "indoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 5,
+                "warranty_years": 10,
+                "battery_type": "low_voltage"
+            },
+            "pricing": {
+                "unit_price": 464.16,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://tienda-solar.es/pt/baterias-de-litio/1081-bateria-de-litio-dyness-24kwh-48v-b4850?utm_medium=cpc&utm_source=google&utm_campaign=20082823848&utm_term=&gad_source=1&gad_campaignid=20091742558&gclid=CjwKCAjw5NvPBhAoEiwA_2egfuUtSmwJF59NLZGUrIqA8bMFd3l1rxlJiIfZbwcUDNnFaMC_9XBRqxoCqOsQAvD_BwE"
+            }
+        },
+        {
+            "id": "bat-018",
+            "brand": "SOLAREDGE",
+            "model": "Energy Bank 10kWh",
+            "specs": {
+                "capacity_kwh": 10.3,
+                "usable_capacity_kwh": 9.7,
+                "power_kw": 5.0,
+                "dod": 1.0,
+                "chemistry": "NMC",
+                "size_mm": {
+                    "thickness": 250,
+                    "width": 790,
+                    "height": 1179
+                },
+                "weight_kg": 121,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 3,
+                "warranty_years": 10,
+                "battery_type": "high_voltage"
+            },
+            "pricing": {
+                "unit_price": 5399.00,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://suministrosdelsol.com/pt/baterias-de-litio/1511-bateria-solaredge-energy-bank-de-10-kwh.html"
+            }
+        },
+        {
+            "id": "bat-019",
+            "brand": "GOODWE",
+            "model": "Lynx Home F 6.6kWh",
+            "specs": {
+                "capacity_kwh": 6.6,
+                "usable_capacity_kwh": 6.55,
+                "power_kw": 5.12,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 380,
+                    "width": 600,
+                    "height": 625
+                },
+                "weight_kg": 115,
+                "operating_temperature_c": {
+                    "min": -20,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "high_voltage"
+            },
+            "pricing": {
+                "unit_price": 4509.00,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://suministrosdelsol.com/pt/baterias-goodwe/1319-bateria-de-litio-goodwe-lynx-home-f-serie-lxf-h-de-655-kwh-a-1638-kwh.html"
+            }
+        },
+        {
+            "id": "bat-020",
+            "brand": "GOODWE",
+            "model": "Lynx Home F 9.8kWh",
+            "specs": {
+                "capacity_kwh": 9.8,
+                "usable_capacity_kwh": 9.7,
+                "power_kw": 7.68,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 380,
+                    "width": 600,
+                    "height": 780
+                },
+                "weight_kg": 158,
+                "operating_temperature_c": {
+                    "min": -20,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "high_voltage"
+            },
+            "pricing": {
+                "unit_price": 6244.14,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://suministrosdelsol.com/pt/baterias-goodwe/1319-26016-bateria-de-litio-goodwe-lynx-home-f-serie-lxf-h-de-655-kwh-a-1638-kwh.html#/5984-lynx_home_f-lx_f98_h_983kwh"
+            }
+        },
+        {
+            "id": "bat-021",
+            "brand": "GOODWE",
+            "model": "Lynx Home F 13.1kWh",
+            "specs": {
+                "capacity_kwh": 13.1,
+                "usable_capacity_kwh": 13.0,
+                "power_kw": 10.24,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 380,
+                    "width": 600,
+                    "height": 935
+                },
+                "weight_kg": 201,
+                "operating_temperature_c": {
+                    "min": -20,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "high_voltage"
+            },
+            "pricing": {
+                "unit_price": 7979.28,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://suministrosdelsol.com/pt/baterias-goodwe/1319-26017-bateria-de-litio-goodwe-lynx-home-f-serie-lxf-h-de-655-kwh-a-1638-kwh.html#/5985-lynx_home_f-lx_f131_h_1310kwh"
+            }
+        },
+        {
+            "id": "bat-022",
+            "brand": "GOODWE",
+            "model": "Lynx Home F 16.4kWh",
+            "specs": {
+                "capacity_kwh": 16.4,
+                "usable_capacity_kwh": 16.3,
+                "power_kw": 12.8,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 380,
+                    "width": 600,
+                    "height": 1090
+                },
+                "weight_kg": 244,
+                "operating_temperature_c": {
+                    "min": -20,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "high_voltage"
+            },
+            "pricing": {
+                "unit_price": 9714.42,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://suministrosdelsol.com/pt/baterias-goodwe/1319-26018-bateria-de-litio-goodwe-lynx-home-f-serie-lxf-h-de-655-kwh-a-1638-kwh.html#/5986-lynx_home_f-lx_f164_h_1638kwh"
+            }
+        },
+        {
+            "id": "bat-023",
+            "brand": "BYD",
+            "model": "Premium HVS 5.1",
+            "specs": {
+                "capacity_kwh": 5.12,
+                "usable_capacity_kwh": 5.12,
+                "power_kw": 5.12,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 298,
+                    "width": 585,
+                    "height": 712
+                },
+                "weight_kg": 91,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "high_voltage"
+            },
+            "pricing": {
+                "unit_price": 3098.76,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://suministrosdelsol.com/pt/baterias-de-litio-byd/883-byd-battery-box-premium-hvs-51kwh-128kwh-nova-bateria-de-alta-tensao.html"
+            }
+        },
+        {
+            "id": "bat-024",
+            "brand": "BYD",
+            "model": "Premium HVS 7.7",
+            "specs": {
+                "capacity_kwh": 7.7,
+                "usable_capacity_kwh": 7.7,
+                "power_kw": 7.7,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 298,
+                    "width": 585,
+                    "height": 945
+                },
+                "weight_kg": 129,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "high_voltage"
+            },
+            "pricing": {
+                "unit_price": 4343.85,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://suministrosdelsol.com/pt/baterias-de-litio-byd/883-1823-byd-battery-box-premium-hvs-51kwh-128kwh-nova-bateria-de-alta-tensao.html#/162-modelos_byd_b_box_hvs-byd_b_box_hvs_77"
+            }
+        },
+        {
+            "id": "bat-025",
+            "brand": "BYD",
+            "model": "Premium HVS 10.2",
+            "specs": {
+                "capacity_kwh": 10.2,
+                "usable_capacity_kwh": 10.2,
+                "power_kw": 10.2,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 298,
+                    "width": 585,
+                    "height": 1178
+                },
+                "weight_kg": 167,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "high_voltage"
+            },
+            "pricing": {
+                "unit_price": 5588.94,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://suministrosdelsol.com/pt/baterias-de-litio-byd/883-1824-byd-battery-box-premium-hvs-51kwh-128kwh-nova-bateria-de-alta-tensao.html#/163-modelos_byd_b_box_hvs-byd_b_box_hvs_102"
+            }
+        },
+        {
+            "id": "bat-026",
+            "brand": "BYD",
+            "model": "Premium HVS 12.8",
+            "specs": {
+                "capacity_kwh": 12.8,
+                "usable_capacity_kwh": 12.8,
+                "power_kw": 12.8,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 298,
+                    "width": 585,
+                    "height": 1411
+                },
+                "weight_kg": 205,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "high_voltage"
+            },
+            "pricing": {
+                "unit_price": 6834.03,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://suministrosdelsol.com/pt/baterias-de-litio-byd/883-1825-byd-battery-box-premium-hvs-51kwh-128kwh-nova-bateria-de-alta-tensao.html#/164-modelos_byd_b_box_hvs-byd_b_box_hvs_128"
+            }
+        },
+        {
+            "id": "bat-027",
+            "brand": "ENPHASE",
+            "model": "IQ Battery 10T",
+            "specs": {
+                "capacity_kwh": 10.5,
+                "usable_capacity_kwh": 10.08,
+                "power_kw": 3.84,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 188,
+                    "width": 1283,
+                    "height": 775
+                },
+                "weight_kg": 143.6,
+                "operating_temperature_c": {
+                    "min": -15,
+                    "max": 55
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "integrated_ac"
+            },
+            "pricing": {
+                "unit_price": 610.46,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://tienda-solar.es/pt/baterias/1731-enphase-coberta-bateria-10t?srsltid=AfmBOorFppgNlcKCetuzu1BUAjQ5FIUuvjyKT813oixwJuL0UDpDPNBg"
+            }
+        },
+        {
+            "id": "bat-028",
+            "brand": "PYLONTECH",
+            "model": "US3000C",
+            "specs": {
+                "capacity_kwh": 3.55,
+                "usable_capacity_kwh": 3.2,
+                "power_kw": 1.77,
+                "dod": 0.95,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 442,
+                    "width": 420,
+                    "height": 132
+                },
+                "weight_kg": 32,
+                "operating_temperature_c": {
+                    "min": 0,
+                    "max": 50
+                },
+                "environment": "indoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 8,
+                "warranty_years": 10,
+                "battery_type": "low_voltage"
+            },
+            "pricing": {
+                "unit_price": 848.33,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://tienda-solar.es/pt/baterias-de-litio/798-bateria-de-litio-pylontech-us3000c-de-35kwh-48v?utm_medium=cpc&utm_source=google&utm_campaign=20082823848&utm_term=&gad_source=1&gad_campaignid=20091742558&gclid=CjwKCAjw5NvPBhAoEiwA_2egfrVWQr2TumkUMVcTodIMnJM9_qJwFCd7Ku149ZE41mqKckdUHxMXbBoCbxUQAvD_BwE"
+            }
+        },
+        {
+            "id": "bat-029",
+            "brand": "LG ENERGY SOLUTION",
+            "model": "RESU 16H Prime",
+            "specs": {
+                "capacity_kwh": 16.0,
+                "usable_capacity_kwh": 16.0,
+                "power_kw": 7.0,
+                "dod": 1.0,
+                "chemistry": "NMC",
+                "size_mm": {
+                    "thickness": 295,
+                    "width": 504,
+                    "height": 1086
+                },
+                "weight_kg": 159,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "high_voltage"
+            },
+            "pricing": {
+                "unit_price": 7199.00,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://suministrosdelsol.com/pt/baterias-lg-chem-resu/1010-lg-resu-16h-prime-nova-bateria-de-litio.html"
+            }
+        },
+        {
+            "id": "bat-030",
+            "brand": "BYD",
+            "model": "Premium HVM 8.3",
+            "specs": {
+                "capacity_kwh": 8.3,
+                "usable_capacity_kwh": 8.3,
+                "power_kw": 7.65,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 298,
+                    "width": 585,
+                    "height": 945
+                },
+                "weight_kg": 129,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "high_voltage"
+            },
+            "pricing": {
+                "unit_price": 4210.77,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://suministrosdelsol.com/pt/baterias-de-litio-byd/884-byd-battery-box-premium-hvm-83kwh-221kwh-nova-bateria-de-alta-tensao.html"
+            }
+        },
+        {
+            "id": "bat-031",
+            "brand": "BYD",
+            "model": "Premium HVM 11",
+            "specs": {
+                "capacity_kwh": 11.0,
+                "usable_capacity_kwh": 11.0,
+                "power_kw": 10.2,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 298,
+                    "width": 585,
+                    "height": 1178
+                },
+                "weight_kg": 167,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "high_voltage"
+            },
+            "pricing": {
+                "unit_price": 5344.7,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://suministrosdelsol.com/pt/baterias-de-litio-byd/884-1831-byd-battery-box-premium-hvm-83kwh-221kwh-nova-bateria-de-alta-tensao.html#/168-modelos_byd_b_box_hvm-byd_b_box_hvm_110kwh"
+            }
+        },
+        {
+            "id": "bat-032",
+            "brand": "BYD",
+            "model": "Premium HVM 13.8",
+            "specs": {
+                "capacity_kwh": 13.8,
+                "usable_capacity_kwh": 13.8,
+                "power_kw": 12.8,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 298,
+                    "width": 585,
+                    "height": 1411
+                },
+                "weight_kg": 205,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "high_voltage"
+            },
+            "pricing": {
+                "unit_price": 6478.62,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://suministrosdelsol.com/pt/baterias-de-litio-byd/884-1832-byd-battery-box-premium-hvm-83kwh-221kwh-nova-bateria-de-alta-tensao.html#/169-modelos_byd_b_box_hvm-byd_b_box_hvm_138kwh"
+            }
+        },
+        {
+            "id": "bat-033",
+            "brand": "BYD",
+            "model": "Premium HVM 16.6",
+            "specs": {
+                "capacity_kwh": 16.6,
+                "usable_capacity_kwh": 16.6,
+                "power_kw": 15.35,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 298,
+                    "width": 585,
+                    "height": 1644
+                },
+                "weight_kg": 243,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "high_voltage"
+            },
+            "pricing": {
+                "unit_price": 7612.57,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://suministrosdelsol.com/pt/baterias-de-litio-byd/884-1833-byd-battery-box-premium-hvm-83kwh-221kwh-nova-bateria-de-alta-tensao.html#/170-modelos_byd_b_box_hvm-byd_b_box_hvm_166kwh"
+            }
+        },
+        {
+            "id": "bat-034",
+            "brand": "BYD",
+            "model": "Premium HVM 19.3",
+            "specs": {
+                "capacity_kwh": 19.3,
+                "usable_capacity_kwh": 19.3,
+                "power_kw": 17.9,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 298,
+                    "width": 585,
+                    "height": 1877
+                },
+                "weight_kg": 281,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "high_voltage"
+            },
+            "pricing": {
+                "unit_price": 8746.51,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://suministrosdelsol.com/pt/baterias-de-litio-byd/884-1834-byd-battery-box-premium-hvm-83kwh-221kwh-nova-bateria-de-alta-tensao.html#/171-modelos_byd_b_box_hvm-byd_b_box_hvm_193kwh"
+            }
+        },
+        {
+            "id": "bat-035",
+            "brand": "BYD",
+            "model": "Premium HVM 22.1",
+            "specs": {
+                "capacity_kwh": 22.1,
+                "usable_capacity_kwh": 22.1,
+                "power_kw": 20.45,
+                "dod": 1.0,
+                "chemistry": "LFP",
+                "size_mm": {
+                    "thickness": 298,
+                    "width": 585,
+                    "height": 2110
+                },
+                "weight_kg": 319,
+                "operating_temperature_c": {
+                    "min": -10,
+                    "max": 50
+                },
+                "environment": "indoor & outdoor",
+                "max_series_connection": 1,
+                "max_parallel_connection": 1,
+                "warranty_years": 10,
+                "battery_type": "high_voltage"
+            },
+            "pricing": {
+                "unit_price": 10224.75,
+                "currency": "EUR"
+            },
+            "links": {
+                "url": "https://suministrosdelsol.com/pt/baterias-de-litio-byd/884-1835-byd-battery-box-premium-hvm-83kwh-221kwh-nova-bateria-de-alta-tensao.html#/172-modelos_byd_b_box_hvm-byd_b_box_hvm_221kwh"
             }
         }
     ]
