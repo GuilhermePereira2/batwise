@@ -8,9 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { getApiUrl } from '@/lib/config';
 import {
-    Battery, Home, FileText, Zap, Sun,
+    Battery, Home, FileText, Zap, Sun, Car,
     ChevronRight, ChevronLeft, Loader2,
-    CheckCircle2, TrendingUp, Wallet
+    CheckCircle2, TrendingUp, Wallet, Plus, Trash2
 } from 'lucide-react';
 
 type InputMode = 'house' | 'bill';
@@ -41,7 +41,15 @@ const DEFAULT_STATE = {
         has_solar: false,
         peak_kw: 4,
         country: 'Portugal',
-        city: 'Lisboa'
+        city: 'Lisboa',
+        battery_ready_inverter: false,
+        has_battery: false,
+        battery_capacity_kwh: 0
+    },
+    electric_vehicles: {
+        has_electric_vehicle: false,
+        count: 0,
+        vehicles: []
     }
 };
 
@@ -112,7 +120,8 @@ export default function Simulator() {
                         ...(parsed.tariff?.prices || {})
                     }
                 },
-                solar: { ...DEFAULT_STATE.solar, ...(parsed.solar || {}) }
+                solar: { ...DEFAULT_STATE.solar, ...(parsed.solar || {}) },
+                electric_vehicles: normalizeElectricVehicles(parsed.electric_vehicles || DEFAULT_STATE.electric_vehicles)
             };
         } catch {
             return DEFAULT_STATE;
@@ -156,6 +165,83 @@ export default function Simulator() {
         return { simple: value, production: 0 };
     };
 
+    function normalizeElectricVehicles(evData: any) {
+        const sourceVehicles = evData?.vehicles || [];
+        const count = Math.max(0, Number(evData?.count ?? sourceVehicles.length ?? 0));
+        const vehicles = Array.from({ length: count }, (_, index) => {
+            const vehicle = sourceVehicles[index] || {};
+            return {
+                brand: vehicle.brand || '',
+                model: vehicle.model || '',
+                daily_km: Number(vehicle.daily_km ?? 30),
+                consumption_kwh_per_km: Number(vehicle.consumption_kwh_per_km ?? 0.18),
+                charging_schedule: vehicle.charging_schedule || 'night',
+            };
+        });
+
+        return {
+            has_electric_vehicle: Boolean(evData?.has_electric_vehicle) && count > 0,
+            count,
+            vehicles,
+        };
+    }
+
+    const createDefaultElectricVehicle = () => ({
+        brand: '',
+        model: '',
+        daily_km: 30,
+        consumption_kwh_per_km: 0.18,
+        charging_schedule: 'night',
+    });
+
+    const updateElectricVehicleCount = (count: number) => {
+        const normalizedCount = Math.max(0, Math.min(6, Number(count) || 0));
+        setFormData({
+            ...formData,
+            electric_vehicles: normalizeElectricVehicles({
+                ...formData.electric_vehicles,
+                has_electric_vehicle: normalizedCount > 0,
+                count: normalizedCount,
+            }),
+        });
+    };
+
+    const updateElectricVehicle = (index: number, field: string, value: string | number) => {
+        const vehicles = [...formData.electric_vehicles.vehicles];
+        vehicles[index] = { ...vehicles[index], [field]: value };
+        setFormData({
+            ...formData,
+            electric_vehicles: normalizeElectricVehicles({
+                ...formData.electric_vehicles,
+                vehicles,
+            }),
+        });
+    };
+
+    const addElectricVehicle = () => {
+        const vehicles = [...formData.electric_vehicles.vehicles, createDefaultElectricVehicle()].slice(0, 6);
+        setFormData({
+            ...formData,
+            electric_vehicles: normalizeElectricVehicles({
+                has_electric_vehicle: true,
+                count: vehicles.length,
+                vehicles,
+            }),
+        });
+    };
+
+    const removeElectricVehicle = (index: number) => {
+        const vehicles = formData.electric_vehicles.vehicles.filter((_: any, vehicleIndex: number) => vehicleIndex !== index);
+        setFormData({
+            ...formData,
+            electric_vehicles: normalizeElectricVehicles({
+                has_electric_vehicle: vehicles.length > 0,
+                count: vehicles.length,
+                vehicles,
+            }),
+        });
+    };
+
     const runSimulation = async () => {
         setLoading(true);
         try {
@@ -164,10 +250,17 @@ export default function Simulator() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     mode,
-                    input: mode === 'house' ? formData.house : formData.bill,
+                    input: {
+                        ...(mode === 'house' ? formData.house : formData.bill),
+                        site: {
+                            area_m2: formData.house.area_m2,
+                            floors: formData.house.floors,
+                        },
+                        electric_vehicles: formData.electric_vehicles,
+                    },
                     tariff: formData.tariff,
                     solar: formData.solar,
-                    assumptions: { battery_dod: 0.9, system_losses: 0.1 }
+                    assumptions: { battery_dod: 0.9, system_losses: 0.1, component_margin: 0.1, installation_margin: 0.1 }
                 }),
             });
 
@@ -189,8 +282,21 @@ export default function Simulator() {
         if (recommendation.battery) {
             products.push(`Bateria: ${recommendation.battery.quantity} x ${recommendation.battery.model}`);
         }
+        if (recommendation.existing_battery?.has_battery) {
+            products.push(`Bateria existente considerada: ${recommendation.existing_battery.capacity_kwh} kWh`);
+        }
+        if (recommendation.inverter) {
+            products.push(`Inversor: ${recommendation.inverter.brand} ${recommendation.inverter.model}`);
+        }
         if (recommendation.solar_panels) {
-            products.push(`Painéis solares: ${recommendation.solar_panels.quantity} x ${recommendation.solar_panels.panel.brand} ${recommendation.solar_panels.panel.model}`);
+            if (recommendation.solar_panels.existing) {
+                products.push(`Painéis solares existentes: ${recommendation.solar_panels.array_power_kwp} kWp`);
+            } else {
+                products.push(`Painéis solares: ${recommendation.solar_panels.quantity} x ${recommendation.solar_panels.panel.brand} ${recommendation.solar_panels.panel.model}`);
+            }
+        }
+        if (recommendation.replacement_notes?.length) {
+            products.push(...recommendation.replacement_notes.map((note: string) => `Nota: ${note}`));
         }
         const body = `Olá, gostaria de solicitar um orçamento para a instalação dos seguintes produtos sugeridos pela simulação:\n\n${products.join('\n')}\n\nLocal da casa: ${formData.solar.city}, ${formData.house.area_m2} m²\n\nObrigado.`;
         const subject = 'Solicitação de Orçamento para instalação';
@@ -199,6 +305,55 @@ export default function Simulator() {
         localStorage.setItem('subject', subject);
         window.location.href = '/contact';
     };
+
+    const budgetSections = [
+        {
+            tier: 'budget',
+            title: 'Budget',
+            description: 'Opções com menor investimento inicial.',
+            badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        },
+        {
+            tier: 'balanced',
+            title: 'Balanced',
+            description: 'Equilíbrio entre custo, capacidade e retorno.',
+            badgeClass: 'bg-orange-50 text-orange-700 border-orange-200',
+        },
+        {
+            tier: 'premium',
+            title: 'Premium',
+            description: 'Sistemas com mais capacidade e margem de crescimento.',
+            badgeClass: 'bg-black text-white border-black',
+        },
+    ];
+
+    const recommendationGroups = budgetSections.map((section) => ({
+        ...section,
+        items: (results?.recommendations || []).filter((rec: any) => rec.budget_tier === section.tier),
+    }));
+
+    const formatPrice = (value: any) => `${Math.round(Number(value || 0)).toLocaleString()}€`;
+
+    const getPriceBreakdown = (recommendation: any) => {
+        const componentPrices = recommendation?.component_prices_eur || {};
+        const battery = componentPrices.battery ?? recommendation?.battery?.pricing?.unit_price ?? 0;
+        const inverter = componentPrices.inverter ?? recommendation?.inverter?.pricing?.unit_price ?? 0;
+        const solarPanels = componentPrices.solar_panels ?? recommendation?.solar_panels?.total_price_eur ?? 0;
+        const hardwareTotal = componentPrices.hardware_total ?? recommendation?.hardware_total_eur ?? (battery + inverter + solarPanels);
+        const installation = componentPrices.installation_margin ?? recommendation?.installation_margin_eur ?? hardwareTotal * 0.1;
+
+        return {
+            hardwareTotal,
+            installation,
+        };
+    };
+
+    const getSystemName = (recommendation: any) => {
+        if (recommendation?.system_name) return recommendation.system_name;
+        return `${recommendation?.battery?.brand || ''} ${recommendation?.battery?.model || ''}`.trim();
+    };
+
+    const selectedPrices = selectedRecommendation ? getPriceBreakdown(selectedRecommendation) : null;
 
     return (
         <div className="flex flex-col min-h-screen bg-white text-black">
@@ -436,7 +591,7 @@ export default function Simulator() {
                                         <div className="grid grid-cols-2 gap-2 sm:w-auto">
                                             <Button
                                                 className={`h-12 ${formData.solar.has_solar ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
-                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_solar: false } })}
+                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_solar: false, battery_ready_inverter: false, has_battery: false, battery_capacity_kwh: 0 } })}
                                             >
                                                 Não
                                             </Button>
@@ -479,6 +634,191 @@ export default function Simulator() {
                                                     value={formData.solar.city}
                                                     onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, city: e.target.value } })}
                                                 />
+                                            </div>
+                                            <div className="space-y-2 md:col-span-2">
+                                                <Label>O inversor dos painéis atuais suporta bateria?</Label>
+                                                <div className="grid grid-cols-2 gap-2 max-w-sm">
+                                                    <Button
+                                                        className={`h-12 ${formData.solar.battery_ready_inverter ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
+                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, battery_ready_inverter: false, has_battery: false, battery_capacity_kwh: 0 } })}
+                                                    >
+                                                        Não
+                                                    </Button>
+                                                    <Button
+                                                        className={`h-12 ${formData.solar.battery_ready_inverter ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, battery_ready_inverter: true } })}
+                                                    >
+                                                        Sim
+                                                    </Button>
+                                                </div>
+                                                {!formData.solar.battery_ready_inverter && (
+                                                    <p className="mt-2 text-sm font-medium text-red-700">
+                                                        Atenção: ao escolher "Não", o inversor atual não será reaproveitado. Vai ficar fora do sistema de bateria e o orçamento passa a incluir um inversor novo compatível.
+                                                    </p>
+                                                )}
+                                                {formData.solar.battery_ready_inverter && (
+                                                    <div className="mt-3 space-y-3">
+                                                        <p className="text-sm text-gray-500">
+                                                            Vamos assumir que o inversor atual fica instalado e não será cobrado um inversor novo.
+                                                        </p>
+                                                        <div className="space-y-2">
+                                                            <Label>Já tem bateria ligada a esse inversor?</Label>
+                                                            <div className="grid grid-cols-2 gap-2 max-w-sm">
+                                                                <Button
+                                                                    className={`h-12 ${formData.solar.has_battery ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
+                                                                    onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_battery: false, battery_capacity_kwh: 0 } })}
+                                                                >
+                                                                    Não
+                                                                </Button>
+                                                                <Button
+                                                                    className={`h-12 ${formData.solar.has_battery ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                                    onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_battery: true, battery_capacity_kwh: formData.solar.battery_capacity_kwh || 5 } })}
+                                                                >
+                                                                    Sim
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                        {formData.solar.has_battery && (
+                                                            <div className="space-y-2 max-w-sm">
+                                                                <Label>Capacidade da bateria atual (kWh)</Label>
+                                                                <Input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="0.1"
+                                                                    className="border-gray-300 focus-visible:ring-orange-600"
+                                                                    value={formData.solar.battery_capacity_kwh}
+                                                                    onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, battery_capacity_kwh: Number(e.target.value) } })}
+                                                                />
+                                                                <p className="text-xs text-gray-500">
+                                                                    Esta capacidade será considerada como já instalada no dimensionamento.
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="pt-4 border-t border-gray-200 space-y-4">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                        <div className="flex items-start gap-3">
+                                            <Car className="w-5 h-5 mt-1 text-orange-600" />
+                                            <div>
+                                                <Label className="mb-1">Tem carro elétrico?</Label>
+                                                <p className="text-sm text-gray-500">Adicionamos o consumo de carregamento à simulação energética.</p>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 sm:w-auto">
+                                            <Button
+                                                className={`h-12 ${formData.electric_vehicles.has_electric_vehicle ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
+                                                onClick={() => updateElectricVehicleCount(0)}
+                                            >
+                                                Não
+                                            </Button>
+                                            <Button
+                                                className={`h-12 ${formData.electric_vehicles.has_electric_vehicle ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                onClick={() => updateElectricVehicleCount(Math.max(1, formData.electric_vehicles.count || 1))}
+                                            >
+                                                Sim
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {formData.electric_vehicles.has_electric_vehicle && (
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div>
+                                                    <p className="text-sm font-semibold">Carros elétricos</p>
+                                                    <p className="text-sm text-gray-500">{formData.electric_vehicles.vehicles.length} adicionados</p>
+                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    className="h-10 bg-black text-white hover:bg-gray-800"
+                                                    onClick={addElectricVehicle}
+                                                    disabled={formData.electric_vehicles.vehicles.length >= 6}
+                                                >
+                                                    <Plus className="w-4 h-4 mr-2" />
+                                                    Adicionar carro
+                                                </Button>
+                                            </div>
+
+                                            <div className="space-y-4">
+                                                {formData.electric_vehicles.vehicles.map((vehicle: any, index: number) => (
+                                                    <div key={index} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                                                        <div className="mb-3 flex items-center justify-between gap-3">
+                                                            <div className="font-semibold">Carro {index + 1}</div>
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                className="h-9 border-gray-300 text-black hover:bg-gray-100"
+                                                                onClick={() => removeElectricVehicle(index)}
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
+                                                        <div className="grid gap-4 md:grid-cols-4">
+                                                            <div className="space-y-2">
+                                                                <Label>Km por dia</Label>
+                                                                <Input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    className="border-gray-300 focus-visible:ring-orange-600"
+                                                                    value={vehicle.daily_km}
+                                                                    onChange={(e) => updateElectricVehicle(index, 'daily_km', Number(e.target.value))}
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label>Consumo (kWh/km)</Label>
+                                                                <Input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    min="0"
+                                                                    className="border-gray-300 focus-visible:ring-orange-600"
+                                                                    value={vehicle.consumption_kwh_per_km}
+                                                                    onChange={(e) => updateElectricVehicle(index, 'consumption_kwh_per_km', Number(e.target.value))}
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label>Marca</Label>
+                                                                <Input
+                                                                    type="text"
+                                                                    className="border-gray-300 focus-visible:ring-orange-600"
+                                                                    value={vehicle.brand}
+                                                                    onChange={(e) => updateElectricVehicle(index, 'brand', e.target.value)}
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label>Modelo</Label>
+                                                                <Input
+                                                                    type="text"
+                                                                    className="border-gray-300 focus-visible:ring-orange-600"
+                                                                    value={vehicle.model}
+                                                                    onChange={(e) => updateElectricVehicle(index, 'model', e.target.value)}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <div className="mt-4 space-y-2">
+                                                            <Label>Quando carrega normalmente?</Label>
+                                                            <div className="grid gap-2 md:grid-cols-3">
+                                                                {[
+                                                                    { key: 'night', label: 'Só à noite' },
+                                                                    { key: 'day', label: 'Durante o dia' },
+                                                                    { key: 'mixed', label: 'Dia e noite' },
+                                                                ].map((option) => (
+                                                                    <Button
+                                                                        key={option.key}
+                                                                        className={`h-11 ${vehicle.charging_schedule === option.key ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                                        onClick={() => updateElectricVehicle(index, 'charging_schedule', option.key)}
+                                                                    >
+                                                                        {option.label}
+                                                                    </Button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
                                     )}
@@ -617,7 +957,7 @@ export default function Simulator() {
                     {/* Step 3: Results */}
                     {step === 3 && results && (
                         <div className="space-y-8 animate-in zoom-in-95 duration-500">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <Card className="border-gray-200 bg-white">
                                     <CardContent className="p-5">
                                         <p className="text-sm text-gray-500">Capacidade ideal</p>
@@ -647,92 +987,159 @@ export default function Simulator() {
                                         </div>
                                     </CardContent>
                                 </Card>
-                            </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                {results.recommendations.map((rec: any, idx: number) => (
-                                    <Card
-                                        key={idx}
-                                        onClick={() => setSelectedRecommendation(rec)}
-                                        className={`cursor-pointer relative overflow-hidden transition-all hover:scale-105 bg-white ${idx === 0 ? 'border-orange-600 border-2 shadow-xl' : 'border-gray-200'}`}
-                                    >
-                                        {idx === 0 && (
-                                            <div className="absolute top-0 right-0 bg-orange-600 text-white px-3 py-1 text-xs font-bold rounded-bl-lg">
-                                                MELHOR ESCOLHA
+                                {(results.summary?.annual_ev_consumption_estimated ?? 0) > 0 && (
+                                    <Card className="border-gray-200 bg-white">
+                                        <CardContent className="p-5">
+                                            <p className="text-sm text-gray-500">Carros elétricos</p>
+                                            <div className="mt-2 flex items-baseline gap-2">
+                                                <span className="text-3xl font-extrabold text-black">{Math.round(results.summary?.annual_ev_consumption_estimated ?? 0)}</span>
+                                                <span className="text-sm text-gray-500">kWh/ano</span>
                                             </div>
-                                        )}
-                                        <CardHeader className="pb-2">
-                                            <Badge className="w-fit mb-2 bg-black text-white hover:bg-black">Sistema completo</Badge>
-                                            <CardTitle className="text-xl">{rec.battery.brand} {rec.battery.model}</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="space-y-4">
-                                            <div className="flex items-baseline gap-1 border-b border-gray-100 pb-4">
-                                                <span className="text-3xl font-extrabold">{rec.capex_total_eur.toLocaleString()}€</span>
-                                                <span className="text-gray-400 text-sm">est.</span>
-                                            </div>
-
-                                            <div className="space-y-3">
-                                                <div className="rounded-lg border border-gray-200 p-3">
-                                                    <div className="flex items-start gap-3">
-                                                        <Battery className="w-5 h-5 mt-0.5 text-orange-600" />
-                                                        <div>
-                                                            <p className="text-xs uppercase text-gray-400 font-semibold">Bateria</p>
-                                                            <p className="text-base font-bold leading-tight">{rec.battery.brand} {rec.battery.model}</p>
-                                                            <p className="text-xs text-gray-500">{rec.simulated_capacity_kwh} kWh úteis simulados</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {rec.inverter && (
-                                                    <div className="rounded-lg border border-gray-200 p-3">
-                                                        <div className="flex items-start gap-3">
-                                                            <Zap className="w-5 h-5 mt-0.5 text-orange-600" />
-                                                            <div>
-                                                                <p className="text-xs uppercase text-gray-400 font-semibold">Inversor</p>
-                                                                <p className="text-base font-bold leading-tight">{rec.inverter.brand} {rec.inverter.model}</p>
-                                                                <p className="text-xs text-gray-500">{rec.inverter.specs?.power_kw} kW</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                {rec.solar_panels && (
-                                                    <div className="rounded-lg border border-gray-200 p-3">
-                                                        <div className="flex items-start gap-3">
-                                                            <Sun className="w-5 h-5 mt-0.5 text-orange-600" />
-                                                            <div>
-                                                                <p className="text-xs uppercase text-gray-400 font-semibold">Painéis solares</p>
-                                                                <p className="text-base font-bold leading-tight">
-                                                                    {rec.solar_panels.quantity} x {rec.solar_panels.panel.brand} {rec.solar_panels.panel.model}
-                                                                </p>
-                                                                <p className="text-xs text-gray-500">{rec.solar_panels.array_power_kwp} kWp</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <div className="space-y-3 pt-2">
-                                                <div className="flex items-center text-sm text-black">
-                                                    <TrendingUp className="w-4 h-4 mr-2 text-orange-600" />
-                                                    <span>Poupança: <strong>{rec.savings_annual_eur}€/ano</strong></span>
-                                                </div>
-                                                <div className="flex items-center text-sm text-black">
-                                                    <Wallet className="w-4 h-4 mr-2 text-orange-600" />
-                                                    <span>Payback: <strong>{rec.payback_years ? `${rec.payback_years} anos` : 'não aplicável'}</strong></span>
-                                                </div>
-                                                <p className="text-xs text-gray-500">
-                                                    Inclui hardware ({Math.round(rec.hardware_total_eur || 0).toLocaleString()}€) + margem de instalação ({Math.round(rec.installation_margin_eur || 0).toLocaleString()}€).
-                                                </p>
-                                            </div>
-
-                                            <Button
-                                                onClick={(e) => e.stopPropagation()}
-                                                className={`w-full mt-4 ${idx === 0 ? 'bg-black text-white hover:bg-gray-800' : 'bg-white border-2 border-black text-black hover:bg-gray-50'}`}
-                                            >
-                                                Solicitar Orçamento
-                                            </Button>
                                         </CardContent>
                                     </Card>
+                                )}
+                            </div>
+
+                            <div className="space-y-10">
+                                {recommendationGroups.map((group) => (
+                                    group.items.length > 0 && (
+                                        <section key={group.tier} className="space-y-4">
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                                                <div>
+                                                    <div className="flex items-center gap-3">
+                                                        <h2 className="text-2xl font-extrabold tracking-tight">{group.title}</h2>
+                                                        <Badge variant="outline" className={group.badgeClass}>
+                                                            {group.items.length} opções
+                                                        </Badge>
+                                                    </div>
+                                                    <p className="mt-1 text-sm text-gray-500">{group.description}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                                {group.items.map((rec: any, idx: number) => {
+                                                    const prices = getPriceBreakdown(rec);
+
+                                                    return (
+                                                    <Card
+                                                        key={`${group.tier}-${rec.battery?.id || idx}`}
+                                                        onClick={() => setSelectedRecommendation(rec)}
+                                                        className={`cursor-pointer relative overflow-hidden transition-all hover:scale-[1.02] bg-white ${idx === 0 ? 'border-orange-600 border-2 shadow-xl' : 'border-gray-200'}`}
+                                                    >
+                                                        {idx === 0 && (
+                                                            <div className="absolute top-0 right-0 bg-orange-600 text-white px-3 py-1 text-xs font-bold rounded-bl-lg">
+                                                                TOP {group.title.toUpperCase()}
+                                                            </div>
+                                                        )}
+                                                        <CardHeader className="pb-2">
+                                                            <Badge className="w-fit mb-2 bg-black text-white hover:bg-black">Sistema completo</Badge>
+                                                            <CardTitle className="text-xl">{getSystemName(rec)}</CardTitle>
+                                                        </CardHeader>
+                                                        <CardContent className="space-y-4">
+                                                            <div className="flex items-baseline gap-1 border-b border-gray-100 pb-4">
+                                                                <span className="text-3xl font-extrabold">{rec.capex_total_eur.toLocaleString()}€</span>
+                                                                <span className="text-gray-400 text-sm">est.</span>
+                                                            </div>
+
+                                                            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm">
+                                                                <div className="flex justify-between gap-4">
+                                                                    <span className="text-gray-500">Hardware</span>
+                                                                    <span className="font-semibold">{formatPrice(prices.hardwareTotal)}</span>
+                                                                </div>
+                                                                <div className="mt-1 flex justify-between gap-4">
+                                                                    <span className="text-gray-500">Instalação</span>
+                                                                    <span className="font-semibold">{formatPrice(prices.installation)}</span>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="space-y-3">
+                                                                <div className="rounded-lg border border-gray-200 p-3">
+                                                                    <div className="flex items-start gap-3">
+                                                                        <Battery className="w-5 h-5 mt-0.5 text-orange-600" />
+                                                                        <div>
+                                                                            <p className="text-xs uppercase text-gray-400 font-semibold">Bateria</p>
+                                                                            <p className="text-base font-bold leading-tight">{rec.battery.brand} {rec.battery.model}</p>
+                                                                            <p className="text-xs text-gray-500">{rec.new_battery_capacity_kwh || rec.simulated_capacity_kwh} kWh novos</p>
+                                                                            {rec.existing_battery?.has_battery && (
+                                                                                <p className="text-xs text-gray-500">
+                                                                                    + {rec.existing_battery.capacity_kwh} kWh existentes = {rec.simulated_capacity_kwh} kWh simulados
+                                                                                </p>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {rec.inverter && (
+                                                                    <div className="rounded-lg border border-gray-200 p-3">
+                                                                        <div className="flex items-start gap-3">
+                                                                            <Zap className="w-5 h-5 mt-0.5 text-orange-600" />
+                                                                            <div>
+                                                                                <p className="text-xs uppercase text-gray-400 font-semibold">Inversor</p>
+                                                                                <p className="text-base font-bold leading-tight">{rec.inverter.brand} {rec.inverter.model}</p>
+                                                                                <p className="text-xs text-gray-500">{rec.inverter.specs?.power_kw} kW</p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                                {rec.existing_inverter_action === 'replace' && rec.replacement_notes?.length > 0 && (
+                                                                    <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-800">
+                                                                        {rec.replacement_notes[0]}
+                                                                    </div>
+                                                                )}
+                                                                {rec.solar_panels && (
+                                                                    <div className="rounded-lg border border-gray-200 p-3">
+                                                                        <div className="flex items-start gap-3">
+                                                                            <Sun className="w-5 h-5 mt-0.5 text-orange-600" />
+                                                                            <div>
+                                                                                <p className="text-xs uppercase text-gray-400 font-semibold">Painéis solares</p>
+                                                                                <p className="text-base font-bold leading-tight">
+                                                                                    {rec.solar_panels.existing
+                                                                                        ? 'Painéis existentes'
+                                                                                        : `${rec.solar_panels.quantity} x ${rec.solar_panels.panel.brand} ${rec.solar_panels.panel.model}`}
+                                                                                </p>
+                                                                                <p className="text-xs text-gray-500">{rec.solar_panels.array_power_kwp} kWp</p>
+                                                                                {rec.solar_panels.roof_area_m2 && (
+                                                                                    <p className="text-xs text-gray-500">
+                                                                                        {rec.solar_panels.total_panel_area_m2} m² de {rec.solar_panels.roof_area_m2} m² ({rec.solar_panels.roof_coverage_pct}%)
+                                                                                    </p>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            <div className="space-y-3 pt-2">
+                                                                <div className="flex items-center text-sm text-black">
+                                                                    <TrendingUp className="w-4 h-4 mr-2 text-orange-600" />
+                                                                    <span>Poupança: <strong>{rec.savings_annual_eur}€/ano</strong></span>
+                                                                </div>
+                                                                <div className="flex items-center text-sm text-black">
+                                                                    <Wallet className="w-4 h-4 mr-2 text-orange-600" />
+                                                                    <span>Payback: <strong>{rec.payback_years ? `${rec.payback_years} anos` : 'não aplicável'}</strong></span>
+                                                                </div>
+                                                                <p className="text-xs text-gray-500">
+                                                                    Hardware: {formatPrice(prices.hardwareTotal)} + instalação: {formatPrice(prices.installation)}.
+                                                                </p>
+                                                            </div>
+
+                                                            <Button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleRequestQuote(rec);
+                                                                }}
+                                                                className={`w-full mt-4 ${idx === 0 ? 'bg-black text-white hover:bg-gray-800' : 'bg-white border-2 border-black text-black hover:bg-gray-50'}`}
+                                                            >
+                                                                Solicitar Orçamento
+                                                            </Button>
+                                                        </CardContent>
+                                                    </Card>
+                                                    );
+                                                })}
+                                            </div>
+                                        </section>
+                                    )
                                 ))}
                             </div>
 
@@ -745,7 +1152,7 @@ export default function Simulator() {
                                         <div className="flex items-start justify-between gap-4 p-6 border-b border-gray-200">
                                             <div>
                                                 <p className="text-sm text-gray-500">Detalhes da recomendação</p>
-                                                <h2 className="text-2xl font-bold">{selectedRecommendation.battery.brand} {selectedRecommendation.battery.model}</h2>
+                                                <h2 className="text-2xl font-bold">{getSystemName(selectedRecommendation)}</h2>
                                                 <p className="text-sm text-gray-500 mt-1">Capacidade simulada: {selectedRecommendation.simulated_capacity_kwh} kWh úteis</p>
                                             </div>
                                             <Button variant="ghost" onClick={() => setSelectedRecommendation(null)} className="text-gray-500 hover:text-black">
@@ -777,7 +1184,13 @@ export default function Simulator() {
                                                     <h3 className="text-lg font-bold mb-4">Bateria</h3>
                                                     <p className="text-sm text-gray-500 mb-2">{selectedRecommendation.battery.brand} {selectedRecommendation.battery.model}</p>
                                                     <div className="space-y-2 text-sm">
-                                                        <p><span className="font-semibold">Capacidade útil:</span> {selectedRecommendation.simulated_capacity_kwh} kWh</p>
+                                                        <p><span className="font-semibold">Capacidade nova:</span> {selectedRecommendation.new_battery_capacity_kwh || selectedRecommendation.simulated_capacity_kwh} kWh</p>
+                                                        {selectedRecommendation.existing_battery?.has_battery && (
+                                                            <>
+                                                                <p><span className="font-semibold">Bateria existente:</span> {selectedRecommendation.existing_battery.capacity_kwh} kWh</p>
+                                                                <p><span className="font-semibold">Capacidade total simulada:</span> {selectedRecommendation.simulated_capacity_kwh} kWh</p>
+                                                            </>
+                                                        )}
                                                         <p><span className="font-semibold">Tensão:</span> {selectedRecommendation.battery.specs?.voltage || 'N/A'}</p>
                                                         <p><span className="font-semibold">Ciclos estimados:</span> {selectedRecommendation.battery.specs?.cycles || 'N/A'}</p>
                                                     </div>
@@ -792,6 +1205,13 @@ export default function Simulator() {
                                                             <p><span className="font-semibold">Eficiência:</span> {selectedRecommendation.inverter.specs?.efficiency || 'N/A'}</p>
                                                             <p><span className="font-semibold">Tipo:</span> {selectedRecommendation.inverter.specs?.type || 'N/A'}</p>
                                                         </div>
+                                                        {selectedRecommendation.existing_inverter_action === 'replace' && selectedRecommendation.replacement_notes?.length > 0 && (
+                                                            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-800">
+                                                                {selectedRecommendation.replacement_notes.map((note: string) => (
+                                                                    <p key={note}>{note}</p>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>
@@ -799,20 +1219,49 @@ export default function Simulator() {
                                             {selectedRecommendation.solar_panels && (
                                                 <div className="rounded-3xl border border-gray-200 p-6">
                                                     <h3 className="text-lg font-bold mb-4">Painéis solares</h3>
-                                                    <p className="text-sm text-gray-500 mb-2">{selectedRecommendation.solar_panels.quantity} x {selectedRecommendation.solar_panels.panel.brand} {selectedRecommendation.solar_panels.panel.model}</p>
+                                                    <p className="text-sm text-gray-500 mb-2">
+                                                        {selectedRecommendation.solar_panels.existing
+                                                            ? 'Painéis solares existentes'
+                                                            : `${selectedRecommendation.solar_panels.quantity} x ${selectedRecommendation.solar_panels.panel.brand} ${selectedRecommendation.solar_panels.panel.model}`}
+                                                    </p>
                                                     <div className="space-y-2 text-sm">
                                                         <p><span className="font-semibold">Potência total:</span> {selectedRecommendation.solar_panels.array_power_kwp} kWp</p>
-                                                        <p><span className="font-semibold">Potência por painel:</span> {selectedRecommendation.solar_panels.panel.power_w || 'N/A'} W</p>
-                                                        <p><span className="font-semibold">Área estimada:</span> {selectedRecommendation.solar_panels.quantity * (selectedRecommendation.solar_panels.panel.area_m2 || 0)} m²</p>
+                                                        {selectedRecommendation.solar_panels.roof_area_m2 && (
+                                                            <>
+                                                                <p><span className="font-semibold">Área estimada do telhado:</span> {selectedRecommendation.solar_panels.roof_area_m2} m²</p>
+                                                                <p><span className="font-semibold">Área ocupada por painéis:</span> {selectedRecommendation.solar_panels.total_panel_area_m2} m²</p>
+                                                                <p><span className="font-semibold">Ocupação do telhado:</span> {selectedRecommendation.solar_panels.roof_coverage_pct}%</p>
+                                                            </>
+                                                        )}
+                                                        {!selectedRecommendation.solar_panels.existing && (
+                                                            <>
+                                                                <p><span className="font-semibold">Potência por painel:</span> {selectedRecommendation.solar_panels.panel.power_w || 'N/A'} W</p>
+                                                                <p><span className="font-semibold">Área estimada:</span> {selectedRecommendation.solar_panels.quantity * (selectedRecommendation.solar_panels.panel.area_m2 || 0)} m²</p>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </div>
                                             )}
 
-                                            <div className="rounded-3xl border border-gray-200 p-6 bg-gray-50 text-sm text-gray-600">
-                                                <p><span className="font-semibold">Hardware:</span> {Math.round(selectedRecommendation.hardware_total_eur || 0).toLocaleString()}€</p>
-                                                <p><span className="font-semibold">Margem de instalação:</span> {Math.round(selectedRecommendation.installation_margin_eur || 0).toLocaleString()}€</p>
-                                                <p><span className="font-semibold">Custo unitário médio:</span> {selectedRecommendation.unit_cost_eur ? `${selectedRecommendation.unit_cost_eur.toLocaleString()}€` : 'N/A'}</p>
-                                            </div>
+                                            {selectedPrices && (
+                                                <div className="rounded-3xl border border-gray-200 p-6 bg-gray-50">
+                                                    <h3 className="text-lg font-bold mb-4">Resumo do investimento</h3>
+                                                    <div className="space-y-3 text-sm text-gray-700">
+                                                        <div className="flex justify-between gap-4">
+                                                            <span>Total hardware</span>
+                                                            <span className="font-semibold text-black">{formatPrice(selectedPrices.hardwareTotal)}</span>
+                                                        </div>
+                                                        <div className="flex justify-between gap-4">
+                                                            <span>Instalação</span>
+                                                            <span className="font-semibold text-black">{formatPrice(selectedPrices.installation)}</span>
+                                                        </div>
+                                                        <div className="border-t border-gray-300 pt-3 flex justify-between gap-4 text-base">
+                                                            <span className="font-bold text-black">Total estimado</span>
+                                                            <span className="font-extrabold text-black">{formatPrice(selectedRecommendation.capex_total_eur)}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             <div className="flex flex-col gap-3 sm:flex-row">
                                                 <Button className="flex-1 bg-white border-2 border-black text-black hover:bg-gray-50" onClick={() => setSelectedRecommendation(null)}>
@@ -824,8 +1273,21 @@ export default function Simulator() {
                                                     if (selectedRecommendation.battery) {
                                                         products.push(`Bateria: ${selectedRecommendation.battery.quantity} x ${selectedRecommendation.battery.model}`);
                                                     }
+                                                    if (selectedRecommendation.existing_battery?.has_battery) {
+                                                        products.push(`Bateria existente considerada: ${selectedRecommendation.existing_battery.capacity_kwh} kWh`);
+                                                    }
+                                                    if (selectedRecommendation.inverter) {
+                                                        products.push(`Inversor: ${selectedRecommendation.inverter.brand} ${selectedRecommendation.inverter.model}`);
+                                                    }
                                                     if (selectedRecommendation.solar_panels) {
-                                                        products.push(`Painéis solares: ${selectedRecommendation.solar_panels.quantity} x ${selectedRecommendation.solar_panels.panel.brand} ${selectedRecommendation.solar_panels.panel.model}`);
+                                                        if (selectedRecommendation.solar_panels.existing) {
+                                                            products.push(`Painéis solares existentes: ${selectedRecommendation.solar_panels.array_power_kwp} kWp`);
+                                                        } else {
+                                                            products.push(`Painéis solares: ${selectedRecommendation.solar_panels.quantity} x ${selectedRecommendation.solar_panels.panel.brand} ${selectedRecommendation.solar_panels.panel.model}`);
+                                                        }
+                                                    }
+                                                    if (selectedRecommendation.replacement_notes?.length) {
+                                                        products.push(...selectedRecommendation.replacement_notes.map((note: string) => `Nota: ${note}`));
                                                     }
                                                     const body = `Olá, gostaria de solicitar um orçamento para a instalação dos seguintes produtos sugeridos pela simulação:\n\n${products.join('\n')}\n\nLocal da casa: ${formData.solar.city}, ${formData.house.area_m2} m²\n\nObrigado.`;
                                                     localStorage.setItem('Message', body);
