@@ -14,6 +14,7 @@ import os
 import json
 import csv
 import io
+import sqlite3
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from mangum import Mangum
@@ -37,6 +38,11 @@ load_backend_env()
 db_users = DynamoDBUserHandler()
 
 app = FastAPI(title="BatteryApp Calculator API")
+
+
+@app.on_event("startup")
+def check_home_catalog_on_startup():
+    validate_sqlite_home_catalog()
 
 # Configurar CORS (Para o teu frontend no Vercel conseguir falar com este backend)
 origins = [
@@ -724,35 +730,234 @@ async def resend_verification_email(data: dict):  # recebe {'email': '...'}
 
 def load_catalog():
     data_dir = os.path.join(os.path.dirname(__file__), "data")
-    batteries_path = os.path.join(data_dir, "home_batteries.json")
-    inverters_path = os.path.join(data_dir, "home_inverters.json")
-    panels_path = os.path.join(data_dir, "home_solar_panels.json")
-    compatibility_path = os.path.join(data_dir, "home_component_compatibility.json")
+    db_path = os.path.join(data_dir, "home_energy_catalog.sqlite")
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        catalog = {
+            "schema_version": "1.0.0",
+            "currency": "EUR",
+            "batteries": [sqlite_battery_to_catalog_item(row) for row in conn.execute("SELECT * FROM home_batteries WHERE is_active = 1 ORDER BY id")],
+            "inverters": [sqlite_inverter_to_catalog_item(row) for row in conn.execute("SELECT * FROM home_inverters WHERE is_active = 1 ORDER BY id")],
+            "solar_panels": [sqlite_panel_to_catalog_item(row) for row in conn.execute("SELECT * FROM home_solar_panels WHERE is_active = 1 ORDER BY id")],
+            "compatibility": load_sqlite_compatibility(conn),
+        }
+    return catalog
 
-    catalog = {
-        "schema_version": "1.0.0",
-        "currency": "EUR",
-        "batteries": [],
-        "inverters": [],
-        "solar_panels": [],
-        "compatibility": {"default_compatible": True, "rules": []},
+
+def validate_sqlite_home_catalog():
+    catalog = load_catalog()
+    missing = []
+    for key in ("batteries", "inverters", "solar_panels"):
+        if not catalog[key]:
+            missing.append(key)
+    if missing:
+        raise RuntimeError(f"SQLite home catalog validation failed. Empty tables: {', '.join(missing)}")
+    print(
+        "Home SQLite catalog OK "
+        f"({len(catalog['batteries'])} batteries, "
+        f"{len(catalog['inverters'])} inverters, "
+        f"{len(catalog['solar_panels'])} panels)"
+    )
+
+
+def sqlite_battery_to_catalog_item(row):
+    return {
+        "id": row["id"],
+        "brand": row["brand_name"],
+        "model": row["model_name"],
+        "specs": {
+            "capacity_kwh": row["capacity_kwh"],
+            "usable_capacity_kwh": row["usable_capacity_kwh"],
+            "power_kw": row["continuous_power_kw"],
+            "dod": row["depth_of_discharge_ratio"],
+            "chemistry": row["chemistry"],
+            "battery_type": row["battery_type"],
+            "nominal_voltage_class": row["nominal_voltage_class"],
+            "size_mm": {
+                "thickness": row["depth_mm"],
+                "width": row["width_mm"],
+                "height": row["height_mm"],
+            },
+            "dimensions_mm": {
+                "width": row["width_mm"],
+                "height": row["height_mm"],
+                "depth": row["depth_mm"],
+            },
+            "weight_kg": row["weight_kg"],
+            "operating_temperature_c": {
+                "min": row["operating_temp_min_c"],
+                "max": row["operating_temp_max_c"],
+            },
+            "environment": row["environment"],
+            "max_series_connection": row["max_series_connection"],
+            "max_parallel_connection": row["max_parallel_connection"],
+            "warranty_years": row["warranty_years"],
+        },
+        "pricing": {
+            "unit_price": row["unit_price"],
+            "currency": row["currency"] or "EUR",
+        },
+        "links": {
+            "url": row["source_url"] or "",
+        },
     }
 
-    with open(batteries_path, "r") as f:
-        batteries_data = json.load(f)
-        catalog["batteries"] = batteries_data.get("batteries", [])
-        catalog["currency"] = batteries_data.get("currency", catalog["currency"])
 
-    with open(inverters_path, "r") as f:
-        catalog["inverters"] = json.load(f).get("inverters", [])
+def sqlite_inverter_to_catalog_item(row):
+    return {
+        "id": row["id"],
+        "brand": row["brand_name"],
+        "model": row["model_name"],
+        "specs": {
+            "power_kw": row["power_kw"] or row["rated_output_power_kw"] or row["max_battery_charge_discharge_kw"],
+            "rated_output_power_kw": row["rated_output_power_kw"],
+            "max_pv_input_kwp": row["max_pv_input_kwp"],
+            "pv_voltage_range_v": {
+                "min": row["pv_voltage_min_v"],
+                "max": row["pv_voltage_max_v"],
+            },
+            "max_battery_charge_discharge_kw": row["max_battery_charge_discharge_kw"],
+            "battery_technology": row["battery_technology"],
+            "battery_type": row["nominal_battery_voltage_class"] or row["battery_technology"],
+            "battery_voltage_range_v": {
+                "min": row["battery_voltage_min_v"],
+                "max": row["battery_voltage_max_v"],
+            },
+            "grid_type": row["grid_type"],
+            "phases": row["phases"],
+            "is_hybrid": bool(row["is_hybrid"]),
+            "connection": row["connection_type"],
+            "max_efficiency": row["max_efficiency_ratio"],
+            "warranty_years": row["warranty_years"],
+            "weight_kg": row["weight_kg"],
+            "dimensions_mm": {
+                "width": row["width_mm"],
+                "height": row["height_mm"],
+                "depth": row["depth_mm"],
+            },
+            "operating_temperature_c": {
+                "min": row["operating_temp_min_c"],
+                "max": row["operating_temp_max_c"],
+            },
+            "environment": row["environment"],
+            "has_direct_pv_input": bool(row["has_direct_pv_input"]),
+        },
+        "pricing": {
+            "unit_price": row["unit_price"],
+            "currency": row["currency"] or "EUR",
+        },
+        "links": {
+            "url": row["source_url"] or "",
+        },
+    }
 
-    with open(panels_path, "r") as f:
-        catalog["solar_panels"] = json.load(f).get("solar_panels", [])
 
-    with open(compatibility_path, "r") as f:
-        catalog["compatibility"] = json.load(f)
+def sqlite_panel_to_catalog_item(row):
+    return {
+        "id": row["id"],
+        "brand": row["brand_name"],
+        "model": row["model_name"],
+        "specs": {
+            "power_w": row["rated_power_w"],
+            "rated_power_kw": row["rated_power_kw"],
+            "efficiency_pct": row["efficiency_pct"],
+            "technology": row["technology"],
+            "type": row["cell_type"],
+            "dimensions_mm": {
+                "length": row["length_mm"],
+                "width": row["width_mm"],
+                "height": row["height_mm"],
+            },
+            "weight_kg": row["weight_kg"],
+        },
+        "pricing": {
+            "unit_price": row["unit_price"],
+            "currency": row["currency"] or "EUR",
+        },
+        "links": {
+            "url": row["source_url"] or "",
+        },
+    }
 
-    return catalog
+
+def load_sqlite_compatibility(conn):
+    rules = {}
+    for row in conn.execute("SELECT * FROM compatibility_rules"):
+        rules[row["id"]] = {
+            "id": row["id"],
+            "relation_type": row["relation_type"],
+            "compatible": bool(row["compatible"]),
+            "status": row["status"],
+            "evidence_level": row["evidence_level"],
+            "notes": row["notes"],
+            "components": {},
+            "groups": {},
+            "conditions": [],
+        }
+
+    for row in conn.execute("SELECT * FROM compatibility_rule_components"):
+        rule = rules.get(row["rule_id"])
+        if not rule:
+            continue
+        rule["components"].setdefault(row["role"], []).append({
+            "component_type": row["component_type"],
+            "component_id": row["component_id"],
+        })
+
+    for row in conn.execute("SELECT * FROM compatibility_rule_groups"):
+        rule = rules.get(row["rule_id"])
+        if not rule:
+            continue
+        rule["groups"].setdefault(row["role"], []).append({
+            "component_type": row["component_type"],
+            "group_id": row["group_id"],
+        })
+
+    for row in conn.execute("SELECT * FROM compatibility_rule_conditions"):
+        rule = rules.get(row["rule_id"])
+        if not rule:
+            continue
+        condition_value = row["condition_value_json"]
+        try:
+            condition_value = json.loads(condition_value)
+        except (TypeError, json.JSONDecodeError):
+            pass
+        rule["conditions"].append({
+            "key": row["condition_key"],
+            "value": condition_value,
+        })
+
+    group_members = {"battery": {}, "inverter": {}, "solar_panel": {}}
+    for row in conn.execute("SELECT * FROM component_group_members"):
+        group_members.setdefault(row["component_type"], {}).setdefault(row["component_id"], []).append(row["group_id"])
+
+    pv_rules = []
+    for row in conn.execute("SELECT * FROM inverter_solar_panel_rules"):
+        pv_rules.append({
+            "id": row["id"],
+            "inverter_id": row["inverter_id"],
+            "solar_panel_id": row["solar_panel_id"],
+            "compatible": bool(row["compatible"]),
+            "status": row["status"],
+            "max_pv_input_kwp": row["max_pv_input_kwp"],
+            "max_panel_count_by_power_only": row["max_panel_count_by_power_only"],
+            "requires_string_sizing": bool(row["requires_string_sizing"]),
+            "notes": row["notes"],
+        })
+
+    default_compatible = True
+    default_policy = rules.get("rule-00-default-deny")
+    if default_policy:
+        default_compatible = bool(default_policy["compatible"])
+
+    return {
+        "schema_version": "1.0.0",
+        "default_compatible": default_compatible,
+        "description": "Compatibility policy loaded from SQLite catalog.",
+        "rules": [rule for rule in rules.values() if rule["relation_type"] != "default_policy"],
+        "group_members": group_members,
+        "inverter_solar_panel_rules": pv_rules,
+    }
 
 
 @app.post("/api/simulator/size")

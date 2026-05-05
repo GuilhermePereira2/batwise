@@ -27,7 +27,12 @@
                 "max_series_connection": 3,
                 "max_parallel_connection": 4,
                 "warranty_years": 15,
-                "battery_type": "high_voltage"
+                "battery_type": "high_voltage",
+                "dimensions_mm": {
+                    "width": 590,
+                    "height": 150,
+                    "depth": 255
+                }
             },
             "pricing": {
                 "unit_price": 3404.64,
@@ -61,7 +66,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 64,
                 "warranty_years": 10,
-                "battery_type": "low_voltage"
+                "battery_type": "low_voltage",
+                "dimensions_mm": {
+                    "width": 650,
+                    "height": 500,
+                    "depth": 575
+                }
             },
             "pricing": {
                 "unit_price": 6429.69,
@@ -95,7 +105,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 64,
                 "warranty_years": 15,
-                "battery_type": "low_voltage"
+                "battery_type": "low_voltage",
+                "dimensions_mm": {
+                    "width": 650,
+                    "height": 478,
+                    "depth": 298
+                }
             },
             "pricing": {
                 "unit_price": 2217.39,
@@ -129,7 +144,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 30,
                 "warranty_years": -1,
-                "battery_type": "low_voltage"
+                "battery_type": "low_voltage",
+                "dimensions_mm": {
+                    "width": 460,
+                    "height": 580,
+                    "depth": 160
+                }
             },
             "pricing": {
                 "unit_price": 1321.01,
@@ -163,7 +183,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 5,
                 "warranty_years": 10,
-                "battery_type": "low_voltage"
+                "battery_type": "low_voltage",
+                "dimensions_mm": {
+                    "width": 540,
+                    "height": 500,
+                    "depth": 240
+                }
             },
             "pricing": {
                 "unit_price": 1777.31,
@@ -197,7 +222,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 5,
                 "warranty_years": 10,
-                "battery_type": "low_voltage"
+                "battery_type": "low_voltage",
+                "dimensions_mm": {
+                    "width": 540,
+                    "height": 500,
+                    "depth": 240
+                }
             },
             "pricing": {
                 "unit_price": 1909.69,
@@ -231,10 +261,15 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 2,
                 "warranty_years": 10,
-                "battery_type": "low_voltage"
+                "battery_type": "low_voltage",
+                "dimensions_mm": {
+                    "width": 540,
+                    "height": 1120,
+                    "depth": 240
+                }
             },
             "pricing": {
-                "unit_price": 3413.10,
+                "unit_price": 3413.1,
                 "currency": "EUR"
             },
             "links": {
@@ -265,7 +300,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 2,
                 "warranty_years": 10,
-                "battery_type": "low_voltage"
+                "battery_type": "low_voltage",
+                "dimensions_mm": {
+                    "width": 540,
+                    "height": 1120,
+                    "depth": 240
+                }
             },
             "pricing": {
                 "unit_price": 3545.48,
@@ -299,10 +339,15 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "low_voltage"
+                "battery_type": "low_voltage",
+                "dimensions_mm": {
+                    "width": 540,
+                    "height": 1620,
+                    "depth": 240
+                }
             },
             "pricing": {
-                "unit_price": 5048.90,
+                "unit_price": 5048.9,
                 "currency": "EUR"
             },
             "links": {
@@ -333,7 +378,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "low_voltage"
+                "battery_type": "low_voltage",
+                "dimensions_mm": {
+                    "width": 540,
+                    "height": 1620,
+                    "depth": 240
+                }
             },
             "pricing": {
                 "unit_price": 5181.27,
@@ -367,7 +417,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "integrated_ac"
+                "battery_type": "integrated_ac",
+                "dimensions_mm": {
+                    "width": 753,
+                    "height": 1150,
+                    "depth": 147
+                }
             },
             "pricing": {
                 "unit_price": 7121.63,
@@ -401,10 +456,15 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 16,
                 "warranty_years": 15,
-                "battery_type": "low_voltage"
+                "battery_type": "low_voltage",
+                "dimensions_mm": {
+                    "width": 420,
+                    "height": 161,
+                    "depth": 442
+                }
             },
             "pricing": {
-                "unit_price": 874.00,
+                "unit_price": 874.0,
                 "currency": "EUR"
             },
             "links": {
@@ -435,10 +495,15 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "high_voltage"
+                "battery_type": "high_voltage",
+                "dimensions_mm": {
+                    "width": 504,
+                    "height": 817,
+                    "depth": 295
+                }
             },
             "pricing": {
-                "unit_price": 5009.40,
+                "unit_price": 5009.4,
                 "currency": "EUR"
             },
             "links": {
@@ -469,10 +534,15 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 15,
-                "battery_type": "integrated_ac"
+                "battery_type": "integrated_ac",
+                "dimensions_mm": {
+                    "width": 430,
+                    "height": 775,
+                    "depth": 188
+                }
             },
             "pricing": {
-                "unit_price": 2238.50,
+                "unit_price": 2238.5,
                 "currency": "EUR"
             },
             "links": {
@@ -503,7 +573,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 10,
                 "warranty_years": 10,
-                "battery_type": "low_voltage"
+                "battery_type": "low_voltage",
+                "dimensions_mm": {
+                    "width": 650,
+                    "height": 170,
+                    "depth": 260
+                }
             },
             "pricing": {
                 "unit_price": 940.29,
@@ -537,7 +612,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 2,
                 "warranty_years": 10,
-                "battery_type": "high_voltage"
+                "battery_type": "high_voltage",
+                "dimensions_mm": {
+                    "width": 625,
+                    "height": 545,
+                    "depth": 330
+                }
             },
             "pricing": {
                 "unit_price": 3430.17,
@@ -571,7 +651,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 5,
                 "warranty_years": 10,
-                "battery_type": "low_voltage"
+                "battery_type": "low_voltage",
+                "dimensions_mm": {
+                    "width": 480,
+                    "height": 90,
+                    "depth": 360
+                }
             },
             "pricing": {
                 "unit_price": 464.16,
@@ -605,10 +690,15 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 3,
                 "warranty_years": 10,
-                "battery_type": "high_voltage"
+                "battery_type": "high_voltage",
+                "dimensions_mm": {
+                    "width": 790,
+                    "height": 1179,
+                    "depth": 250
+                }
             },
             "pricing": {
-                "unit_price": 5399.00,
+                "unit_price": 5399.0,
                 "currency": "EUR"
             },
             "links": {
@@ -639,10 +729,15 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "high_voltage"
+                "battery_type": "high_voltage",
+                "dimensions_mm": {
+                    "width": 600,
+                    "height": 625,
+                    "depth": 380
+                }
             },
             "pricing": {
-                "unit_price": 4509.00,
+                "unit_price": 4509.0,
                 "currency": "EUR"
             },
             "links": {
@@ -673,7 +768,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "high_voltage"
+                "battery_type": "high_voltage",
+                "dimensions_mm": {
+                    "width": 600,
+                    "height": 780,
+                    "depth": 380
+                }
             },
             "pricing": {
                 "unit_price": 6244.14,
@@ -707,7 +807,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "high_voltage"
+                "battery_type": "high_voltage",
+                "dimensions_mm": {
+                    "width": 600,
+                    "height": 935,
+                    "depth": 380
+                }
             },
             "pricing": {
                 "unit_price": 7979.28,
@@ -741,7 +846,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "high_voltage"
+                "battery_type": "high_voltage",
+                "dimensions_mm": {
+                    "width": 600,
+                    "height": 1090,
+                    "depth": 380
+                }
             },
             "pricing": {
                 "unit_price": 9714.42,
@@ -775,7 +885,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "high_voltage"
+                "battery_type": "high_voltage",
+                "dimensions_mm": {
+                    "width": 585,
+                    "height": 712,
+                    "depth": 298
+                }
             },
             "pricing": {
                 "unit_price": 3098.76,
@@ -809,7 +924,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "high_voltage"
+                "battery_type": "high_voltage",
+                "dimensions_mm": {
+                    "width": 585,
+                    "height": 945,
+                    "depth": 298
+                }
             },
             "pricing": {
                 "unit_price": 4343.85,
@@ -843,7 +963,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "high_voltage"
+                "battery_type": "high_voltage",
+                "dimensions_mm": {
+                    "width": 585,
+                    "height": 1178,
+                    "depth": 298
+                }
             },
             "pricing": {
                 "unit_price": 5588.94,
@@ -877,7 +1002,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "high_voltage"
+                "battery_type": "high_voltage",
+                "dimensions_mm": {
+                    "width": 585,
+                    "height": 1411,
+                    "depth": 298
+                }
             },
             "pricing": {
                 "unit_price": 6834.03,
@@ -911,7 +1041,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "integrated_ac"
+                "battery_type": "integrated_ac",
+                "dimensions_mm": {
+                    "width": 1283,
+                    "height": 775,
+                    "depth": 188
+                }
             },
             "pricing": {
                 "unit_price": 610.46,
@@ -945,7 +1080,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 8,
                 "warranty_years": 10,
-                "battery_type": "low_voltage"
+                "battery_type": "low_voltage",
+                "dimensions_mm": {
+                    "width": 420,
+                    "height": 132,
+                    "depth": 442
+                }
             },
             "pricing": {
                 "unit_price": 848.33,
@@ -979,10 +1119,15 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "high_voltage"
+                "battery_type": "high_voltage",
+                "dimensions_mm": {
+                    "width": 504,
+                    "height": 1086,
+                    "depth": 295
+                }
             },
             "pricing": {
-                "unit_price": 7199.00,
+                "unit_price": 7199.0,
                 "currency": "EUR"
             },
             "links": {
@@ -1013,7 +1158,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "high_voltage"
+                "battery_type": "high_voltage",
+                "dimensions_mm": {
+                    "width": 585,
+                    "height": 945,
+                    "depth": 298
+                }
             },
             "pricing": {
                 "unit_price": 4210.77,
@@ -1047,7 +1197,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "high_voltage"
+                "battery_type": "high_voltage",
+                "dimensions_mm": {
+                    "width": 585,
+                    "height": 1178,
+                    "depth": 298
+                }
             },
             "pricing": {
                 "unit_price": 5344.7,
@@ -1081,7 +1236,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "high_voltage"
+                "battery_type": "high_voltage",
+                "dimensions_mm": {
+                    "width": 585,
+                    "height": 1411,
+                    "depth": 298
+                }
             },
             "pricing": {
                 "unit_price": 6478.62,
@@ -1115,7 +1275,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "high_voltage"
+                "battery_type": "high_voltage",
+                "dimensions_mm": {
+                    "width": 585,
+                    "height": 1644,
+                    "depth": 298
+                }
             },
             "pricing": {
                 "unit_price": 7612.57,
@@ -1149,7 +1314,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "high_voltage"
+                "battery_type": "high_voltage",
+                "dimensions_mm": {
+                    "width": 585,
+                    "height": 1877,
+                    "depth": 298
+                }
             },
             "pricing": {
                 "unit_price": 8746.51,
@@ -1183,7 +1353,12 @@
                 "max_series_connection": 1,
                 "max_parallel_connection": 1,
                 "warranty_years": 10,
-                "battery_type": "high_voltage"
+                "battery_type": "high_voltage",
+                "dimensions_mm": {
+                    "width": 585,
+                    "height": 2110,
+                    "depth": 298
+                }
             },
             "pricing": {
                 "unit_price": 10224.75,

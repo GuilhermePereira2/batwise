@@ -35,7 +35,13 @@
                 "power_w": 440,
                 "efficiency_pct": 22.0,
                 "technology": "N-type TOPCon",
-                "type": "monocrystalline"
+                "type": "monocrystalline",
+                "dimensions_mm": {
+                    "length": null,
+                    "width": null,
+                    "height": null
+                },
+                "weight_kg": null
             },
             "pricing": {
                 "unit_price": 145,
@@ -53,7 +59,13 @@
                 "power_w": 450,
                 "efficiency_pct": 22.5,
                 "technology": "N-type TOPCon",
-                "type": "monocrystalline"
+                "type": "monocrystalline",
+                "dimensions_mm": {
+                    "length": null,
+                    "width": null,
+                    "height": null
+                },
+                "weight_kg": null
             },
             "pricing": {
                 "unit_price": 155,

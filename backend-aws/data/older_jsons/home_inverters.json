@@ -25,7 +25,22 @@
                 "max_series_connection": 3,
                 "warranty_years": 15,
                 "battery_type": "high_voltage",
-                "weight": 10.0
+                "weight": 10.0,
+                "rated_output_power_kw": 21.0,
+                "max_battery_charge_discharge_kw": 21.0,
+                "battery_technology": "high_voltage",
+                "weight_kg": 10.0,
+                "max_pv_input_kwp": null,
+                "pv_voltage_range_v": {
+                    "min": null,
+                    "max": null
+                },
+                "battery_voltage_range_v": {
+                    "min": null,
+                    "max": null
+                },
+                "grid_type": null,
+                "max_efficiency": null
             },
             "pricing": {
                 "unit_price": 1336.75,
@@ -43,14 +58,14 @@
                 "rated_output_power_kw": 5.0,
                 "max_pv_input_kwp": 7.5,
                 "pv_voltage_range_v": {
-                    "min": 90,
-                    "max": 560
+                    "min": 90.0,
+                    "max": 560.0
                 },
                 "max_battery_charge_discharge_kw": 5.0,
                 "battery_technology": "high_voltage",
                 "battery_voltage_range_v": {
-                    "min": 350,
-                    "max": 560
+                    "min": 350.0,
+                    "max": 560.0
                 },
                 "grid_type": "single_phase",
                 "is_hybrid": true,
@@ -67,10 +82,12 @@
                     "min": -25,
                     "max": 60
                 },
-                "environment": "indoor & outdoor"
+                "environment": "indoor & outdoor",
+                "power_kw": 5.0,
+                "battery_type": "high_voltage"
             },
             "pricing": {
-                "unit_price": 739.90,
+                "unit_price": 739.9,
                 "currency": "EUR"
             },
             "links": {
@@ -85,14 +102,14 @@
                 "rated_output_power_kw": 6.0,
                 "max_pv_input_kwp": 9.0,
                 "pv_voltage_range_v": {
-                    "min": 90,
-                    "max": 560
+                    "min": 90.0,
+                    "max": 560.0
                 },
                 "max_battery_charge_discharge_kw": 5.0,
                 "battery_technology": "high_voltage",
                 "battery_voltage_range_v": {
-                    "min": 350,
-                    "max": 560
+                    "min": 350.0,
+                    "max": 560.0
                 },
                 "grid_type": "single_phase",
                 "is_hybrid": true,
@@ -109,7 +126,9 @@
                     "min": -25,
                     "max": 60
                 },
-                "environment": "indoor & outdoor"
+                "environment": "indoor & outdoor",
+                "power_kw": 6.0,
+                "battery_type": "high_voltage"
             },
             "pricing": {
                 "unit_price": 949,
@@ -127,14 +146,14 @@
                 "rated_output_power_kw": 4.0,
                 "max_pv_input_kwp": 6.0,
                 "pv_voltage_range_v": {
-                    "min": 90,
-                    "max": 560
+                    "min": 90.0,
+                    "max": 560.0
                 },
                 "max_battery_charge_discharge_kw": 4.4,
                 "battery_technology": "high_voltage",
                 "battery_voltage_range_v": {
-                    "min": 350,
-                    "max": 560
+                    "min": 350.0,
+                    "max": 560.0
                 },
                 "grid_type": "single_phase",
                 "is_hybrid": true,
@@ -151,7 +170,9 @@
                     "min": -25,
                     "max": 60
                 },
-                "environment": "indoor & outdoor"
+                "environment": "indoor & outdoor",
+                "power_kw": 4.0,
+                "battery_type": "high_voltage"
             },
             "pricing": {
                 "unit_price": 735,
@@ -169,14 +190,14 @@
                 "rated_output_power_kw": 3.0,
                 "max_pv_input_kwp": 4.5,
                 "pv_voltage_range_v": {
-                    "min": 90,
-                    "max": 560
+                    "min": 90.0,
+                    "max": 560.0
                 },
                 "max_battery_charge_discharge_kw": 3.3,
                 "battery_technology": "high_voltage",
                 "battery_voltage_range_v": {
-                    "min": 350,
-                    "max": 560
+                    "min": 350.0,
+                    "max": 560.0
                 },
                 "grid_type": "single_phase",
                 "is_hybrid": true,
@@ -193,7 +214,9 @@
                     "min": -25,
                     "max": 60
                 },
-                "environment": "indoor & outdoor"
+                "environment": "indoor & outdoor",
+                "power_kw": 3.0,
+                "battery_type": "high_voltage"
             },
             "pricing": {
                 "unit_price": 494.9,
@@ -211,14 +234,14 @@
                 "rated_output_power_kw": 3.0,
                 "max_pv_input_kwp": 4.5,
                 "pv_voltage_range_v": {
-                    "min": 65,
-                    "max": 530
+                    "min": 65.0,
+                    "max": 530.0
                 },
                 "max_battery_charge_discharge_kw": 3,
                 "battery_technology": "high_voltage",
                 "battery_voltage_range_v": {
-                    "min": 150,
-                    "max": 455
+                    "min": 150.0,
+                    "max": 455.0
                 },
                 "grid_type": "single_phase",
                 "is_hybrid": true,
@@ -235,7 +258,9 @@
                     "min": -40,
                     "max": 60
                 },
-                "environment": "indoor & outdoor"
+                "environment": "indoor & outdoor",
+                "power_kw": 3.0,
+                "battery_type": "high_voltage"
             },
             "pricing": {
                 "unit_price": 1326,
@@ -251,16 +276,16 @@
             "model": "PRIMO GEN24 4.0 PLUS",
             "specs": {
                 "rated_output_power_kw": 4.0,
-                "max_pv_input_kwp": 6,
+                "max_pv_input_kwp": 6.0,
                 "pv_voltage_range_v": {
-                    "min": 65,
-                    "max": 530
+                    "min": 65.0,
+                    "max": 530.0
                 },
                 "max_battery_charge_discharge_kw": 4,
                 "battery_technology": "high_voltage",
                 "battery_voltage_range_v": {
-                    "min": 150,
-                    "max": 455
+                    "min": 150.0,
+                    "max": 455.0
                 },
                 "grid_type": "single_phase",
                 "is_hybrid": true,
@@ -277,7 +302,9 @@
                     "min": -40,
                     "max": 60
                 },
-                "environment": "indoor & outdoor"
+                "environment": "indoor & outdoor",
+                "power_kw": 4.0,
+                "battery_type": "high_voltage"
             },
             "pricing": {
                 "unit_price": 1559.96,
@@ -295,14 +322,14 @@
                 "rated_output_power_kw": 5.0,
                 "max_pv_input_kwp": 7.5,
                 "pv_voltage_range_v": {
-                    "min": 65,
-                    "max": 530
+                    "min": 65.0,
+                    "max": 530.0
                 },
                 "max_battery_charge_discharge_kw": 5,
                 "battery_technology": "high_voltage",
                 "battery_voltage_range_v": {
-                    "min": 150,
-                    "max": 455
+                    "min": 150.0,
+                    "max": 455.0
                 },
                 "grid_type": "single_phase",
                 "is_hybrid": true,
@@ -319,7 +346,9 @@
                     "min": -40,
                     "max": 60
                 },
-                "environment": "indoor & outdoor"
+                "environment": "indoor & outdoor",
+                "power_kw": 5.0,
+                "battery_type": "high_voltage"
             },
             "pricing": {
                 "unit_price": 1767.48,
@@ -337,14 +366,14 @@
                 "rated_output_power_kw": 6.0,
                 "max_pv_input_kwp": 9.0,
                 "pv_voltage_range_v": {
-                    "min": 65,
-                    "max": 480
+                    "min": 65.0,
+                    "max": 480.0
                 },
                 "max_battery_charge_discharge_kw": 6,
                 "battery_technology": "high_voltage",
                 "battery_voltage_range_v": {
-                    "min": 150,
-                    "max": 455
+                    "min": 150.0,
+                    "max": 455.0
                 },
                 "grid_type": "single_phase",
                 "is_hybrid": true,
@@ -361,7 +390,9 @@
                     "min": -40,
                     "max": 60
                 },
-                "environment": "indoor & outdoor"
+                "environment": "indoor & outdoor",
+                "power_kw": 6.0,
+                "battery_type": "high_voltage"
             },
             "pricing": {
                 "unit_price": 1994.52,
@@ -379,14 +410,14 @@
                 "rated_output_power_kw": 3.0,
                 "max_pv_input_kwp": 6.0,
                 "pv_voltage_range_v": {
-                    "min": 50,
-                    "max": 480
+                    "min": 50.0,
+                    "max": 480.0
                 },
                 "max_battery_charge_discharge_kw": 3,
                 "battery_technology": "high_voltage",
                 "battery_voltage_range_v": {
-                    "min": 150,
-                    "max": 600
+                    "min": 150.0,
+                    "max": 600.0
                 },
                 "grid_type": "single_phase",
                 "is_hybrid": true,
@@ -403,7 +434,9 @@
                     "min": -40,
                     "max": 60
                 },
-                "environment": "indoor & outdoor"
+                "environment": "indoor & outdoor",
+                "power_kw": 3.0,
+                "battery_type": "high_voltage"
             },
             "pricing": {
                 "unit_price": 1529.0,
@@ -414,21 +447,21 @@
             }
         },
         {
-            "id": "inv-011",
+            "id": "inv-003",
             "brand": "SOLAREDGE",
             "model": "SE4000H",
             "specs": {
                 "rated_output_power_kw": 4.0,
                 "max_pv_input_kwp": 8.0,
                 "pv_voltage_range_v": {
-                    "min": 50,
-                    "max": 480
+                    "min": 50.0,
+                    "max": 480.0
                 },
                 "max_battery_charge_discharge_kw": 4,
                 "battery_technology": "high_voltage",
                 "battery_voltage_range_v": {
-                    "min": 150,
-                    "max": 600
+                    "min": 150.0,
+                    "max": 600.0
                 },
                 "grid_type": "single_phase",
                 "is_hybrid": true,
@@ -445,7 +478,9 @@
                     "min": -40,
                     "max": 60
                 },
-                "environment": "indoor & outdoor"
+                "environment": "indoor & outdoor",
+                "power_kw": 4.0,
+                "battery_type": "high_voltage"
             },
             "pricing": {
                 "unit_price": 1885.0,
@@ -456,21 +491,21 @@
             }
         },
         {
-            "id": "inv-011",
+            "id": "inv-012",
             "brand": "SOLAREDGE",
             "model": "SE5000H",
             "specs": {
                 "rated_output_power_kw": 5.0,
                 "max_pv_input_kwp": 10.0,
                 "pv_voltage_range_v": {
-                    "min": 50,
-                    "max": 480
+                    "min": 50.0,
+                    "max": 480.0
                 },
                 "max_battery_charge_discharge_kw": 5,
                 "battery_technology": "high_voltage",
                 "battery_voltage_range_v": {
-                    "min": 150,
-                    "max": 600
+                    "min": 150.0,
+                    "max": 600.0
                 },
                 "grid_type": "single_phase",
                 "is_hybrid": true,
@@ -487,7 +522,9 @@
                     "min": -40,
                     "max": 60
                 },
-                "environment": "indoor & outdoor"
+                "environment": "indoor & outdoor",
+                "power_kw": 5.0,
+                "battery_type": "high_voltage"
             },
             "pricing": {
                 "unit_price": 1529.0,
@@ -498,21 +535,21 @@
             }
         },
         {
-            "id": "inv-011",
+            "id": "inv-013",
             "brand": "SOLAREDGE",
             "model": "SE6000H",
             "specs": {
                 "rated_output_power_kw": 6.0,
                 "max_pv_input_kwp": 12.0,
                 "pv_voltage_range_v": {
-                    "min": 50,
-                    "max": 480
+                    "min": 50.0,
+                    "max": 480.0
                 },
                 "max_battery_charge_discharge_kw": 5,
                 "battery_technology": "high_voltage",
                 "battery_voltage_range_v": {
-                    "min": 150,
-                    "max": 600
+                    "min": 150.0,
+                    "max": 600.0
                 },
                 "grid_type": "single_phase",
                 "is_hybrid": true,
@@ -529,7 +566,9 @@
                     "min": -40,
                     "max": 60
                 },
-                "environment": "indoor & outdoor"
+                "environment": "indoor & outdoor",
+                "power_kw": 6.0,
+                "battery_type": "high_voltage"
             },
             "pricing": {
                 "unit_price": 1297.4,
@@ -540,21 +579,21 @@
             }
         },
         {
-            "id": "inv-011",
+            "id": "inv-014",
             "brand": "Victron Energy",
             "model": "EasySolar-II GX 48V 5000VA",
             "specs": {
                 "rated_output_power_kw": 4.0,
                 "max_pv_input_kwp": 5.8,
                 "pv_voltage_range_v": {
-                    "min": 10,
-                    "max": 250
+                    "min": 10.0,
+                    "max": 250.0
                 },
                 "max_battery_charge_discharge_kw": 4,
                 "battery_technology": "low_voltage",
                 "battery_voltage_range_v": {
-                    "min": 38,
-                    "max": 66
+                    "min": 38.0,
+                    "max": 66.0
                 },
                 "grid_type": "single_phase",
                 "is_hybrid": true,
@@ -571,7 +610,9 @@
                     "min": -20,
                     "max": 45
                 },
-                "environment": "indoor"
+                "environment": "indoor",
+                "power_kw": 4.0,
+                "battery_type": "low_voltage"
             },
             "pricing": {
                 "unit_price": 1297.4,
@@ -582,21 +623,21 @@
             }
         },
         {
-            "id": "inv-011",
+            "id": "inv-015",
             "brand": "Victron Energy",
             "model": "EasySolar-II GX 48V 3000VA",
             "specs": {
                 "rated_output_power_kw": 3.0,
-                "max_pv_input_kwp": 4,
+                "max_pv_input_kwp": 4.0,
                 "pv_voltage_range_v": {
-                    "min": 10,
-                    "max": 250
+                    "min": 10.0,
+                    "max": 250.0
                 },
                 "max_battery_charge_discharge_kw": 3,
                 "battery_technology": "low_voltage",
                 "battery_voltage_range_v": {
-                    "min": 38,
-                    "max": 66
+                    "min": 38.0,
+                    "max": 66.0
                 },
                 "grid_type": "single_phase",
                 "is_hybrid": true,
@@ -613,7 +654,9 @@
                     "min": -20,
                     "max": 45
                 },
-                "environment": "indoor"
+                "environment": "indoor",
+                "power_kw": 3.0,
+                "battery_type": "low_voltage"
             },
             "pricing": {
                 "unit_price": 1299.0,
@@ -624,21 +667,21 @@
             }
         },
         {
-            "id": "inv-011",
+            "id": "inv-016",
             "brand": "Victron Energy",
             "model": "Multiplus-II 48V 3000VA",
             "specs": {
                 "rated_output_power_kw": 3.0,
-                "max_pv_input_kwp": -1,
+                "max_pv_input_kwp": null,
                 "pv_voltage_range_v": {
-                    "min": -1,
-                    "max": -1
+                    "min": null,
+                    "max": null
                 },
                 "max_battery_charge_discharge_kw": 3,
                 "battery_technology": "low_voltage",
                 "battery_voltage_range_v": {
-                    "min": 38,
-                    "max": 66
+                    "min": 38.0,
+                    "max": 66.0
                 },
                 "grid_type": "single_phase",
                 "is_hybrid": true,
@@ -655,7 +698,9 @@
                     "min": -40,
                     "max": 65
                 },
-                "environment": "indoor"
+                "environment": "indoor",
+                "power_kw": 3.0,
+                "battery_type": "low_voltage"
             },
             "pricing": {
                 "unit_price": 513.47,
@@ -666,21 +711,21 @@
             }
         },
         {
-            "id": "inv-011",
+            "id": "inv-017",
             "brand": "Victron Energy",
             "model": "Multiplus-II 48V 5000VA",
             "specs": {
                 "rated_output_power_kw": 5.0,
-                "max_pv_input_kwp": -1,
+                "max_pv_input_kwp": null,
                 "pv_voltage_range_v": {
-                    "min": -1,
-                    "max": -1
+                    "min": null,
+                    "max": null
                 },
                 "max_battery_charge_discharge_kw": 3.36,
                 "battery_technology": "low_voltage",
                 "battery_voltage_range_v": {
-                    "min": 38,
-                    "max": 66
+                    "min": 38.0,
+                    "max": 66.0
                 },
                 "grid_type": "single_phase",
                 "is_hybrid": true,
@@ -697,7 +742,9 @@
                     "min": -40,
                     "max": 65
                 },
-                "environment": "indoor"
+                "environment": "indoor",
+                "power_kw": 5.0,
+                "battery_type": "low_voltage"
             },
             "pricing": {
                 "unit_price": 807.07,
@@ -708,21 +755,21 @@
             }
         },
         {
-            "id": "inv-011",
+            "id": "inv-018",
             "brand": "Victron Energy",
             "model": "Multiplus-II 48V 8000VA",
             "specs": {
                 "rated_output_power_kw": 8.0,
-                "max_pv_input_kwp": -1,
+                "max_pv_input_kwp": null,
                 "pv_voltage_range_v": {
-                    "min": -1,
-                    "max": -1
+                    "min": null,
+                    "max": null
                 },
                 "max_battery_charge_discharge_kw": 5.28,
                 "battery_technology": "low_voltage",
                 "battery_voltage_range_v": {
-                    "min": 38,
-                    "max": 66
+                    "min": 38.0,
+                    "max": 66.0
                 },
                 "grid_type": "single_phase",
                 "is_hybrid": true,
@@ -739,7 +786,9 @@
                     "min": -40,
                     "max": 65
                 },
-                "environment": "indoor"
+                "environment": "indoor",
+                "power_kw": 8.0,
+                "battery_type": "low_voltage"
             },
             "pricing": {
                 "unit_price": 1314.82,
@@ -750,21 +799,21 @@
             }
         },
         {
-            "id": "inv-011",
+            "id": "inv-019",
             "brand": "Victron Energy",
             "model": "Multiplus-II 48V 10000VA",
             "specs": {
                 "rated_output_power_kw": 10.0,
-                "max_pv_input_kwp": -1,
+                "max_pv_input_kwp": null,
                 "pv_voltage_range_v": {
-                    "min": -1,
-                    "max": -1
+                    "min": null,
+                    "max": null
                 },
                 "max_battery_charge_discharge_kw": 6.72,
                 "battery_technology": "low_voltage",
                 "battery_voltage_range_v": {
-                    "min": 38,
-                    "max": 66
+                    "min": 38.0,
+                    "max": 66.0
                 },
                 "grid_type": "single_phase",
                 "is_hybrid": true,
@@ -781,7 +830,9 @@
                     "min": -40,
                     "max": 65
                 },
-                "environment": "indoor"
+                "environment": "indoor",
+                "power_kw": 10.0,
+                "battery_type": "low_voltage"
             },
             "pricing": {
                 "unit_price": 1584.51,
@@ -792,21 +843,21 @@
             }
         },
         {
-            "id": "inv-011",
+            "id": "inv-020",
             "brand": "SMA",
             "model": "Sunny Boy 3.0",
             "specs": {
                 "rated_output_power_kw": 3,
                 "max_pv_input_kwp": 5.5,
                 "pv_voltage_range_v": {
-                    "min": 110,
-                    "max": 500
+                    "min": 110.0,
+                    "max": 500.0
                 },
                 "max_battery_charge_discharge_kw": 6.72,
                 "battery_technology": "low_voltage",
                 "battery_voltage_range_v": {
-                    "min": 38,
-                    "max": 66
+                    "min": 38.0,
+                    "max": 66.0
                 },
                 "grid_type": "single_phase",
                 "is_hybrid": true,
@@ -823,7 +874,9 @@
                     "min": -40,
                     "max": 65
                 },
-                "environment": "indoor"
+                "environment": "indoor",
+                "power_kw": 3.0,
+                "battery_type": "low_voltage"
             },
             "pricing": {
                 "unit_price": 1584.51,
@@ -832,6 +885,6 @@
             "links": {
                 "url": "https://bateriasweb.com/inversor-cargador-multiplus-ii-48-10000-140-100/?gad_source=1&gad_campaignid=17417544133&gclid=CjwKCAjw5NvPBhAoEiwA_2egfhvtkKDNmDBXj7m11a8deqW7DoXHJs1d9qkj8vlMJJCB_kEZG0Km2BoC11EQAvD_BwE"
             }
-        },
+        }
     ]
 }
