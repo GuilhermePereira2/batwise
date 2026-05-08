@@ -13,7 +13,7 @@ Resources:
       Role: arn:aws:iam::267067829753:role/service-role/watt-builder-backend-fastapi-role-51mbg1zv
       FileSystemConfigs: []
       FunctionName: watt-builder-backend-fastapi
-      Runtime: python3.12
+      Runtime: python3.11
       PackageType: Zip
       LoggingConfig:
         LogFormat: Text

@@ -251,10 +251,15 @@ class UserLogin(BaseModel):
     password: str
 
 
+class GoogleLogin(BaseModel):
+    credential: str
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str
     user_name: str
+    email: Optional[EmailStr] = None
     credits: int
     trial_started_at: Optional[str] = None
     admin: bool = False

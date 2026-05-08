@@ -6,6 +6,7 @@ version = 0.1
 [default.global.parameters]
 stack_name = "watt-builder-backend-fastapi-aws"
 region = "eu-west-3"
+
 [default.deploy.parameters]
 resolve_s3 = true
 s3_prefix = "watt-builder-backend-fastapi-aws"

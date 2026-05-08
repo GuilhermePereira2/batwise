@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
+import { useNavigate } from 'react-router-dom';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -7,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { getApiUrl } from '@/lib/config';
+import { useAuth } from '@/context/AuthContext';
 import {
     Battery, Home, FileText, Zap, Sun, Car,
     ChevronRight, ChevronLeft, Loader2,
@@ -42,9 +45,15 @@ const DEFAULT_STATE = {
         peak_kw: 4,
         country: 'Portugal',
         city: 'Lisboa',
+        existing_inverter_brand: '',
+        existing_inverter_model: '',
+        existing_inverter_max_power_kw: 0,
         battery_ready_inverter: false,
         has_battery: false,
-        battery_capacity_kwh: 0
+        battery_capacity_kwh: 0,
+        existing_battery_brand: '',
+        existing_battery_model: '',
+        existing_battery_max_power_kw: 0
     },
     electric_vehicles: {
         has_electric_vehicle: false,
@@ -54,6 +63,8 @@ const DEFAULT_STATE = {
 };
 
 export default function Simulator() {
+    const navigate = useNavigate();
+    const { isAuthenticated, token } = useAuth();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [mode, setMode] = useState<InputMode | null>(null);
@@ -131,6 +142,23 @@ export default function Simulator() {
     useEffect(() => {
         localStorage.setItem('simulator_v2', JSON.stringify(formData));
     }, [formData]);
+
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        const pending = localStorage.getItem('simulator_pending_auth');
+        if (!pending) return;
+
+        try {
+            const parsed = JSON.parse(pending);
+            if (parsed.formData) setFormData(parsed.formData);
+            if (parsed.mode) setMode(parsed.mode);
+            setStep(2);
+        } catch {
+            // Ignore invalid saved simulator state.
+        } finally {
+            localStorage.removeItem('simulator_pending_auth');
+        }
+    }, [isAuthenticated]);
 
     const normalizeHistoryEntry = (entry: any, type: string) => {
         if (!entry || typeof entry !== 'object') {
@@ -242,12 +270,45 @@ export default function Simulator() {
         });
     };
 
+    const getActiveTariffPrices = (tariff: any) => {
+        const prices = tariff?.prices || {};
+        if (tariff?.type === 'bi') {
+            return {
+                offPeak: Number(prices.offPeak ?? 0),
+                peak: Number(prices.peak ?? 0),
+            };
+        }
+        if (tariff?.type === 'tri') {
+            return {
+                offPeak: Number(prices.offPeak ?? 0),
+                peak: Number(prices.peak ?? 0),
+                ponta: Number(prices.ponta ?? 0),
+            };
+        }
+        return {
+            simple: Number(prices.simple ?? 0),
+        };
+    };
+
     const runSimulation = async () => {
+        if (!isAuthenticated || !token) {
+            localStorage.setItem('simulator_pending_auth', JSON.stringify({ step, mode, formData }));
+            navigate('/login?redirect=/simulator');
+            return;
+        }
+
         setLoading(true);
         try {
+            const tariffPayload = {
+                type: formData.tariff.type,
+                prices: getActiveTariffPrices(formData.tariff),
+            };
             const response = await fetch(getApiUrl('api/simulator/size'), {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
                 body: JSON.stringify({
                     mode,
                     input: {
@@ -258,17 +319,24 @@ export default function Simulator() {
                         },
                         electric_vehicles: formData.electric_vehicles,
                     },
-                    tariff: formData.tariff,
+                    tariff: tariffPayload,
                     solar: formData.solar,
                     assumptions: { battery_dod: 0.9, system_losses: 0.1, component_margin: 0.1, installation_margin: 0.1 }
                 }),
             });
+
+            if (response.status === 401) {
+                localStorage.setItem('simulator_pending_auth', JSON.stringify({ step, mode, formData }));
+                navigate('/login?redirect=/simulator');
+                return;
+            }
 
             if (!response.ok) throw new Error("Erro na API");
 
             const data = await response.json();
             setResults(data);
             setStep(3);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (error) {
             console.error("Erro na simulação:", error);
             alert("Erro ao calcular. Verifica a conexão com o backend.");
@@ -283,13 +351,16 @@ export default function Simulator() {
             products.push(`Bateria: ${recommendation.battery.quantity} x ${recommendation.battery.model}`);
         }
         if (recommendation.existing_battery?.has_battery) {
-            products.push(`Bateria existente considerada: ${recommendation.existing_battery.capacity_kwh} kWh`);
+            products.push(`Bateria existente considerada: ${getExistingBatteryDescription(recommendation.existing_battery)}`);
         }
         if (recommendation.inverter) {
             products.push(`Inversor: ${recommendation.inverter.brand} ${recommendation.inverter.model}`);
         }
         if (recommendation.solar_panels) {
-            if (recommendation.solar_panels.existing) {
+            if (recommendation.solar_panels.expanded) {
+                products.push(`Painéis solares existentes: ${recommendation.solar_panels.existing_power_kwp} kWp`);
+                products.push(`Reforço solar: ${recommendation.solar_panels.quantity} x ${recommendation.solar_panels.panel.brand} ${recommendation.solar_panels.panel.model} (${recommendation.solar_panels.added_power_kwp} kWp adicionais)`);
+            } else if (recommendation.solar_panels.existing) {
                 products.push(`Painéis solares existentes: ${recommendation.solar_panels.array_power_kwp} kWp`);
             } else {
                 products.push(`Painéis solares: ${recommendation.solar_panels.quantity} x ${recommendation.solar_panels.panel.brand} ${recommendation.solar_panels.panel.model}`);
@@ -351,6 +422,103 @@ export default function Simulator() {
     const getSystemName = (recommendation: any) => {
         if (recommendation?.system_name) return recommendation.system_name;
         return `${recommendation?.battery?.brand || ''} ${recommendation?.battery?.model || ''}`.trim();
+    };
+
+    const getSolarDescription = (solarPanels: any) => {
+        if (!solarPanels) return 'Sem painéis solares incluídos';
+        if (solarPanels.expanded) {
+            return `Existentes ${solarPanels.existing_power_kwp} kWp + ${solarPanels.quantity} x ${solarPanels.panel.brand} ${solarPanels.panel.model} (${solarPanels.added_power_kwp} kWp novos, ${solarPanels.array_power_kwp} kWp total)`;
+        }
+        if (solarPanels.existing) {
+            return `Painéis existentes (${solarPanels.array_power_kwp} kWp)`;
+        }
+        return `${solarPanels.quantity} x ${solarPanels.panel.brand} ${solarPanels.panel.model} (${solarPanels.array_power_kwp} kWp)`;
+    };
+
+    const getExistingBatteryDescription = (existingBattery: any) => {
+        if (!existingBattery?.has_battery) return '';
+        const name = [existingBattery.brand, existingBattery.model].filter(Boolean).join(' ');
+        const power = existingBattery.max_power_kw ? `, ${existingBattery.max_power_kw} kW` : '';
+        return `${name ? `${name} - ` : ''}${existingBattery.capacity_kwh} kWh${power}`;
+    };
+
+    const downloadProposalsPdf = () => {
+        if (!results?.recommendations?.length) return;
+
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 14;
+        const maxWidth = pageWidth - margin * 2;
+        let y = 18;
+
+        const addPageIfNeeded = (height = 18) => {
+            if (y + height <= pageHeight - margin) return;
+            doc.addPage();
+            y = 18;
+        };
+
+        const addText = (text: string, x = margin, fontSize = 10, style: 'normal' | 'bold' = 'normal', lineGap = 5) => {
+            doc.setFont('helvetica', style);
+            doc.setFontSize(fontSize);
+            const lines = doc.splitTextToSize(text, maxWidth - (x - margin));
+            addPageIfNeeded(lines.length * lineGap + 2);
+            doc.text(lines, x, y);
+            y += lines.length * lineGap;
+        };
+
+        doc.setTextColor(0, 0, 0);
+        addText('WattBuilder - Propostas da Simulação', margin, 18, 'bold', 8);
+        addText(`Data: ${new Date().toLocaleDateString('pt-PT')}`, margin, 10);
+        addText(`Consumo anual estimado: ${Math.round(results.summary?.annual_consumption_estimated ?? 0).toLocaleString()} kWh`, margin, 10);
+        addText(`Produção solar estimada: ${Math.round(results.summary?.annual_solar_estimated ?? 0).toLocaleString()} kWh/ano`, margin, 10);
+        if ((results.summary?.annual_ev_consumption_estimated ?? 0) > 0) {
+            addText(`Consumo de carros elétricos: ${Math.round(results.summary.annual_ev_consumption_estimated).toLocaleString()} kWh/ano`, margin, 10);
+        }
+        y += 4;
+
+        budgetSections.forEach((section) => {
+            const items = (results.recommendations || []).filter((rec: any) => rec.budget_tier === section.tier);
+            if (!items.length) return;
+
+            addPageIfNeeded(20);
+            addText(section.title, margin, 14, 'bold', 7);
+            addText(section.description, margin, 9);
+            y += 2;
+
+            items.forEach((rec: any, index: number) => {
+                const prices = getPriceBreakdown(rec);
+                addPageIfNeeded(58);
+                doc.setDrawColor(220, 220, 220);
+                doc.line(margin, y, pageWidth - margin, y);
+                y += 6;
+
+                addText(`${index + 1}. ${getSystemName(rec)}`, margin, 11, 'bold', 5);
+                addText(`Investimento estimado: ${formatPrice(rec.capex_total_eur)} | Hardware: ${formatPrice(prices.hardwareTotal)} | Instalação: ${formatPrice(prices.installation)}`, margin, 9);
+                addText(`Fatura atual: ${formatPrice(rec.annual_bill_before_eur)}/ano | Após sistema: ${formatPrice(rec.annual_bill_after_eur)}/ano | Poupança: ${formatPrice(rec.savings_annual_eur)}/ano | Payback: ${rec.payback_years ? `${rec.payback_years} anos` : 'não aplicável'}`, margin, 9);
+                addText(`Bateria: ${rec.battery.brand} ${rec.battery.model} (${rec.new_battery_capacity_kwh || rec.simulated_capacity_kwh} kWh)`, margin, 9);
+                if (rec.existing_battery?.has_battery) {
+                    addText(`Bateria existente: ${getExistingBatteryDescription(rec.existing_battery)}`, margin, 9);
+                }
+                if (rec.inverter) {
+                    addText(`Inversor: ${rec.inverter.brand} ${rec.inverter.model} (${rec.inverter.specs?.power_kw || 'N/A'} kW)`, margin, 9);
+                }
+                addText(`Painéis solares: ${getSolarDescription(rec.solar_panels)}`, margin, 9);
+                if (rec.replacement_notes?.length) {
+                    rec.replacement_notes.forEach((note: string) => addText(`Nota: ${note}`, margin, 8));
+                }
+                y += 4;
+            });
+        });
+
+        addPageIfNeeded(28);
+        doc.setDrawColor(220, 220, 220);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 6;
+        addText('Notas', margin, 12, 'bold');
+        (results.notes || []).forEach((note: string) => addText(`- ${note}`, margin, 8));
+
+        doc.save(`propostas-wattbuilder-${new Date().toISOString().slice(0, 10)}.pdf`);
     };
 
     const selectedPrices = selectedRecommendation ? getPriceBreakdown(selectedRecommendation) : null;
@@ -591,7 +759,22 @@ export default function Simulator() {
                                         <div className="grid grid-cols-2 gap-2 sm:w-auto">
                                             <Button
                                                 className={`h-12 ${formData.solar.has_solar ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
-                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_solar: false, battery_ready_inverter: false, has_battery: false, battery_capacity_kwh: 0 } })}
+                                                onClick={() => setFormData({
+                                                    ...formData,
+                                                    solar: {
+                                                        ...formData.solar,
+                                                        has_solar: false,
+                                                        existing_inverter_brand: '',
+                                                        existing_inverter_model: '',
+                                                        existing_inverter_max_power_kw: 0,
+                                                        battery_ready_inverter: false,
+                                                        has_battery: false,
+                                                        battery_capacity_kwh: 0,
+                                                        existing_battery_brand: '',
+                                                        existing_battery_model: '',
+                                                        existing_battery_max_power_kw: 0,
+                                                    }
+                                                })}
                                             >
                                                 Não
                                             </Button>
@@ -607,7 +790,7 @@ export default function Simulator() {
                                     {formData.solar.has_solar && (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div className="space-y-2">
-                                                <Label>Potência de pico instalada (kW)</Label>
+                                                <Label>Potência de pico existente (kWp)</Label>
                                                 <Input
                                                     type="number"
                                                     step="0.1"
@@ -615,6 +798,37 @@ export default function Simulator() {
                                                     className="border-gray-300 focus-visible:ring-orange-600"
                                                     value={formData.solar.peak_kw}
                                                     onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, peak_kw: Number(e.target.value) } })}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Potência máxima do inversor atual (kW)</Label>
+                                                <Input
+                                                    type="number"
+                                                    step="0.1"
+                                                    min="0"
+                                                    className="border-gray-300 focus-visible:ring-orange-600"
+                                                    value={formData.solar.existing_inverter_max_power_kw}
+                                                    onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_max_power_kw: Number(e.target.value) } })}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Marca do inversor atual</Label>
+                                                <Input
+                                                    type="text"
+                                                    className="border-gray-300 focus-visible:ring-orange-600"
+                                                    value={formData.solar.existing_inverter_brand}
+                                                    onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_brand: e.target.value } })}
+                                                    placeholder="Ex: Huawei"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Modelo do inversor atual</Label>
+                                                <Input
+                                                    type="text"
+                                                    className="border-gray-300 focus-visible:ring-orange-600"
+                                                    value={formData.solar.existing_inverter_model}
+                                                    onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_model: e.target.value } })}
+                                                    placeholder="Ex: SUN2000-5KTL"
                                                 />
                                             </div>
                                             <div className="space-y-2">
@@ -640,7 +854,7 @@ export default function Simulator() {
                                                 <div className="grid grid-cols-2 gap-2 max-w-sm">
                                                     <Button
                                                         className={`h-12 ${formData.solar.battery_ready_inverter ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
-                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, battery_ready_inverter: false, has_battery: false, battery_capacity_kwh: 0 } })}
+                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, battery_ready_inverter: false, has_battery: false, battery_capacity_kwh: 0, existing_battery_brand: '', existing_battery_model: '', existing_battery_max_power_kw: 0 } })}
                                                     >
                                                         Não
                                                     </Button>
@@ -666,7 +880,7 @@ export default function Simulator() {
                                                             <div className="grid grid-cols-2 gap-2 max-w-sm">
                                                                 <Button
                                                                     className={`h-12 ${formData.solar.has_battery ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
-                                                                    onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_battery: false, battery_capacity_kwh: 0 } })}
+                                                                    onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_battery: false, battery_capacity_kwh: 0, existing_battery_brand: '', existing_battery_model: '', existing_battery_max_power_kw: 0 } })}
                                                                 >
                                                                     Não
                                                                 </Button>
@@ -679,18 +893,51 @@ export default function Simulator() {
                                                             </div>
                                                         </div>
                                                         {formData.solar.has_battery && (
-                                                            <div className="space-y-2 max-w-sm">
-                                                                <Label>Capacidade da bateria atual (kWh)</Label>
-                                                                <Input
-                                                                    type="number"
-                                                                    min="0"
-                                                                    step="0.1"
-                                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                                    value={formData.solar.battery_capacity_kwh}
-                                                                    onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, battery_capacity_kwh: Number(e.target.value) } })}
-                                                                />
-                                                                <p className="text-xs text-gray-500">
-                                                                    Esta capacidade será considerada como já instalada no dimensionamento.
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                <div className="space-y-2">
+                                                                    <Label>Capacidade da bateria atual (kWh)</Label>
+                                                                    <Input
+                                                                        type="number"
+                                                                        min="0"
+                                                                        step="0.1"
+                                                                        className="border-gray-300 focus-visible:ring-orange-600"
+                                                                        value={formData.solar.battery_capacity_kwh}
+                                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, battery_capacity_kwh: Number(e.target.value) } })}
+                                                                    />
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <Label>Potência máxima da bateria atual (kW)</Label>
+                                                                    <Input
+                                                                        type="number"
+                                                                        min="0"
+                                                                        step="0.1"
+                                                                        className="border-gray-300 focus-visible:ring-orange-600"
+                                                                        value={formData.solar.existing_battery_max_power_kw}
+                                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_max_power_kw: Number(e.target.value) } })}
+                                                                    />
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <Label>Marca da bateria atual</Label>
+                                                                    <Input
+                                                                        type="text"
+                                                                        className="border-gray-300 focus-visible:ring-orange-600"
+                                                                        value={formData.solar.existing_battery_brand}
+                                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_brand: e.target.value } })}
+                                                                        placeholder="Ex: Huawei"
+                                                                    />
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <Label>Modelo da bateria atual</Label>
+                                                                    <Input
+                                                                        type="text"
+                                                                        className="border-gray-300 focus-visible:ring-orange-600"
+                                                                        value={formData.solar.existing_battery_model}
+                                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_model: e.target.value } })}
+                                                                        placeholder="Ex: Luna2000"
+                                                                    />
+                                                                </div>
+                                                                <p className="text-xs text-gray-500 md:col-span-2">
+                                                                    Estes dados serão considerados como equipamento já instalado no dimensionamento.
                                                                 </p>
                                                             </div>
                                                         )}
@@ -957,6 +1204,17 @@ export default function Simulator() {
                     {/* Step 3: Results */}
                     {step === 3 && results && (
                         <div className="space-y-8 animate-in zoom-in-95 duration-500">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h2 className="text-2xl font-bold">Propostas recomendadas</h2>
+                                    <p className="text-sm text-gray-500">Descarrega um PDF com todas as opções e métricas financeiras.</p>
+                                </div>
+                                <Button onClick={downloadProposalsPdf} className="bg-black text-white hover:bg-gray-800">
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    Descarregar PDF
+                                </Button>
+                            </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <Card className="border-gray-200 bg-white">
                                     <CardContent className="p-5">
@@ -1094,11 +1352,18 @@ export default function Simulator() {
                                                                             <div>
                                                                                 <p className="text-xs uppercase text-gray-400 font-semibold">Painéis solares</p>
                                                                                 <p className="text-base font-bold leading-tight">
-                                                                                    {rec.solar_panels.existing
+                                                                                    {rec.solar_panels.expanded
+                                                                                        ? `Existentes + ${rec.solar_panels.quantity} x ${rec.solar_panels.panel.brand} ${rec.solar_panels.panel.model}`
+                                                                                        : rec.solar_panels.existing
                                                                                         ? 'Painéis existentes'
                                                                                         : `${rec.solar_panels.quantity} x ${rec.solar_panels.panel.brand} ${rec.solar_panels.panel.model}`}
                                                                                 </p>
                                                                                 <p className="text-xs text-gray-500">{rec.solar_panels.array_power_kwp} kWp</p>
+                                                                                {rec.solar_panels.expanded && (
+                                                                                    <p className="text-xs text-gray-500">
+                                                                                        {rec.solar_panels.existing_power_kwp} kWp existentes + {rec.solar_panels.added_power_kwp} kWp novos
+                                                                                    </p>
+                                                                                )}
                                                                                 {rec.solar_panels.roof_area_m2 && (
                                                                                     <p className="text-xs text-gray-500">
                                                                                         {rec.solar_panels.total_panel_area_m2} m² de {rec.solar_panels.roof_area_m2} m² ({rec.solar_panels.roof_coverage_pct}%)
@@ -1111,9 +1376,19 @@ export default function Simulator() {
                                                             </div>
 
                                                             <div className="space-y-3 pt-2">
+                                                                <div className="grid grid-cols-2 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm">
+                                                                    <div>
+                                                                        <p className="text-xs text-gray-500">Fatura atual</p>
+                                                                        <p className="font-bold">{formatPrice(rec.annual_bill_before_eur)}/ano</p>
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-xs text-gray-500">Após sistema</p>
+                                                                        <p className="font-bold">{formatPrice(rec.annual_bill_after_eur)}/ano</p>
+                                                                    </div>
+                                                                </div>
                                                                 <div className="flex items-center text-sm text-black">
                                                                     <TrendingUp className="w-4 h-4 mr-2 text-orange-600" />
-                                                                    <span>Poupança: <strong>{rec.savings_annual_eur}€/ano</strong></span>
+                                                                    <span>Poupança anual: <strong>{formatPrice(rec.savings_annual_eur)}/ano</strong></span>
                                                                 </div>
                                                                 <div className="flex items-center text-sm text-black">
                                                                     <Wallet className="w-4 h-4 mr-2 text-orange-600" />
@@ -1168,14 +1443,14 @@ export default function Simulator() {
                                                     <p className="text-sm text-gray-500 mt-1">inclui hardware e instalação</p>
                                                 </div>
                                                 <div className="rounded-3xl border border-gray-200 p-5 bg-gray-50">
-                                                    <p className="text-xs uppercase text-gray-400 font-semibold mb-2">Poupança anual</p>
-                                                    <p className="text-3xl font-bold">{selectedRecommendation.savings_annual_eur}€</p>
-                                                    <p className="text-sm text-gray-500 mt-1">economia prevista por ano</p>
+                                                    <p className="text-xs uppercase text-gray-400 font-semibold mb-2">Fatura anual</p>
+                                                    <p className="text-3xl font-bold">{formatPrice(selectedRecommendation.annual_bill_after_eur)}</p>
+                                                    <p className="text-sm text-gray-500 mt-1">antes: {formatPrice(selectedRecommendation.annual_bill_before_eur)}/ano</p>
                                                 </div>
                                                 <div className="rounded-3xl border border-gray-200 p-5 bg-gray-50">
                                                     <p className="text-xs uppercase text-gray-400 font-semibold mb-2">Payback</p>
                                                     <p className="text-3xl font-bold">{selectedRecommendation.payback_years ? `${selectedRecommendation.payback_years} anos` : 'não aplicável'}</p>
-                                                    <p className="text-sm text-gray-500 mt-1">tempo de retorno do investimento</p>
+                                                    <p className="text-sm text-gray-500 mt-1">poupança: {formatPrice(selectedRecommendation.savings_annual_eur)}/ano</p>
                                                 </div>
                                             </div>
 
@@ -1187,7 +1462,7 @@ export default function Simulator() {
                                                         <p><span className="font-semibold">Capacidade nova:</span> {selectedRecommendation.new_battery_capacity_kwh || selectedRecommendation.simulated_capacity_kwh} kWh</p>
                                                         {selectedRecommendation.existing_battery?.has_battery && (
                                                             <>
-                                                                <p><span className="font-semibold">Bateria existente:</span> {selectedRecommendation.existing_battery.capacity_kwh} kWh</p>
+                                                                <p><span className="font-semibold">Bateria existente:</span> {getExistingBatteryDescription(selectedRecommendation.existing_battery)}</p>
                                                                 <p><span className="font-semibold">Capacidade total simulada:</span> {selectedRecommendation.simulated_capacity_kwh} kWh</p>
                                                             </>
                                                         )}
@@ -1220,12 +1495,20 @@ export default function Simulator() {
                                                 <div className="rounded-3xl border border-gray-200 p-6">
                                                     <h3 className="text-lg font-bold mb-4">Painéis solares</h3>
                                                     <p className="text-sm text-gray-500 mb-2">
-                                                        {selectedRecommendation.solar_panels.existing
+                                                        {selectedRecommendation.solar_panels.expanded
+                                                            ? `Painéis existentes + ${selectedRecommendation.solar_panels.quantity} x ${selectedRecommendation.solar_panels.panel.brand} ${selectedRecommendation.solar_panels.panel.model}`
+                                                            : selectedRecommendation.solar_panels.existing
                                                             ? 'Painéis solares existentes'
                                                             : `${selectedRecommendation.solar_panels.quantity} x ${selectedRecommendation.solar_panels.panel.brand} ${selectedRecommendation.solar_panels.panel.model}`}
                                                     </p>
                                                     <div className="space-y-2 text-sm">
                                                         <p><span className="font-semibold">Potência total:</span> {selectedRecommendation.solar_panels.array_power_kwp} kWp</p>
+                                                        {selectedRecommendation.solar_panels.expanded && (
+                                                            <>
+                                                                <p><span className="font-semibold">Potência existente:</span> {selectedRecommendation.solar_panels.existing_power_kwp} kWp</p>
+                                                                <p><span className="font-semibold">Potência nova:</span> {selectedRecommendation.solar_panels.added_power_kwp} kWp</p>
+                                                            </>
+                                                        )}
                                                         {selectedRecommendation.solar_panels.roof_area_m2 && (
                                                             <>
                                                                 <p><span className="font-semibold">Área estimada do telhado:</span> {selectedRecommendation.solar_panels.roof_area_m2} m²</p>
@@ -1233,10 +1516,10 @@ export default function Simulator() {
                                                                 <p><span className="font-semibold">Ocupação do telhado:</span> {selectedRecommendation.solar_panels.roof_coverage_pct}%</p>
                                                             </>
                                                         )}
-                                                        {!selectedRecommendation.solar_panels.existing && (
+                                                        {(!selectedRecommendation.solar_panels.existing || selectedRecommendation.solar_panels.expanded) && (
                                                             <>
-                                                                <p><span className="font-semibold">Potência por painel:</span> {selectedRecommendation.solar_panels.panel.power_w || 'N/A'} W</p>
-                                                                <p><span className="font-semibold">Área estimada:</span> {selectedRecommendation.solar_panels.quantity * (selectedRecommendation.solar_panels.panel.area_m2 || 0)} m²</p>
+                                                                <p><span className="font-semibold">Potência por painel novo:</span> {selectedRecommendation.solar_panels.panel.specs?.power_w || 'N/A'} W</p>
+                                                                <p><span className="font-semibold">Área dos painéis novos:</span> {selectedRecommendation.solar_panels.additional_panel_set?.total_panel_area_m2 || selectedRecommendation.solar_panels.total_panel_area_m2} m²</p>
                                                             </>
                                                         )}
                                                     </div>
@@ -1274,13 +1557,16 @@ export default function Simulator() {
                                                         products.push(`Bateria: ${selectedRecommendation.battery.quantity} x ${selectedRecommendation.battery.model}`);
                                                     }
                                                     if (selectedRecommendation.existing_battery?.has_battery) {
-                                                        products.push(`Bateria existente considerada: ${selectedRecommendation.existing_battery.capacity_kwh} kWh`);
+                                                        products.push(`Bateria existente considerada: ${getExistingBatteryDescription(selectedRecommendation.existing_battery)}`);
                                                     }
                                                     if (selectedRecommendation.inverter) {
                                                         products.push(`Inversor: ${selectedRecommendation.inverter.brand} ${selectedRecommendation.inverter.model}`);
                                                     }
                                                     if (selectedRecommendation.solar_panels) {
-                                                        if (selectedRecommendation.solar_panels.existing) {
+                                                        if (selectedRecommendation.solar_panels.expanded) {
+                                                            products.push(`Painéis solares existentes: ${selectedRecommendation.solar_panels.existing_power_kwp} kWp`);
+                                                            products.push(`Reforço solar: ${selectedRecommendation.solar_panels.quantity} x ${selectedRecommendation.solar_panels.panel.brand} ${selectedRecommendation.solar_panels.panel.model} (${selectedRecommendation.solar_panels.added_power_kwp} kWp adicionais)`);
+                                                        } else if (selectedRecommendation.solar_panels.existing) {
                                                             products.push(`Painéis solares existentes: ${selectedRecommendation.solar_panels.array_power_kwp} kWp`);
                                                         } else {
                                                             products.push(`Painéis solares: ${selectedRecommendation.solar_panels.quantity} x ${selectedRecommendation.solar_panels.panel.brand} ${selectedRecommendation.solar_panels.panel.model}`);

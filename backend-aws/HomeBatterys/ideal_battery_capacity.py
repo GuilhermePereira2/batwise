@@ -203,7 +203,7 @@ def build_hourly_profile(
     tariff: Dict[str, Any],
     solar: Dict[str, Any],
 ) -> Tuple[Dict[str, List[float]], Dict[str, float]]:
-    monthly_consumption = estimate_monthly_consumption(mode, input_data, tariff)
+    monthly_consumption = estimate_monthly_consumption(mode, input_data, tariff, include_ev=False)
     monthly_solar = estimate_monthly_solar(input_data, solar)
 
     load: List[float] = []
@@ -234,6 +234,10 @@ def build_hourly_profile(
                 divisor = period_weights[period] or 1.0
                 month_load.append(target_kwh * weight / divisor)
 
+        month_ev_load = estimate_monthly_ev_hourly_load(input_data, days)
+        if month_ev_load:
+            month_load = [base + ev for base, ev in zip(month_load, month_ev_load)]
+
         month_solar_total = monthly_solar[month_index]
         solar_divisor = sum(solar_weights) or 1.0
         month_pv = [month_solar_total * weight / solar_divisor for weight in solar_weights]
@@ -254,9 +258,14 @@ def build_hourly_profile(
     )
 
 
-def estimate_monthly_consumption(mode: str, input_data: Dict[str, Any], tariff: Dict[str, Any]) -> Dict[str, float]:
+def estimate_monthly_consumption(
+    mode: str,
+    input_data: Dict[str, Any],
+    tariff: Dict[str, Any],
+    include_ev: bool = True,
+) -> Dict[str, float]:
     tariff_type = tariff.get("type", "simple")
-    monthly_ev_by_period = estimate_monthly_ev_consumption_by_period(input_data, tariff_type)
+    monthly_ev_by_period = estimate_monthly_ev_consumption_by_period(input_data, tariff_type) if include_ev else {}
 
     if mode == "house":
         occupants = max(1, int(float(input_data.get("occupants", 1))))
@@ -291,6 +300,47 @@ def estimate_monthly_consumption(mode: str, input_data: Dict[str, Any], tariff: 
 
 def estimate_monthly_ev_consumption(input_data: Dict[str, Any]) -> float:
     return sum(estimate_monthly_ev_consumption_by_period(input_data, "simple").values())
+
+
+def estimate_monthly_ev_hourly_load(input_data: Dict[str, Any], days: int) -> List[float]:
+    ev_data = input_data.get("electric_vehicles") or {}
+    hourly = [0.0 for _ in range(days * 24)]
+    if not ev_data.get("has_electric_vehicle"):
+        return hourly
+
+    vehicles = ev_data.get("vehicles") or []
+    for vehicle in vehicles:
+        if not isinstance(vehicle, dict):
+            continue
+        daily_km = max(0.0, float(vehicle.get("daily_km", 0) or 0))
+        consumption = max(
+            0.05,
+            float(vehicle.get("consumption_kwh_per_km", DEFAULT_EV_CONSUMPTION_KWH_PER_KM) or DEFAULT_EV_CONSUMPTION_KWH_PER_KM),
+        )
+        daily_kwh = daily_km * consumption
+        schedule = str(vehicle.get("charging_schedule", "night") or "night")
+        hour_shares = ev_charging_hour_shares(schedule)
+        for day in range(days):
+            for hour, share in hour_shares.items():
+                hourly[day * 24 + hour] += daily_kwh * share
+
+    return hourly
+
+
+def ev_charging_hour_shares(schedule: str) -> Dict[int, float]:
+    night_hours = [0, 1, 2, 3, 4, 5]
+    day_hours = [10, 11, 12, 13, 14, 15]
+
+    if schedule == "day":
+        return {hour: 1 / len(day_hours) for hour in day_hours}
+    if schedule == "mixed":
+        shares: Dict[int, float] = {}
+        for hour in night_hours:
+            shares[hour] = shares.get(hour, 0.0) + 0.5 / len(night_hours)
+        for hour in day_hours:
+            shares[hour] = shares.get(hour, 0.0) + 0.5 / len(day_hours)
+        return shares
+    return {hour: 1 / len(night_hours) for hour in night_hours}
 
 
 def estimate_monthly_ev_consumption_by_period(input_data: Dict[str, Any], tariff_type: str) -> Dict[str, float]:
@@ -362,6 +412,7 @@ def estimate_monthly_solar(input_data: Dict[str, Any], solar: Dict[str, Any]) ->
     if not solar.get("has_solar"):
         return [0.0 for _ in range(12)]
 
+    peak_kw = get_existing_solar_peak_kwp(solar)
     history = input_data.get("history") or []
     production_values = [
         float(entry.get("production", 0) or 0)
@@ -370,22 +421,33 @@ def estimate_monthly_solar(input_data: Dict[str, Any], solar: Dict[str, Any]) ->
     ]
     if production_values:
         monthly_avg = sum(production_values) / len(production_values)
+        existing_peak = get_existing_solar_peak_kwp(solar)
+        if existing_peak > 0 and peak_kw > existing_peak:
+            monthly_avg *= peak_kw / existing_peak
         return [monthly_avg for _ in range(12)]
 
-    peak_kw = max(0.0, float(solar.get("peak_kw", 0) or 0))
     annual_yield = peak_kw * solar_yield_kwh_per_kwp(solar)
     factor_sum = sum(MONTH_SOLAR_FACTORS)
     return [annual_yield * factor / factor_sum for factor in MONTH_SOLAR_FACTORS]
 
 
 def estimate_recommended_solar_peak_kw(profile_summary: Dict[str, float], solar: Dict[str, Any]) -> float:
-    existing_peak = float(solar.get("peak_kw", 0) or 0)
+    existing_peak = get_existing_solar_peak_kwp(solar)
     if solar.get("has_solar") and existing_peak > 0:
         return round(existing_peak, 2)
 
     annual_consumption = profile_summary["annual_consumption_kwh"]
     target_peak = annual_consumption / solar_yield_kwh_per_kwp(solar or {"country": "Portugal", "city": "Lisboa"})
     return round(max(2.0, min(10.0, target_peak)), 2)
+
+
+def get_existing_solar_peak_kwp(solar: Optional[Dict[str, Any]]) -> float:
+    if not (solar or {}).get("has_solar"):
+        return 0.0
+    try:
+        return max(0.0, float((solar or {}).get("peak_kw", 0) or 0))
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def solar_yield_kwh_per_kwp(solar: Dict[str, Any]) -> float:
@@ -433,15 +495,40 @@ def solar_hour_weight(hour: int) -> float:
 
 def build_hourly_prices(tariff: Dict[str, Any]) -> List[float]:
     tariff_type = tariff.get("type", "simple")
-    prices = tariff.get("prices") or {}
-    defaults = {"simple": 0.22, "offPeak": 0.14, "peak": 0.24, "ponta": 0.30}
     hourly = []
     for days in MONTH_DAYS:
         for _day in range(days):
             for hour in range(24):
                 period = tariff_period(hour, tariff_type)
-                hourly.append(float(prices.get(period, defaults.get(period, defaults["simple"])) or defaults["simple"]))
+                hourly.append(get_active_tariff_price(tariff, period))
     return hourly
+
+
+def active_tariff_periods(tariff_type: str) -> List[str]:
+    if tariff_type == "bi":
+        return ["offPeak", "peak"]
+    if tariff_type == "tri":
+        return ["offPeak", "peak", "ponta"]
+    return ["simple"]
+
+
+def get_active_tariff_price(tariff: Dict[str, Any], period: str) -> float:
+    tariff_type = tariff.get("type", "simple")
+    active_periods = active_tariff_periods(tariff_type)
+    prices = tariff.get("prices") or {}
+    fallback_by_type = {
+        "simple": {"simple": 0.22},
+        "bi": {"offPeak": 0.14, "peak": 0.24},
+        "tri": {"offPeak": 0.14, "peak": 0.24, "ponta": 0.30},
+    }
+
+    if period not in active_periods:
+        period = active_periods[0]
+
+    value = prices.get(period)
+    if value is None:
+        value = fallback_by_type.get(tariff_type, fallback_by_type["simple"]).get(period, 0.22)
+    return float(value or 0)
 
 
 def simulate_capacity(
@@ -460,6 +547,7 @@ def simulate_capacity(
 
     price_min = min(prices_eur_kwh)
     price_max = max(prices_eur_kwh)
+    allow_grid_arbitrage = allow_grid_arbitrage and price_max - price_min >= 0.05
     low_threshold = price_min + 0.005
     high_threshold = price_max - 0.005
 
@@ -583,31 +671,28 @@ def rank_catalog(
     has_existing_solar = bool((solar or {}).get("has_solar"))
     existing_inverter_supports_battery = bool((solar or {}).get("battery_ready_inverter"))
     existing_battery_capacity = get_existing_battery_capacity_kwh(solar)
+    existing_solar_peak_kwp = get_existing_solar_peak_kwp(solar)
+    total_solar_peak_kwp = max(solar_peak_kwp, existing_solar_peak_kwp)
+    expand_existing_solar = False
+    auto_expansion_target_kwp = estimate_auto_solar_expansion_target_kwp(profile, solar)
 
-    for battery in catalog.get("batteries", []):
-        specs = battery.get("specs", {})
-        capacity = float(specs.get("usable_capacity_kwh") or specs.get("capacity_kwh") or 0)
-        if capacity <= 0:
-            continue
-        simulated_capacity = capacity + existing_battery_capacity
-        inverter = (
-            build_existing_battery_ready_inverter(solar)
-            if has_existing_solar and existing_inverter_supports_battery
-            else select_inverter_for_battery(battery, inverters, catalog.get("compatibility"))
-        )
-        panel_set = (
-            build_existing_solar_panel_set(solar, roof_area_m2)
-            if has_existing_solar
-            else select_solar_panel_set(panels, battery, inverter, solar_peak_kwp, catalog.get("compatibility"), roof_area_m2)
-        )
+    def append_recommendation(
+        battery: Dict[str, Any],
+        capacity: float,
+        simulated_capacity: float,
+        inverter: Optional[Dict[str, Any]],
+        panel_set: Optional[Dict[str, Any]],
+    ) -> None:
         if inverters and not inverter:
-            continue
+            return
         if panels and not panel_set:
-            continue
+            return
+
+        variant_profile = profile_for_panel_set(profile, solar, panel_set)
         result = simulate_capacity(
             capacity_kwh=simulated_capacity,
-            load_kwh=profile["load_kwh"],
-            pv_kwh=profile["pv_kwh"],
+            load_kwh=variant_profile["load_kwh"],
+            pv_kwh=variant_profile["pv_kwh"],
             prices_eur_kwh=prices,
             dod=dod,
             roundtrip_efficiency=roundtrip_efficiency,
@@ -623,7 +708,8 @@ def rank_catalog(
         hardware_total = battery_price + inverter_price + panels_price
         installation_margin_eur = hardware_total * installation_margin
         capex = hardware_total + installation_margin_eur
-        annual_savings = no_system_base.annual_cost_eur - result.annual_cost_eur
+        current_bill = base.annual_cost_eur if has_existing_solar else no_system_base.annual_cost_eur
+        annual_savings = current_bill - result.annual_cost_eur
         payback = capex / annual_savings if annual_savings > 0 else None
         fit_penalty = abs(simulated_capacity - target) / target
 
@@ -659,6 +745,8 @@ def rank_catalog(
                 "capex_total_eur": round(capex, 2),
                 "hardware_total_eur": round(hardware_total, 2),
                 "installation_margin_eur": round(installation_margin_eur, 2),
+                "annual_bill_before_eur": round(current_bill, 2),
+                "annual_bill_after_eur": round(result.annual_cost_eur, 2),
                 "savings_annual_eur": round(annual_savings, 2),
                 "payback_years": round(payback, 1) if payback else None,
                 "fit_to_ideal": round(max(0.0, 1.0 - fit_penalty), 2),
@@ -667,7 +755,123 @@ def rank_catalog(
             }
         )
 
+    for battery in catalog.get("batteries", []):
+        specs = battery.get("specs", {})
+        capacity = float(specs.get("usable_capacity_kwh") or specs.get("capacity_kwh") or 0)
+        if capacity <= 0:
+            continue
+        simulated_capacity = capacity + existing_battery_capacity
+        inverter = (
+            build_existing_battery_ready_inverter(solar)
+            if has_existing_solar and existing_inverter_supports_battery
+            else select_inverter_for_battery(
+                battery,
+                inverters,
+                catalog.get("compatibility"),
+                total_solar_peak_kwp,
+                requires_pv_input=bool(panels or has_existing_solar),
+            )
+        )
+        if has_existing_solar:
+            panel_set = build_existing_solar_panel_set(solar, roof_area_m2)
+            if expand_existing_solar:
+                additional_target_kwp = max(0.0, total_solar_peak_kwp - existing_solar_peak_kwp)
+                existing_panel_area = float(panel_set.get("total_panel_area_m2", 0) or 0)
+                additional_panel_set = select_solar_panel_set(
+                    panels,
+                    battery,
+                    inverter,
+                    additional_target_kwp,
+                    catalog.get("compatibility"),
+                    roof_area_m2,
+                    existing_peak_kwp=existing_solar_peak_kwp,
+                    reserved_roof_area_m2=existing_panel_area,
+                )
+                if additional_panel_set:
+                    panel_set = build_expanded_solar_panel_set(solar, additional_panel_set, roof_area_m2)
+        else:
+            panel_set = select_solar_panel_set(
+                panels,
+                battery,
+                inverter,
+                solar_peak_kwp,
+                catalog.get("compatibility"),
+                roof_area_m2,
+            )
+        append_recommendation(battery, capacity, simulated_capacity, inverter, panel_set)
+
+        if has_existing_solar and auto_expansion_target_kwp > existing_solar_peak_kwp and not expand_existing_solar:
+            expanded_inverter = (
+                build_existing_battery_ready_inverter(solar)
+                if existing_inverter_supports_battery
+                else select_inverter_for_battery(
+                    battery,
+                    inverters,
+                    catalog.get("compatibility"),
+                    auto_expansion_target_kwp,
+                    requires_pv_input=bool(panels or has_existing_solar),
+                )
+            )
+            additional_target_kwp = auto_expansion_target_kwp - existing_solar_peak_kwp
+            existing_panel_set = build_existing_solar_panel_set(solar, roof_area_m2)
+            existing_panel_area = float(existing_panel_set.get("total_panel_area_m2", 0) or 0)
+            additional_panel_set = select_solar_panel_set(
+                panels,
+                battery,
+                expanded_inverter,
+                additional_target_kwp,
+                catalog.get("compatibility"),
+                roof_area_m2,
+                existing_peak_kwp=existing_solar_peak_kwp,
+                reserved_roof_area_m2=existing_panel_area,
+                allow_dc_oversize=False,
+            )
+            if additional_panel_set:
+                expanded_panel_set = build_expanded_solar_panel_set(solar, additional_panel_set, roof_area_m2)
+                expanded_panel_set["auto_expanded"] = True
+                append_recommendation(battery, capacity, simulated_capacity, expanded_inverter, expanded_panel_set)
+
     return select_budgeted_recommendations(recommendations)
+
+
+def estimate_auto_solar_expansion_target_kwp(profile: Dict[str, List[float]], solar: Optional[Dict[str, Any]]) -> float:
+    if not (solar or {}).get("has_solar"):
+        return 0.0
+    if (solar or {}).get("battery_ready_inverter"):
+        return 0.0
+    existing_peak = get_existing_solar_peak_kwp(solar)
+    if existing_peak <= 0:
+        return 0.0
+
+    annual_load = sum(profile.get("load_kwh", []))
+    annual_pv = sum(profile.get("pv_kwh", []))
+    if annual_load <= annual_pv * 1.05:
+        return 0.0
+
+    yield_kwh_per_kwp = solar_yield_kwh_per_kwp(solar or {"country": "Portugal", "city": "Lisboa"})
+    load_matched_peak = annual_load / yield_kwh_per_kwp if yield_kwh_per_kwp > 0 else existing_peak
+    target_peak = max(existing_peak + 2.0, load_matched_peak * 1.15)
+    return round(min(10.0, target_peak), 2)
+
+
+def profile_for_panel_set(
+    profile: Dict[str, List[float]],
+    solar: Optional[Dict[str, Any]],
+    panel_set: Optional[Dict[str, Any]],
+) -> Dict[str, List[float]]:
+    if not panel_set or not panel_set.get("expanded"):
+        return profile
+
+    existing_peak = get_existing_solar_peak_kwp(solar)
+    total_peak = float(panel_set.get("array_power_kwp", 0) or 0)
+    if existing_peak <= 0 or total_peak <= existing_peak:
+        return profile
+
+    scale = total_peak / existing_peak
+    return {
+        "load_kwh": profile["load_kwh"],
+        "pv_kwh": [value * scale for value in profile["pv_kwh"]],
+    }
 
 
 def build_system_name(
@@ -679,7 +883,16 @@ def build_system_name(
     if inverter:
         parts.append(format_component_name(inverter))
     if panel_set:
-        if panel_set.get("existing"):
+        if panel_set.get("expanded"):
+            panel = panel_set.get("panel") or {}
+            quantity = int(panel_set.get("quantity", 0) or 0)
+            panel_name = format_component_name(panel)
+            existing_power = panel_set.get("existing_power_kwp", 0)
+            if quantity > 0 and panel_name:
+                parts.append(f"painéis existentes {existing_power} kWp + {quantity}x {panel_name}")
+            else:
+                parts.append(f"painéis existentes {panel_set.get('array_power_kwp', 0)} kWp")
+        elif panel_set.get("existing"):
             parts.append(f"painéis existentes {panel_set.get('array_power_kwp', 0)} kWp")
         else:
             panel = panel_set.get("panel") or {}
@@ -697,8 +910,13 @@ def build_replacement_notes(
 ) -> List[str]:
     if not (solar or {}).get("has_solar"):
         return []
+    notes: List[str] = []
     if (solar or {}).get("battery_ready_inverter"):
-        return ["O inversor atual foi assumido como compatível com bateria e não foi incluído um inversor novo no preço."]
+        notes.append("O inversor atual foi assumido como compatível com bateria e não foi incluído um inversor novo no preço.")
+    elif inverter:
+        notes.append("O inversor atual não suporta bateria: não será reaproveitado e terá de ser retirado/substituído por este inversor novo.")
+    if notes:
+        return notes
     if inverter:
         return ["O inversor atual não suporta bateria: não será reaproveitado e terá de ser retirado/substituído por este inversor novo."]
     return []
@@ -740,9 +958,13 @@ def build_existing_battery_info(solar: Optional[Dict[str, Any]]) -> Optional[Dic
     capacity = get_existing_battery_capacity_kwh(solar)
     if capacity <= 0:
         return None
+    max_power_kw = safe_positive_float((solar or {}).get("existing_battery_max_power_kw"))
     return {
         "has_battery": True,
         "capacity_kwh": round(capacity, 2),
+        "brand": clean_text((solar or {}).get("existing_battery_brand")),
+        "model": clean_text((solar or {}).get("existing_battery_model")),
+        "max_power_kw": round(max_power_kw, 2) if max_power_kw > 0 else None,
     }
 
 
@@ -760,12 +982,15 @@ def format_component_name(component: Dict[str, Any]) -> str:
 
 def build_existing_battery_ready_inverter(solar: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     peak_kw = max(0.0, float((solar or {}).get("peak_kw", 0) or 0))
+    max_power_kw = safe_positive_float((solar or {}).get("existing_inverter_max_power_kw")) or peak_kw
+    brand = clean_text((solar or {}).get("existing_inverter_brand")) or "Inversor atual"
+    model = clean_text((solar or {}).get("existing_inverter_model")) or "compatível com bateria"
     return {
         "id": "existing-battery-ready-inverter",
-        "brand": "Inversor atual",
-        "model": "compatível com bateria",
+        "brand": brand,
+        "model": model,
         "specs": {
-            "power_kw": peak_kw,
+            "power_kw": max_power_kw,
             "is_hybrid": True,
             "connection": "existing_system",
         },
@@ -778,6 +1003,17 @@ def build_existing_battery_ready_inverter(solar: Optional[Dict[str, Any]]) -> Di
         },
         "existing": True,
     }
+
+
+def clean_text(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def safe_positive_float(value: Any) -> float:
+    try:
+        return max(0.0, float(value or 0))
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def build_existing_solar_panel_set(solar: Optional[Dict[str, Any]], roof_area_m2: Optional[float] = None) -> Dict[str, Any]:
@@ -811,6 +1047,34 @@ def build_existing_solar_panel_set(solar: Optional[Dict[str, Any]], roof_area_m2
     }
 
 
+def build_expanded_solar_panel_set(
+    solar: Optional[Dict[str, Any]],
+    additional_set: Dict[str, Any],
+    roof_area_m2: Optional[float] = None,
+) -> Dict[str, Any]:
+    existing_set = build_existing_solar_panel_set(solar, roof_area_m2)
+    existing_power = float(existing_set.get("array_power_kwp", 0) or 0)
+    added_power = float(additional_set.get("array_power_kwp", 0) or 0)
+    existing_area = float(existing_set.get("total_panel_area_m2", 0) or 0)
+    added_area = float(additional_set.get("total_panel_area_m2", 0) or 0)
+    total_area = existing_area + added_area
+    roof_coverage_pct = (total_area / roof_area_m2 * 100) if roof_area_m2 and roof_area_m2 > 0 else None
+
+    return {
+        **additional_set,
+        "existing": True,
+        "expanded": True,
+        "existing_power_kwp": round(existing_power, 2),
+        "added_power_kwp": round(added_power, 2),
+        "array_power_kwp": round(existing_power + added_power, 2),
+        "existing_panel_set": existing_set,
+        "additional_panel_set": additional_set,
+        "roof_area_m2": round(roof_area_m2, 1) if roof_area_m2 else additional_set.get("roof_area_m2"),
+        "total_panel_area_m2": round(total_area, 1) if total_area else additional_set.get("total_panel_area_m2"),
+        "roof_coverage_pct": round(roof_coverage_pct, 1) if roof_coverage_pct is not None else additional_set.get("roof_coverage_pct"),
+    }
+
+
 def select_budgeted_recommendations(recommendations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     if not recommendations:
         return []
@@ -840,18 +1104,42 @@ def select_budgeted_recommendations(recommendations: List[Dict[str, Any]]) -> Li
             item["capex_total_eur"],
         )
 
+    def capacity_score(item: Dict[str, Any]) -> tuple:
+        return (
+            -float(item.get("simulated_capacity_kwh", 0) or 0),
+            item["payback_years"] if item["payback_years"] is not None else 999,
+            item["capex_total_eur"],
+        )
+
     selected: List[Dict[str, Any]] = []
     selected_ids: set[str] = set()
     for tier in ("budget", "balanced", "premium"):
         tier_items = [item for item in sorted_by_price if item["budget_tier"] == tier]
-        for item in sorted(tier_items, key=quality_score)[:2]:
+        if tier == "budget":
+            non_auto_items = [
+                item for item in tier_items
+                if not (item.get("solar_panels") or {}).get("auto_expanded")
+            ]
+            if non_auto_items:
+                tier_items = non_auto_items
+        candidates = sorted(tier_items, key=quality_score)[:2]
+        if tier == "premium" and tier_items:
+            largest = sorted(tier_items, key=capacity_score)[0]
+            if largest not in candidates:
+                candidates = candidates[:1] + [largest]
+        for item in candidates:
+            battery_id = str(item.get("battery", {}).get("id", ""))
+            if battery_id in selected_ids:
+                continue
             selected.append(item)
-            selected_ids.add(str(item.get("battery", {}).get("id", "")))
+            selected_ids.add(battery_id)
 
     if len(selected) < 6:
         for item in sorted(recommendations, key=quality_score):
             battery_id = str(item.get("battery", {}).get("id", ""))
             if battery_id in selected_ids:
+                continue
+            if item.get("budget_tier") == "budget" and (item.get("solar_panels") or {}).get("auto_expanded"):
                 continue
             selected.append(item)
             selected_ids.add(battery_id)
@@ -875,6 +1163,9 @@ def select_solar_panel_set(
     target_peak_kwp: float,
     compatibility: Optional[Dict[str, Any]] = None,
     roof_area_m2: Optional[float] = None,
+    existing_peak_kwp: float = 0.0,
+    reserved_roof_area_m2: float = 0.0,
+    allow_dc_oversize: bool = True,
 ) -> Optional[Dict[str, Any]]:
     if not panels or target_peak_kwp <= 0:
         return None
@@ -892,11 +1183,19 @@ def select_solar_panel_set(
 
     target_kwp = target_peak_kwp
     if inverter_power > 0:
-        target_kwp = max(target_kwp, inverter_power)
+        inverter_target = inverter_power * (1.35 if allow_dc_oversize else 1.0)
+        target_kwp = max(target_kwp, inverter_target - existing_peak_kwp)
     if max_pv_input_kwp > 0:
-        target_kwp = min(target_kwp, max_pv_input_kwp)
+        remaining_pv_input = max(0.0, max_pv_input_kwp - existing_peak_kwp)
+        target_kwp = min(target_kwp, remaining_pv_input)
     elif inverter_power > 0:
-        target_kwp = min(target_kwp, inverter_power * 1.35)
+        inverter_limit = inverter_power * (1.35 if allow_dc_oversize else 1.0)
+        target_kwp = min(target_kwp, max(0.0, inverter_limit - existing_peak_kwp))
+    if inverter_power > 0 and not allow_dc_oversize:
+        target_kwp = min(target_kwp, max(0.0, inverter_power - existing_peak_kwp))
+
+    if target_kwp <= 0:
+        return None
 
     def score(panel: Dict[str, Any]) -> tuple:
         power_w = float(panel.get("specs", {}).get("power_w", 0) or 0)
@@ -920,8 +1219,13 @@ def select_solar_panel_set(
     if rule_max:
         max_quantities.append(rule_max)
     if roof_area_m2 and roof_area_m2 > 0:
-        usable_roof_area = roof_area_m2 * DEFAULT_USABLE_ROOF_RATIO
-        max_quantities.append(max(1, int(usable_roof_area // panel_area_m2)))
+        usable_roof_area = max(0.0, roof_area_m2 * DEFAULT_USABLE_ROOF_RATIO - reserved_roof_area_m2)
+        if usable_roof_area <= 0:
+            return None
+        max_panels_by_roof = int(usable_roof_area // panel_area_m2)
+        if max_panels_by_roof <= 0:
+            return None
+        max_quantities.append(max_panels_by_roof)
 
     if max_quantities:
         quantity = min(quantity, min(max_quantities))
@@ -938,9 +1242,9 @@ def select_solar_panel_set(
         "panel_area_m2": round(panel_area_m2, 2),
         "total_panel_area_m2": round(total_panel_area_m2, 1),
         "roof_area_m2": round(roof_area_m2, 1) if roof_area_m2 else None,
-        "usable_roof_area_m2": round(roof_area_m2 * DEFAULT_USABLE_ROOF_RATIO, 1) if roof_area_m2 else None,
+        "usable_roof_area_m2": round(max(0.0, roof_area_m2 * DEFAULT_USABLE_ROOF_RATIO - reserved_roof_area_m2), 1) if roof_area_m2 else None,
         "roof_coverage_pct": round(roof_coverage_pct, 1) if roof_coverage_pct is not None else None,
-        "max_panels_by_roof": int((roof_area_m2 * DEFAULT_USABLE_ROOF_RATIO) // panel_area_m2) if roof_area_m2 and roof_area_m2 > 0 else None,
+        "max_panels_by_roof": int(max(0.0, roof_area_m2 * DEFAULT_USABLE_ROOF_RATIO - reserved_roof_area_m2) // panel_area_m2) if roof_area_m2 and roof_area_m2 > 0 else None,
     }
 
 
@@ -948,6 +1252,8 @@ def select_inverter_for_battery(
     battery: Dict[str, Any],
     inverters: List[Dict[str, Any]],
     compatibility: Optional[Dict[str, Any]] = None,
+    pv_peak_kwp: float = 0.0,
+    requires_pv_input: bool = False,
 ) -> Optional[Dict[str, Any]]:
     if not inverters:
         return None
@@ -957,7 +1263,19 @@ def select_inverter_for_battery(
     compatible_inverters = [
         inverter for inverter in inverters
         if is_component_set_compatible(battery, inverter, None, compatibility)
+        and is_inverter_sized_for_battery(battery, inverter)
     ]
+    if requires_pv_input:
+        pv_capable_inverters = []
+        for inverter in compatible_inverters:
+            specs = inverter.get("specs", {})
+            max_pv_input_kwp = float(specs.get("max_pv_input_kwp", 0) or 0)
+            if not (specs.get("has_direct_pv_input") or max_pv_input_kwp > 0):
+                continue
+            if pv_peak_kwp > 0 and max_pv_input_kwp > 0 and max_pv_input_kwp < pv_peak_kwp:
+                continue
+            pv_capable_inverters.append(inverter)
+        compatible_inverters = pv_capable_inverters
     if not compatible_inverters:
         return None
 
@@ -966,6 +1284,9 @@ def select_inverter_for_battery(
         inverter_power = get_inverter_power_kw(inverter)
         power_gap = abs(inverter_power - battery_power) if battery_power > 0 else 0
         undersized_penalty = 10 if battery_power > 0 and inverter_power < battery_power * 0.75 else 0
+        pv_oversized_penalty = 0
+        if pv_peak_kwp > 0 and inverter_power > pv_peak_kwp * 1.5:
+            pv_oversized_penalty = inverter_power - pv_peak_kwp * 1.5
         hybrid_bonus = -1 if specs.get("is_hybrid") else 0
 
         compatible_brands = [str(brand).lower() for brand in specs.get("compatible_battery_brands", [])]
@@ -974,9 +1295,21 @@ def select_inverter_for_battery(
             brand_penalty = 20
 
         price = float(inverter.get("pricing", {}).get("unit_price", 0) or 0)
-        return (brand_penalty, undersized_penalty, power_gap, hybrid_bonus, price)
+        return (brand_penalty, undersized_penalty, pv_oversized_penalty, power_gap, hybrid_bonus, price)
 
     return min(compatible_inverters, key=score)
+
+
+def is_inverter_sized_for_battery(battery: Dict[str, Any], inverter: Dict[str, Any]) -> bool:
+    specs = battery.get("specs", {})
+    battery_capacity = float(specs.get("usable_capacity_kwh") or specs.get("capacity_kwh") or 0)
+    battery_power = float(battery.get("specs", {}).get("power_kw", 0) or 0)
+    inverter_power = get_inverter_power_kw(inverter)
+    if inverter_power <= 0:
+        return True
+    minimum_by_power = battery_power * 0.75 if battery_power > 0 else 0.0
+    minimum_by_capacity = battery_capacity * 0.35 if battery_capacity > 0 else 0.0
+    return inverter_power >= max(minimum_by_power, minimum_by_capacity)
 
 
 def get_inverter_power_kw(inverter: Optional[Dict[str, Any]]) -> float:
@@ -1222,8 +1555,13 @@ def normalize_voltage_class(value: Any) -> str:
 
 
 def should_allow_grid_arbitrage(tariff: Dict[str, Any]) -> bool:
+    tariff_type = tariff.get("type", "simple")
+    if tariff_type == "simple":
+        return False
+
     prices = tariff.get("prices") or {}
-    used_prices = [float(value or 0) for value in prices.values() if float(value or 0) > 0]
+    active_periods = active_tariff_periods(tariff_type)
+    used_prices = [float(prices.get(period, 0) or 0) for period in active_periods if float(prices.get(period, 0) or 0) > 0]
     return len(used_prices) >= 2 and max(used_prices) - min(used_prices) >= 0.05
 
 

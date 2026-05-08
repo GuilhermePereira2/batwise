@@ -7,6 +7,7 @@ set -e
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="$REPO_ROOT/.env"
 ENV_EXAMPLE="$REPO_ROOT/.env.example"
+FRONTEND_ENV_FILE="$REPO_ROOT/frontend/.env"
 
 echo "╔════════════════════════════════════════════════════════════╗"
 echo "║        BatWise - Configuração de Ambiente                 ║"
@@ -22,6 +23,17 @@ echo ""
 
 read -p "Escolhe [1, 2, 3 ou 4]: " CHOICE
 
+write_frontend_env() {
+  local api_url="$1"
+  echo "VITE_API_URL=$api_url" > "$FRONTEND_ENV_FILE"
+
+  local google_client_id
+  google_client_id="$(grep "^VITE_GOOGLE_CLIENT_ID=" "$ENV_EXAMPLE" | head -n 1 | cut -d= -f2- || true)"
+  if [ -n "$google_client_id" ]; then
+    echo "VITE_GOOGLE_CLIENT_ID=$google_client_id" >> "$FRONTEND_ENV_FILE"
+  fi
+}
+
 case $CHOICE in
   1)
     echo ""
@@ -30,15 +42,18 @@ case $CHOICE in
     # Copiar do .env.example removendo linhas com AWS credentials, VITE vars e comments de DYNAMODB online
     grep -v "^AWS_ACCESS_KEY_ID=" "$ENV_EXAMPLE" | \
     grep -v "^AWS_SECRET_ACCESS_KEY=" | \
+    grep -v "^AWS_PROFILE=" | \
     grep -v "^# AWS_ACCESS_KEY_ID=" | \
     grep -v "^# AWS_SECRET_ACCESS_KEY=" | \
+    grep -v "^# Perfil AWS local" | \
+    grep -v "^# Confirma com:" | \
     grep -v "^# Para Database ONLINE" | \
     grep -v "^DYNAMODB_ENDPOINT=$" | \
     grep -v "^VITE_API_URL=" | \
     grep -v "^# Para Backend" > "$ENV_FILE"
     
-    # Criar frontend/.env apenas com VITE_API_URL
-    echo "VITE_API_URL=http://localhost:8001" > frontend/.env
+    # Criar frontend/.env com variáveis Vite necessárias
+    write_frontend_env "http://localhost:8001"
     
     echo "✅ .env criado para Cenário 1"
     echo ""
@@ -72,15 +87,27 @@ case $CHOICE in
     grep -v "^VITE_API_URL=" | \
     grep -v "^# Para Backend" > "$ENV_FILE"
     
-    # Criar frontend/.env apenas com VITE_API_URL
-    echo "VITE_API_URL=http://localhost:8001" > frontend/.env
+    # Criar frontend/.env com variáveis Vite necessárias
+    write_frontend_env "http://localhost:8001"
     
     echo "✅ .env criado para Cenário 2"
     echo ""
-    echo "Preenche no .env:"
-    echo "  AWS_ACCESS_KEY_ID=<tua_chave>"
-    echo "  AWS_SECRET_ACCESS_KEY=<tua_chave>"
+    echo "Confirma no .env:"
+    echo "  AWS_PROFILE=duarte"
+    echo "  AWS_REGION=eu-west-3"
     echo "  SECRET_KEY=<chave_gerada_com_openssl>"
+    echo ""
+    echo "O perfil AWS tem de ter credenciais SDK válidas."
+    echo "Se usares aws login, instala as dependências atualizadas:"
+    echo "  cd backend-aws && pip install -r requirements.txt"
+    echo ""
+    echo "Para configurar por access keys:"
+    echo "  aws configure --profile duarte"
+    echo ""
+    echo "Para validar:"
+    echo "  aws sts get-caller-identity --profile duarte"
+    echo ""
+    echo "Se não usares perfil AWS, podes usar AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY no ambiente."
     echo ""
     echo "Depois:"
     echo "1. cd backend-aws && python3 main.py"
@@ -94,8 +121,9 @@ case $CHOICE in
     echo "Para dar deploy do backend online, sam build e sam deploy (AWS) ou git push (Railway)."
     echo ""
     
-    # Criar apenas frontend/.env com VITE_API_URL online (backend vars estão online)
-    grep "^VITE_API_URL=https://" "$ENV_EXAMPLE" > frontend/.env
+    # Criar frontend/.env com VITE_API_URL online e variáveis Vite necessárias
+    online_api_url="$(grep "^VITE_API_URL=https://" "$ENV_EXAMPLE" | head -n 1 | cut -d= -f2-)"
+    write_frontend_env "$online_api_url"
     
     echo "✅ .env criado para Cenário 3"
     echo ""
@@ -112,8 +140,8 @@ case $CHOICE in
     echo "Sem .env local necessário!"
     echo ""
     echo "Variáveis de ambiente estão em:"
-    echo "  - Vercel (Frontend): VITE_API_URL"
-    echo "  - AWS/Railway (Backend): SECRET_KEY, MAIL_*, AWS_*"
+    echo "  - Vercel (Frontend): VITE_API_URL, VITE_GOOGLE_CLIENT_ID"
+    echo "  - AWS/Railway (Backend): SECRET_KEY, MAIL_*, AWS_*, GOOGLE_CLIENT_ID"
     echo ""
     echo "Para fazer deploy:"
     echo "  git push origin preview"

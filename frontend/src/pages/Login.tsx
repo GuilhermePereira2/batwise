@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ const Login = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
     // Novos Estados para UI
     const [showPassword, setShowPassword] = useState(false);
@@ -28,7 +29,43 @@ const Login = () => {
 
     const { toast } = useToast();
     const navigate = useNavigate();
+    const location = useLocation();
     const { login } = useAuth();
+    const googleButtonRef = useRef<HTMLDivElement | null>(null);
+    const redirectTo = new URLSearchParams(location.search).get("redirect") || "/diy";
+
+    useEffect(() => {
+        const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+        if (!googleClientId || !googleButtonRef.current) return;
+
+        const initializeGoogle = () => {
+            const google = (window as any).google;
+            if (!google?.accounts?.id || !googleButtonRef.current) return;
+
+            google.accounts.id.initialize({
+                client_id: googleClientId,
+                callback: handleGoogleCredential,
+            });
+            google.accounts.id.renderButton(googleButtonRef.current, {
+                theme: "outline",
+                size: "large",
+                width: googleButtonRef.current.offsetWidth || 360,
+                text: "signin_with",
+            });
+        };
+
+        if ((window as any).google?.accounts?.id) {
+            initializeGoogle();
+            return;
+        }
+
+        const script = document.createElement("script");
+        script.src = "https://accounts.google.com/gsi/client";
+        script.async = true;
+        script.defer = true;
+        script.onload = initializeGoogle;
+        document.body.appendChild(script);
+    }, []);
 
     // Função para detetar Caps Lock
     const checkCapsLock = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -107,7 +144,7 @@ const Login = () => {
                 description: "You have successfully logged in.",
             });
 
-            navigate("/diy");
+            navigate(redirectTo);
 
         } catch (error: any) {
             toast({
@@ -117,6 +154,48 @@ const Login = () => {
             });
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleGoogleCredential = async (response: any) => {
+        if (!response?.credential) return;
+        setIsGoogleLoading(true);
+
+        try {
+            const res = await fetch(getApiUrl("auth/google-login"), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ credential: response.credential }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.detail || "Google login failed.");
+            }
+
+            const data = await res.json();
+            login(data.access_token, {
+                id: data.email || data.user_name,
+                email: data.email || "",
+                name: data.user_name,
+                credits: data.credits,
+                trial_started_at: data.trial_started_at,
+                admin: data.admin,
+            });
+
+            toast({
+                title: "Welcome!",
+                description: "You have successfully logged in with Google.",
+            });
+            navigate(redirectTo);
+        } catch (error: any) {
+            toast({
+                title: "Google Login Failed",
+                description: error.message,
+                variant: "destructive",
+            });
+        } finally {
+            setIsGoogleLoading(false);
         }
     };
 
@@ -224,6 +303,25 @@ const Login = () => {
                                         "Sign In"
                                     )}
                                 </Button>
+
+                                <div className="relative">
+                                    <div className="absolute inset-0 flex items-center">
+                                        <span className="w-full border-t border-border" />
+                                    </div>
+                                    <div className="relative flex justify-center text-xs uppercase">
+                                        <span className="bg-card px-2 text-muted-foreground">or</span>
+                                    </div>
+                                </div>
+
+                                <div className="min-h-11 w-full">
+                                    {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
+                                        <div ref={googleButtonRef} className={isGoogleLoading ? "pointer-events-none opacity-60" : ""} />
+                                    ) : (
+                                        <Button type="button" variant="outline" className="w-full" disabled>
+                                            Google login not configured
+                                        </Button>
+                                    )}
+                                </div>
 
                                 {/* Botão para Reenviar Email de Verificação */}
                                 {showResendVerification && (
