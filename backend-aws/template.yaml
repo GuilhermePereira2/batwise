@@ -27,10 +27,11 @@ Resources:
           MAIL_USERNAME: general@watt-builder.com
           MAIL_FROM: general@watt-builder.com
           MAIL_PASSWORD: wQEmyvxXkFW1
+          USERS_TABLE_NAME: watt-builder-Users
+          SIMULATION_INPUTS_TABLE_NAME: watt-builder-SimulationInputs
+          GOOGLE_CLIENT_ID: 279039887448-68tk5eahn48u3jj4mh2i5215u4ej02j9.apps.googleusercontent.com
       EphemeralStorage:
         Size: 512
-      Layers:
-        - arn:aws:lambda:eu-west-3:267067829753:layer:watt-builder-libs:2
       Architectures:
         - x86_64
       Tracing: PassThrough
