@@ -24,6 +24,7 @@ const Footer = () => {
             {/* Coluna 1: Ferramentas */}
             <div className="flex flex-col gap-2 text-center md:text-left">
               <h4 className="font-bold mb-1 text-white">Features</h4>
+              <Link to="/simulator" className="text-primary-foreground/70 hover:text-white transition-colors">Smart Home Sizer</Link>
               <Link to="/cell-explorer" className="text-primary-foreground/70 hover:text-white transition-colors">Cell Explorer</Link>
               <Link to="/diy" className="text-primary-foreground/70 hover:text-white transition-colors">Battery Builder</Link>
               <Link to="/business" className="text-primary-foreground/70 hover:text-white transition-colors">Services</Link>

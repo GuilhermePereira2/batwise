@@ -31,7 +31,8 @@
             "market_title": "Top Brands on the Market",
             "market_desc": "Database featuring the best available inverters and batteries.",
             "roi_title": "ROI Calculation",
-            "roi_desc": "Optimization algorithm that shows exactly when your system pays for itself."
+            "roi_desc": "Optimization algorithm that shows exactly when your system pays for itself.",
+            "catch_phrase": "Our customers save between 500 and 1000€ per year with Watt Builder."
         },
         "brands": {
             "title": "Comparing the market leaders"

@@ -231,7 +231,7 @@ const DIYTool = () => {
       if (maxLength) configData.max_length = Number(maxLength);
       if (maxHeight) configData.max_height = Number(maxHeight);
       if (targetPrice) configData.target_price = Number(targetPrice);
-      
+
       configData.ambient_temp = 25; // Default para temperatura ambiente
 
       const url = getApiUrl("calculate");
@@ -261,7 +261,7 @@ const DIYTool = () => {
 
       if (!response.ok) {
         let errorMessage = "An error occurred";
-        
+
         try {
           const errorData = await response.json();
           errorMessage = errorData.detail || errorMessage;
@@ -276,7 +276,7 @@ const DIYTool = () => {
         } else if (response.status === 422) {
           throw new Error(errorMessage);
         }
-        
+
         throw new Error(errorMessage);
       }
 
@@ -360,40 +360,6 @@ const DIYTool = () => {
   return (
     <div className="min-h-screen flex flex-col font-sans">
       <Navigation />
-
-      {/* Hero Section */}
-      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden mt-16 bg-gradient-to-br from-background via-muted/30 to-background">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-accent/5 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
-        </div>
-
-        <div className="container relative z-10 px-4 py-20 mx-auto text-center animate-fade-in">
-          <div className="flex justify-center mb-6">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 rounded-full text-accent font-medium">
-              <Sparkles size={18} />
-              <span>Free Battery Designer</span>
-            </div>
-          </div>
-
-          <h1 className="text-5xl md:text-7xl font-bold text-foreground mb-6 leading-tight">
-            Design your own battery<br />in seconds.
-          </h1>
-
-          <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto">
-            Enter your specs, we calculate cells, BMS, and safety limits for you.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button onClick={scrollToCalculator} size="lg" className="text-lg">
-              Start Designing <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button variant="outline" size="lg" className="text-lg" asChild>
-              <Link to="/pricing">Learn More</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
 
       {/* Interactive Calculator Section */}
       <section id="calculator" className="py-24 bg-background">
@@ -526,14 +492,14 @@ const DIYTool = () => {
                         Min Voltage (V) <span className="text-red-500">*</span>
                         <InfoTooltip content="The minimum voltage where your system shuts down (Low Voltage Cutoff)." />
                       </Label>
-                      <Input 
-                        id="minVoltage" 
-                        type="number" 
-                        value={minVoltage} 
-                        onChange={(e) => setMinVoltage(e.target.value)} 
+                      <Input
+                        id="minVoltage"
+                        type="number"
+                        value={minVoltage}
+                        onChange={(e) => setMinVoltage(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
-                        placeholder="e.g., 36" 
-                        required 
+                        placeholder="e.g., 36"
+                        required
                       />
                     </div>
 
@@ -542,14 +508,14 @@ const DIYTool = () => {
                         Max Voltage (V) <span className="text-red-500">*</span>
                         <InfoTooltip content="The battery voltage at 100% capacity. MUST match charger voltage." />
                       </Label>
-                      <Input 
-                        id="maxVoltage" 
-                        type="number" 
-                        value={maxVoltage} 
-                        onChange={(e) => setMaxVoltage(e.target.value)} 
+                      <Input
+                        id="maxVoltage"
+                        type="number"
+                        value={maxVoltage}
+                        onChange={(e) => setMaxVoltage(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
-                        placeholder="e.g., 54.6" 
-                        required 
+                        placeholder="e.g., 54.6"
+                        required
                       />
                     </div>
 
@@ -558,14 +524,14 @@ const DIYTool = () => {
                         Min Energy (Wh) <span className="text-red-500">*</span>
                         <InfoTooltip content="Defines autonomy (range/runtime). Nominal Voltage x Ah = Wh." />
                       </Label>
-                      <Input 
-                        id="minEnergy" 
-                        type="number" 
-                        value={minEnergy} 
-                        onChange={(e) => setMinEnergy(e.target.value)} 
+                      <Input
+                        id="minEnergy"
+                        type="number"
+                        value={minEnergy}
+                        onChange={(e) => setMinEnergy(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
-                        placeholder="e.g., 2000" 
-                        required 
+                        placeholder="e.g., 2000"
+                        required
                       />
                     </div>
 
@@ -588,14 +554,14 @@ const DIYTool = () => {
                         Continuous Power (W) <span className="text-red-500">*</span>
                         <InfoTooltip content="Average power consumption. Used for thermal safety calculations." />
                       </Label>
-                      <Input 
-                        id="minContinuousPower" 
-                        type="number" 
-                        value={minContinuousPower} 
-                        onChange={(e) => setMinContinuousPower(e.target.value)} 
+                      <Input
+                        id="minContinuousPower"
+                        type="number"
+                        value={minContinuousPower}
+                        onChange={(e) => setMinContinuousPower(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
-                        placeholder="e.g., 3000" 
-                        required 
+                        placeholder="e.g., 3000"
+                        required
                       />
                     </div>
 

@@ -31,7 +31,8 @@
             "market_title": "Melhores Marcas do Mercado",
             "market_desc": "Base de dados com os melhores inversores e baterias disponíveis.",
             "roi_title": "Cálculo do retorno do investimento",
-            "roi_desc": "Algoritmo de otimização que mostra exatamente quando o sistema se paga."
+            "roi_desc": "Algoritmo de otimização que mostra exatamente quando o sistema se paga.",
+            "catch_phrase": "Os nossos clientes poupam entre 500 a 1000€ por ano com o Watt Builder."
         },
         "brands": {
             "title": "A comparar os líderes do mercado"
@@ -46,7 +47,7 @@
             "cell_li3": "Pedidos de testes de células à medida",
             "cell_btn": "Explorar Células",
             "builder_title": "Battery Builder",
-            "builder_desc": "Ferramenta gratuita para desenhar packs customizados",
+            "builder_desc": "Designer de baterias customizadas",
             "builder_li1": "Calculadora fácil de usar",
             "builder_li2": "Sugestões de configuração instantâneas",
             "builder_li3": "Recomendações de componentes",

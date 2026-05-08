@@ -14,10 +14,10 @@ const Business = () => {
     <div className="min-h-screen">
       <Navigation />
       <div className="mt-16">
-        <HeroSection />
-        <ProductSection />
+
         <UsageOptionsSection />
         <FeaturesSection />
+        <ProductSection />
         <section id="contact" className="relative py-24 overflow-hidden">
           {/* Animated Background Elements */}
           <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-background to-primary/5">

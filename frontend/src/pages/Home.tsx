@@ -32,6 +32,16 @@ const topBrands = [
 
 const Home = () => {
   const { t } = useTranslation();
+  const catchPhrase = t("home.features.catch_phrase");
+
+  const formatNumbers = (text: string) => {
+    const parts = text.split(/(\d+)/g);
+    return parts.map((part, i) =>
+      /\d+/.test(part) ?
+        <span key={i} className="text-black font-extrabold">{part}</span> :
+        part
+    );
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -97,6 +107,15 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Savings Section */}
+      <section className="py-8 bg-white border-y border-gray-100">
+        <div className="container px-4 mx-auto max-w-7xl text-center">
+          <p className="text-2xl md:text-2xl font-bold tracking-tight text-gray-500 leading-relaxed">
+            {t("home.features.catch_phrase")}
+          </p>
+        </div>
+      </section>
+
       {/* Top Battery Brands Section */}
       <section className="py-12 border-y border-border/50 bg-muted/10 overflow-hidden">
         <div className="container px-4 mx-auto max-w-7xl text-center">
@@ -131,6 +150,12 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+
+
+
+
+
 
       {/* Legacy/Professional Solutions Section */}
       <section className="py-24 bg-background">
