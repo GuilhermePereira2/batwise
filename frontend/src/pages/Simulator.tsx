@@ -492,7 +492,7 @@ export default function Simulator() {
                 doc.line(margin, y, pageWidth - margin, y);
                 y += 6;
 
-                addText(`${index + 1}. ${getSystemName(rec)}`, margin, 11, 'bold', 5);
+                addText(`Solução ${index + 1}: ${getSystemName(rec)}`, margin, 11, 'bold', 5);
                 addText(`Investimento estimado: ${formatPrice(rec.capex_total_eur)} | Hardware: ${formatPrice(prices.hardwareTotal)} | Instalação: ${formatPrice(prices.installation)}`, margin, 9);
                 addText(`Fatura atual: ${formatPrice(rec.annual_bill_before_eur)}/ano | Após sistema: ${formatPrice(rec.annual_bill_after_eur)}/ano | Poupança: ${formatPrice(rec.savings_annual_eur)}/ano | Payback: ${rec.payback_years ? `${rec.payback_years} anos` : 'não aplicável'}`, margin, 9);
                 addText(`Bateria: ${rec.battery.brand} ${rec.battery.model} (${rec.new_battery_capacity_kwh || rec.simulated_capacity_kwh} kWh)`, margin, 9);
@@ -1296,7 +1296,7 @@ export default function Simulator() {
                                                             )}
 
                                                             <CardHeader className="p-4 pb-2">
-                                                                <CardTitle className="text-lg leading-tight">{getSystemName(rec)}</CardTitle>
+                                                                <CardTitle className="text-lg leading-tight">Solução {idx + 1}</CardTitle>
                                                                 <CardDescription className="text-xs mt-1 line-clamp-2">
                                                                     {rec.battery?.brand} {rec.battery?.model}
                                                                     {rec.inverter && ` • Inv. ${rec.inverter.brand}`}
