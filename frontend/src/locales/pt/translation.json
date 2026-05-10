@@ -205,5 +205,99 @@
             "description": "Se tiver alguma dúvida sobre estes Termos, por favor contacte-nos através de:",
             "email": "general@watt-builder.com"
         }
+    },
+    "privacy": {
+        "page_title": "Política de Privacidade",
+        "last_updated": "Última atualização: 08/05/2026",
+        "back_button": "Voltar",
+        "sections": [
+            {
+                "title": "1. Identificação do Responsável",
+                "content": [
+                    "A Watt Builder é um projeto digital atualmente em fase de desenvolvimento.",
+                    "Para qualquer questão relacionada com dados pessoais: Email: general@watt-builder.com | Website: www.watt-builder.com"
+                ]
+            },
+            {
+                "title": "2. Dados Pessoais Recolhidos",
+                "content": [
+                    "A Watt Builder pode recolher os seguintes dados:",
+                    "• Dados de contacto: Endereço de email (quando fornecido pelo utilizador).",
+                    "• Dados energéticos e técnicos: Consumo energético, produção solar, características da habitação (ex: área, número de pessoas, localização aproximada) e equipamentos energéticos (ex: painéis solares, inversores, baterias).",
+                    "• Dados de utilização: Interações com a plataforma e dados de navegação (ex: endereço IP, dispositivo, browser)."
+                ]
+            },
+            {
+                "title": "3. Finalidade do Tratamento",
+                "content": [
+                    "Os dados são utilizados para: gerar recomendações energéticas personalizadas; simular cenários e estimativas de poupança; melhorar os modelos e funcionamento da plataforma; e garantir a segurança e desempenho do serviço.",
+                    "Os dados não serão utilizados para fins comerciais sem consentimento explícito."
+                ]
+            },
+            {
+                "title": "4. Fundamento Legal",
+                "content": [
+                    "O tratamento de dados baseia-se em: execução de funcionalidades solicitadas pelo utilizador; consentimento do utilizador; e interesse legítimo na melhoria da plataforma."
+                ]
+            },
+            {
+                "title": "5. Partilha de Dados",
+                "content": [
+                    "A Watt Builder não vende dados pessoais.",
+                    "Os dados não serão partilhados com terceiros, exceto quando exigido por lei ou quando o utilizador der consentimento explícito."
+                ]
+            },
+            {
+                "title": "6. Conservação dos Dados",
+                "content": [
+                    "Os dados serão conservados apenas pelo tempo necessário ao funcionamento da plataforma, ou até o utilizador solicitar a sua eliminação."
+                ]
+            },
+            {
+                "title": "7. Direitos do Utilizador",
+                "content": [
+                    "Nos termos do RGPD, o utilizador tem direito a: aceder aos seus dados, corrigir dados incorretos, solicitar a eliminação dos dados, opor-se ao tratamento e solicitar a limitação do tratamento.",
+                    "Para exercer os seus direitos, contacte-nos através do email general@watt-builder.com."
+                ]
+            },
+            {
+                "title": "8. Cookies",
+                "content": [
+                    "A plataforma pode utilizar cookies para garantir o funcionamento do site e melhorar a experiência do utilizador.",
+                    "Para mais detalhes, consulte a Política de Cookies."
+                ]
+            },
+            {
+                "title": "9. Decisões Automatizadas",
+                "content": [
+                    "A Watt Builder utiliza modelos automatizados para gerar recomendações.",
+                    "Essas recomendações são baseadas nos dados fornecidos, não produzem efeitos legais vinculativos e não substituem a validação técnica por profissionais."
+                ]
+            },
+            {
+                "title": "10. Alterações à Política",
+                "content": [
+                    "A Watt Builder pode atualizar esta Política de Privacidade a qualquer momento. As alterações serão publicadas no website."
+                ]
+            },
+            {
+                "title": "11. Contacto",
+                "content": [
+                    "Para qualquer questão relacionada com a proteção de dados: general@watt-builder.com.",
+                    "O utilizador pode ainda apresentar reclamação junto da Comissão Nacional de Proteção de Dados (CNPD)."
+                ]
+            },
+            {
+                "title": "12. Aceitação",
+                "content": [
+                    "A utilização da plataforma implica a aceitação da presente Política de Privacidade."
+                ]
+            }
+        ],
+        "contact": {
+            "title": "Contacte-nos",
+            "description": "Para qualquer questão relacionada com a proteção de dados, por favor contacte-nos através de:",
+            "email": "general@watt-builder.com"
+        }
     }
 }

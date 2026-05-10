@@ -23,6 +23,7 @@ import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import Terms from "./pages/Terms";
 import Simulator from "./pages/Simulator";
+import Privacy from "./pages/Privacy";
 
 
 const queryClient = new QueryClient();
@@ -52,6 +53,7 @@ const App = () => (
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
           <Route path="/simulator" element={<Simulator />} />
           <Route path="/profile" element={<Profile />} />
         </Routes>

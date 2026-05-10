@@ -205,5 +205,99 @@
             "description": "If you have any questions about these Terms, please contact us at:",
             "email": "general@watt-builder.com"
         }
+    },
+    "privacy": {
+        "page_title": "Privacy Policy",
+        "last_updated": "Last updated: 05/08/2026",
+        "back_button": "Back to Signup",
+        "sections": [
+            {
+                "title": "1. Data Controller Identification",
+                "content": [
+                    "Watt Builder is a digital project currently in the development phase.",
+                    "For any questions regarding personal data: Email: general@watt-builder.com | Website: www.watt-builder.com"
+                ]
+            },
+            {
+                "title": "2. Personal Data Collected",
+                "content": [
+                    "Watt Builder may collect the following data:",
+                    "• Contact data: Email address (when provided by the user).",
+                    "• Energy and technical data: Energy consumption, solar production, housing characteristics (e.g., area, number of people, approximate location), and energy equipment (e.g., solar panels, inverters, batteries).",
+                    "• Usage data: Interactions with the platform and navigation data (e.g., IP address, device, browser)."
+                ]
+            },
+            {
+                "title": "3. Purpose of Processing",
+                "content": [
+                    "The data is used to: generate personalized energy recommendations; simulate scenarios and savings estimates; improve the platform's models and operation; and ensure the security and performance of the service.",
+                    "Data will not be used for commercial purposes without explicit consent."
+                ]
+            },
+            {
+                "title": "4. Legal Basis",
+                "content": [
+                    "Data processing is based on: execution of features requested by the user; user consent; and legitimate interest in improving the platform."
+                ]
+            },
+            {
+                "title": "5. Data Sharing",
+                "content": [
+                    "Watt Builder does not sell personal data.",
+                    "Data will not be shared with third parties, except when required by law or when the user gives explicit consent."
+                ]
+            },
+            {
+                "title": "6. Data Retention",
+                "content": [
+                    "Data will be kept only for the time necessary for the platform to function, or until the user requests its deletion."
+                ]
+            },
+            {
+                "title": "7. User Rights",
+                "content": [
+                    "Under the GDPR, the user has the right to: access their data, correct incorrect data, request data deletion, object to processing, and request restriction of processing.",
+                    "To exercise your rights, contact us at general@watt-builder.com."
+                ]
+            },
+            {
+                "title": "8. Cookies",
+                "content": [
+                    "The platform may use cookies to ensure the website functions and to improve user experience.",
+                    "For more details, please see the Cookie Policy."
+                ]
+            },
+            {
+                "title": "9. Automated Decisions",
+                "content": [
+                    "Watt Builder uses automated models to generate recommendations.",
+                    "These recommendations are based on the data provided, do not produce binding legal effects, and do not replace technical validation by professionals."
+                ]
+            },
+            {
+                "title": "10. Changes to the Policy",
+                "content": [
+                    "Watt Builder may update this Privacy Policy at any time. Changes will be published on the website."
+                ]
+            },
+            {
+                "title": "11. Contact",
+                "content": [
+                    "For any questions related to data protection: general@watt-builder.com.",
+                    "The user may also file a complaint with the National Data Protection Commission (CNPD)."
+                ]
+            },
+            {
+                "title": "12. Acceptance",
+                "content": [
+                    "Use of the platform implies acceptance of this Privacy Policy."
+                ]
+            }
+        ],
+        "contact": {
+            "title": "Contact Us",
+            "description": "If you have any questions regarding data protection, please contact us at:",
+            "email": "general@watt-builder.com"
+        }
     }
 }

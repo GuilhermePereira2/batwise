@@ -29,7 +29,7 @@ const Signup = () => {
     // ESTADO DO CAPS LOCK
     const [capsLockActive, setCapsLockActive] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
-    
+
     // Estado para email já existente
     const [emailExists, setEmailExists] = useState(false);
     const [isResendingEmail, setIsResendingEmail] = useState(false);
@@ -103,9 +103,9 @@ const Signup = () => {
             if (!response.ok) {
                 const errorData = await response.json();
                 const errorDetail = errorData.detail || "Registration failed";
-                
+
                 // Detectar se é email já existente
-                if (errorDetail.toLowerCase().includes("already registered") || 
+                if (errorDetail.toLowerCase().includes("already registered") ||
                     errorDetail.toLowerCase().includes("already exists") ||
                     errorDetail.toLowerCase().includes("email already")) {
                     setEmailExists(true);
@@ -263,7 +263,7 @@ const Signup = () => {
                                                 required
                                             />
                                         </div>
-                                        
+
                                         {/* Aviso quando email já existe */}
                                         {emailExists && (
                                             <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-md">
@@ -368,6 +368,10 @@ const Signup = () => {
                                             I accept the{" "}
                                             <Link to="/Terms" className="text-accent hover:underline" target="_blank">
                                                 Terms and Conditions
+                                            </Link>
+                                            {" "}and the{" "}
+                                            <Link to="/Privacy" className="text-accent hover:underline" target="_blank">
+                                                Privacy Policy
                                             </Link>
                                         </Label>
                                     </div>
