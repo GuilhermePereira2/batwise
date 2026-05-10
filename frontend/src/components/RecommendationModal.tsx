@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Battery, Zap, Sun, TrendingUp, Wallet } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Battery, Zap, Sun } from 'lucide-react';
 
 interface RecommendationModalProps {
     recommendation: any;
@@ -26,27 +27,15 @@ export default function RecommendationModal({
     const prices = getPriceBreakdown(recommendation);
 
     return (
-        <div
-            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-start justify-center p-4 sm:p-6 overflow-y-auto"
-            onClick={onClose}
-        >
-            <div
-                className="relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden my-auto"
-                onClick={(e) => e.stopPropagation()}
-            >
-                {/* Modal Header */}
-                <div className="flex items-start justify-between gap-4 p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
-                    <div>
-                        <p className="text-sm text-gray-500 uppercase tracking-wider font-semibold">Detalhes da recomendação</p>
-                        <h2 className="text-2xl font-bold mt-1">{getSystemName(recommendation)}</h2>
-                        <p className="text-sm text-gray-500 mt-1">
-                            Capacidade simulada: <span className="font-semibold text-gray-700">{recommendation.simulated_capacity_kwh} kWh úteis</span>
-                        </p>
-                    </div>
-                    <Button variant="ghost" onClick={onClose} className="text-gray-500 hover:text-black shrink-0">
-                        <ChevronLeft className="w-5 h-5 mr-1" /> Voltar
-                    </Button>
-                </div>
+        <Dialog open={!!recommendation} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-white p-0">
+                <DialogHeader className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+                    <DialogDescription className="text-sm text-gray-500 uppercase tracking-wider font-semibold">Detalhes da recomendação</DialogDescription>
+                    <DialogTitle className="text-2xl font-bold mt-1">{getSystemName(recommendation)}</DialogTitle>
+                    <p className="text-sm text-gray-500 mt-1">
+                        Capacidade simulada: <span className="font-semibold text-gray-700">{recommendation.simulated_capacity_kwh} kWh úteis</span>
+                    </p>
+                </DialogHeader>
 
                 <div className="p-6 space-y-6">
                     {/* Top Highlights */}
@@ -247,7 +236,7 @@ export default function RecommendationModal({
                         </Button>
                     </div>
                 </div>
-            </div>
-        </div>
+            </DialogContent>
+        </Dialog>
     );
 }
