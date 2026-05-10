@@ -533,8 +533,8 @@ export default function Simulator() {
             doc.setTextColor(150, 150, 150); // Cor acinzentada
 
             // Calcular o centro exato da página
-            const centerX = pageWidth / 3;
-            const centerY = pageHeight / 3;
+            const centerX = pageWidth / 2;
+            const centerY = pageHeight / 2;
 
             // Desenhar o texto rodado a 45 graus no centro
             doc.text("Watt Builder", centerX, centerY, { align: "center", angle: 45 });
