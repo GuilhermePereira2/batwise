@@ -538,7 +538,7 @@ export default function Simulator() {
             const centerY = pageHeight / 2;
 
             // Desenhar o texto rodado a 45 graus no centro
-            doc.text("Watt Builder", centerX, centerY, { align: "center", angle: 45 });
+            doc.text("Watt Builder", centerX + 50, centerY + 200, { align: "center", angle: 45 });
 
             doc.restoreGraphicsState(); // Restaura o estado para não afetar mais nada
         }
