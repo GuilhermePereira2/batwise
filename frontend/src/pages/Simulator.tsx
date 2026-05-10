@@ -518,6 +518,31 @@ export default function Simulator() {
         addText('Notas', margin, 12, 'bold');
         (results.notes || []).forEach((note: string) => addText(`- ${note}`, margin, 8));
 
+        // =========================================================
+        // --- ADICIONAR MARCA DE ÁGUA A TODAS AS PÁGINAS ---
+        // =========================================================
+        const totalPages = doc.internal.getNumberOfPages();
+
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i); // Vai para a página 'i'
+
+            doc.saveGraphicsState();
+            doc.setGState(new (doc as any).GState({ opacity: 0.12 })); // Transparência (12%)
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(70); // Tamanho da letra
+            doc.setTextColor(150, 150, 150); // Cor acinzentada
+
+            // Calcular o centro exato da página
+            const centerX = pageWidth / 2;
+            const centerY = pageHeight / 2;
+
+            // Desenhar o texto rodado a 45 graus no centro
+            doc.text("Watt Builder", centerX, centerY, { align: "center", angle: 45 });
+
+            doc.restoreGraphicsState(); // Restaura o estado para não afetar mais nada
+        }
+        // =========================================================
+
         doc.save(`propostas-wattbuilder-${new Date().toISOString().slice(0, 10)}.pdf`);
     };
 
@@ -1218,7 +1243,7 @@ export default function Simulator() {
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <div className="mb-10 text-center">
                                     <h2 className="text-xl md:text-2xl font-semibold text-gray-800">
-                                        {("Parâmetros ideais para a sua casa")}
+                                        {("Parâmetros ideais para a sua casa:")}
                                     </h2>
                                     <div className="mt-2 w-20 h-1 bg-black mx-auto rounded-full" />
                                 </div>
