@@ -107,7 +107,6 @@ export default function Simulator() {
         }
     };
 
-    // Prevenção de crash: Merge seguro com localStorage
     const [formData, setFormData] = useState(() => {
         try {
             const saved = localStorage.getItem('simulator_v2');
@@ -155,7 +154,6 @@ export default function Simulator() {
             if (parsed.mode) setMode(parsed.mode);
             setStep(2);
         } catch {
-            // Ignore invalid saved simulator state.
         } finally {
             localStorage.removeItem('simulator_pending_auth');
         }
@@ -519,42 +517,31 @@ export default function Simulator() {
         addText('Notas', margin, 12, 'bold');
         (results.notes || []).forEach((note: string) => addText(`- ${note}`, margin, 8));
 
-        // =========================================================
-        // --- ADICIONAR MARCA DE ÁGUA A TODAS AS PÁGINAS ---
-        // =========================================================
         const totalPages = doc.internal.getNumberOfPages();
-
         for (let i = 1; i <= totalPages; i++) {
-            doc.setPage(i); // Vai para a página 'i'
-
+            doc.setPage(i);
             doc.saveGraphicsState();
-            doc.setGState(new (doc as any).GState({ opacity: 0.22 })); // Transparência (22%)
+            doc.setGState(new (doc as any).GState({ opacity: 0.22 }));
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(90); // Tamanho da letra
-            doc.setTextColor(150, 150, 150); // Cor acinzentada
+            doc.setFontSize(90);
+            doc.setTextColor(150, 150, 150);
 
-            // Calcular o centro exato da página
             const centerX = pageWidth / 2;
             const centerY = pageHeight / 2;
 
-            // Desenhar o texto rodado a 45 graus no centro
-            doc.text("Watt Builder", centerX + 50, centerY + 200, { align: "center", angle: 45 });
-
-            doc.restoreGraphicsState(); // Restaura o estado para não afetar mais nada
+            doc.text("Watt Builder", centerX + 50, centerY + 100, { align: "center", angle: 45 });
+            doc.restoreGraphicsState();
         }
-        // =========================================================
 
         doc.save(`propostas-wattbuilder-${new Date().toISOString().slice(0, 10)}.pdf`);
     };
-
-    const selectedPrices = selectedRecommendation ? getPriceBreakdown(selectedRecommendation) : null;
 
     return (
         <div className="flex flex-col min-h-screen bg-white text-black">
             <Navigation />
 
             <main className="flex-grow py-12">
-                <div className="max-w-4xl mx-auto px-4">
+                <div className="max-w-5xl mx-auto px-4">
 
                     {/* Progress Header */}
                     <div className="text-center mb-10 mt-20">
@@ -621,7 +608,7 @@ export default function Simulator() {
 
                     {/* Step 2: Form */}
                     {step === 2 && (
-                        <Card className="shadow-xl border-gray-200 animate-in slide-in-from-bottom-4 duration-500">
+                        <Card className="shadow-xl border-gray-200 animate-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
                             <CardHeader>
                                 <CardTitle>Configuração de Consumo</CardTitle>
                                 <CardDescription className="text-gray-500">Ajuste os valores para uma simulação precisa.</CardDescription>
@@ -687,7 +674,6 @@ export default function Simulator() {
                                                 </Button>
                                             ))}
                                         </div>
-
                                     </div>
                                 </div>
 
@@ -774,7 +760,6 @@ export default function Simulator() {
                                         )}
                                     </div>
                                 </div>
-
 
                                 <div className="pt-4 border-t border-gray-200 space-y-4">
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -1229,11 +1214,11 @@ export default function Simulator() {
 
                     {/* Step 3: Results */}
                     {step === 3 && results && (
-                        <div className="space-y-8 animate-in zoom-in-95 duration-500">
+                        <div className="space-y-8 animate-in zoom-in-95 duration-500 max-w-5xl mx-auto">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <h2 className="text-2xl font-bold">Propostas recomendadas</h2>
-                                    <p className="text-sm text-gray-500">Descarrega um PDF com todas as opções e métricas financeiras.</p>
+                                    <p className="text-sm text-gray-500">Abaixo as opções otimizadas para as tuas necessidades de consumo.</p>
                                 </div>
                                 <Button onClick={downloadProposalsPdf} className="bg-black text-white hover:bg-gray-800">
                                     <FileText className="mr-2 h-4 w-4" />
@@ -1242,11 +1227,11 @@ export default function Simulator() {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <div className="mb-10 text-center">
+                                <div className="mb-6 md:mb-0 text-center md:text-left flex flex-col justify-center">
                                     <h2 className="text-xl md:text-2xl font-semibold text-gray-800">
-                                        {("Parâmetros ideais para a sua casa:")}
+                                        Parâmetros ideais para a sua casa:
                                     </h2>
-                                    <div className="mt-2 w-20 h-1 bg-black mx-auto rounded-full" />
+                                    <div className="mt-2 w-12 h-1 bg-black rounded-full mx-auto md:mx-0" />
                                 </div>
                                 <Card className="border-gray-200 bg-white">
                                     <CardContent className="p-5">
@@ -1277,158 +1262,63 @@ export default function Simulator() {
                                         </div>
                                     </CardContent>
                                 </Card>
-
-                                {(results.summary?.annual_ev_consumption_estimated ?? 0) > 0 && (
-                                    <Card className="border-gray-200 bg-white">
-                                        <CardContent className="p-5">
-                                            <p className="text-sm text-gray-500">Carros elétricos</p>
-                                            <div className="mt-2 flex items-baseline gap-2">
-                                                <span className="text-3xl font-extrabold text-black">{Math.round(results.summary?.annual_ev_consumption_estimated ?? 0)}</span>
-                                                <span className="text-sm text-gray-500">kWh/ano</span>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                )}
                             </div>
 
                             <div className="space-y-10">
                                 {recommendationGroups.map((group) => (
                                     group.items.length > 0 && (
                                         <section key={group.tier} className="space-y-4">
-                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between border-b border-gray-200 pb-2">
                                                 <div>
                                                     <div className="flex items-center gap-3">
-                                                        <h2 className="text-2xl font-extrabold tracking-tight">{group.title}</h2>
+                                                        <h2 className="text-xl font-extrabold tracking-tight">{group.title}</h2>
                                                         <Badge variant="outline" className={group.badgeClass}>
                                                             {group.items.length} opções
                                                         </Badge>
                                                     </div>
-                                                    <p className="mt-1 text-sm text-gray-500">{group.description}</p>
+                                                    <p className="text-sm text-gray-500">{group.description}</p>
                                                 </div>
                                             </div>
 
-                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                            {/* Grelha Compacta para as soluções */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                                 {group.items.map((rec: any, idx: number) => {
-                                                    const prices = getPriceBreakdown(rec);
-
                                                     return (
                                                         <Card
                                                             key={`${group.tier}-${rec.battery?.id || idx}`}
                                                             onClick={() => setSelectedRecommendation(rec)}
-                                                            className={`cursor-pointer relative overflow-hidden transition-all hover:scale-[1.02] bg-white ${idx === 0 ? 'border-orange-600 border-2 shadow-xl' : 'border-gray-200'}`}
+                                                            className={`cursor-pointer relative overflow-hidden transition-all hover:scale-[1.02] bg-white flex flex-col h-full ${idx === 0 ? 'border-orange-600 border-2 shadow-md' : 'border-gray-200 shadow-sm'}`}
                                                         >
                                                             {idx === 0 && (
-                                                                <div className="absolute top-0 right-0 bg-orange-600 text-white px-3 py-1 text-xs font-bold rounded-bl-lg">
+                                                                <div className="absolute top-0 right-0 bg-orange-600 text-white px-2 py-0.5 text-[10px] font-bold rounded-bl-lg">
                                                                     TOP {group.title.toUpperCase()}
                                                                 </div>
                                                             )}
-                                                            <CardHeader className="pb-2">
-                                                                <Badge className="w-fit mb-2 bg-black text-white hover:bg-black">Sistema completo</Badge>
-                                                                <CardTitle className="text-xl">{getSystemName(rec)}</CardTitle>
+
+                                                            <CardHeader className="p-4 pb-2">
+                                                                <CardTitle className="text-lg leading-tight">{getSystemName(rec)}</CardTitle>
+                                                                <CardDescription className="text-xs mt-1 line-clamp-2">
+                                                                    {rec.battery?.brand} {rec.battery?.model}
+                                                                    {rec.inverter && ` • Inv. ${rec.inverter.brand}`}
+                                                                    {rec.solar_panels && ` • ${rec.solar_panels.quantity} Painéis`}
+                                                                </CardDescription>
                                                             </CardHeader>
-                                                            <CardContent className="space-y-4">
-                                                                <div className="flex items-baseline gap-1 border-b border-gray-100 pb-4">
-                                                                    <span className="text-3xl font-extrabold">{rec.capex_total_eur.toLocaleString()}€</span>
-                                                                    <span className="text-gray-400 text-sm">est.</span>
+
+                                                            <CardContent className="p-4 pt-2 flex-grow flex flex-col gap-4">
+                                                                <div className="flex items-baseline gap-1 border-b border-gray-100 pb-3">
+                                                                    <span className="text-2xl font-extrabold">{formatPrice(rec.capex_total_eur)}</span>
+                                                                    <span className="text-gray-400 text-xs">est.</span>
                                                                 </div>
 
-                                                                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm">
-                                                                    <div className="flex justify-between gap-4">
-                                                                        <span className="text-gray-500">Hardware</span>
-                                                                        <span className="font-semibold">{formatPrice(prices.hardwareTotal)}</span>
+                                                                <div className="grid grid-cols-2 gap-2 rounded-lg bg-gray-50 p-2 text-sm border border-gray-100">
+                                                                    <div>
+                                                                        <p className="text-xs text-gray-500">Poupança</p>
+                                                                        <p className="font-bold text-orange-600">{formatPrice(rec.savings_annual_eur)}/ano</p>
                                                                     </div>
-                                                                    <div className="mt-1 flex justify-between gap-4">
-                                                                        <span className="text-gray-500">Instalação</span>
-                                                                        <span className="font-semibold">{formatPrice(prices.installation)}</span>
+                                                                    <div>
+                                                                        <p className="text-xs text-gray-500">Retorno</p>
+                                                                        <p className="font-bold">{rec.payback_years ? `${rec.payback_years} anos` : 'N/A'}</p>
                                                                     </div>
-                                                                </div>
-
-                                                                <div className="space-y-3">
-                                                                    <div className="rounded-lg border border-gray-200 p-3">
-                                                                        <div className="flex items-start gap-3">
-                                                                            <Battery className="w-5 h-5 mt-0.5 text-orange-600" />
-                                                                            <div>
-                                                                                <p className="text-xs uppercase text-gray-400 font-semibold">Bateria</p>
-                                                                                <p className="text-base font-bold leading-tight">{rec.battery.brand} {rec.battery.model}</p>
-                                                                                <p className="text-xs text-gray-500">{rec.new_battery_capacity_kwh || rec.simulated_capacity_kwh} kWh novos</p>
-                                                                                {rec.existing_battery?.has_battery && (
-                                                                                    <p className="text-xs text-gray-500">
-                                                                                        + {rec.existing_battery.capacity_kwh} kWh existentes = {rec.simulated_capacity_kwh} kWh simulados
-                                                                                    </p>
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    {rec.inverter && (
-                                                                        <div className="rounded-lg border border-gray-200 p-3">
-                                                                            <div className="flex items-start gap-3">
-                                                                                <Zap className="w-5 h-5 mt-0.5 text-orange-600" />
-                                                                                <div>
-                                                                                    <p className="text-xs uppercase text-gray-400 font-semibold">Inversor</p>
-                                                                                    <p className="text-base font-bold leading-tight">{rec.inverter.brand} {rec.inverter.model}</p>
-                                                                                    <p className="text-xs text-gray-500">{rec.inverter.specs?.power_kw} kW</p>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-                                                                    {rec.existing_inverter_action === 'replace' && rec.replacement_notes?.length > 0 && (
-                                                                        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-800">
-                                                                            {rec.replacement_notes[0]}
-                                                                        </div>
-                                                                    )}
-                                                                    {rec.solar_panels && (
-                                                                        <div className="rounded-lg border border-gray-200 p-3">
-                                                                            <div className="flex items-start gap-3">
-                                                                                <Sun className="w-5 h-5 mt-0.5 text-orange-600" />
-                                                                                <div>
-                                                                                    <p className="text-xs uppercase text-gray-400 font-semibold">Painéis solares</p>
-                                                                                    <p className="text-base font-bold leading-tight">
-                                                                                        {rec.solar_panels.expanded
-                                                                                            ? `Existentes + ${rec.solar_panels.quantity} x ${rec.solar_panels.panel.brand} ${rec.solar_panels.panel.model}`
-                                                                                            : rec.solar_panels.existing
-                                                                                                ? 'Painéis existentes'
-                                                                                                : `${rec.solar_panels.quantity} x ${rec.solar_panels.panel.brand} ${rec.solar_panels.panel.model}`}
-                                                                                    </p>
-                                                                                    <p className="text-xs text-gray-500">{rec.solar_panels.array_power_kwp} kWp</p>
-                                                                                    {rec.solar_panels.expanded && (
-                                                                                        <p className="text-xs text-gray-500">
-                                                                                            {rec.solar_panels.existing_power_kwp} kWp existentes + {rec.solar_panels.added_power_kwp} kWp novos
-                                                                                        </p>
-                                                                                    )}
-                                                                                    {rec.solar_panels.roof_area_m2 && (
-                                                                                        <p className="text-xs text-gray-500">
-                                                                                            {rec.solar_panels.total_panel_area_m2} m² de {rec.solar_panels.roof_area_m2} m² ({rec.solar_panels.roof_coverage_pct}%)
-                                                                                        </p>
-                                                                                    )}
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-
-                                                                <div className="space-y-3 pt-2">
-                                                                    <div className="grid grid-cols-2 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm">
-                                                                        <div>
-                                                                            <p className="text-xs text-gray-500">Fatura atual</p>
-                                                                            <p className="font-bold">{formatPrice(rec.annual_bill_before_eur)}/ano</p>
-                                                                        </div>
-                                                                        <div>
-                                                                            <p className="text-xs text-gray-500">Após sistema</p>
-                                                                            <p className="font-bold">{formatPrice(rec.annual_bill_after_eur)}/ano</p>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="flex items-center text-sm text-black">
-                                                                        <TrendingUp className="w-4 h-4 mr-2 text-orange-600" />
-                                                                        <span>Poupança anual: <strong>{formatPrice(rec.savings_annual_eur)}/ano</strong></span>
-                                                                    </div>
-                                                                    <div className="flex items-center text-sm text-black">
-                                                                        <Wallet className="w-4 h-4 mr-2 text-orange-600" />
-                                                                        <span>Payback: <strong>{rec.payback_years ? `${rec.payback_years} anos` : 'não aplicável'}</strong></span>
-                                                                    </div>
-                                                                    <p className="text-xs text-gray-500">
-                                                                        Hardware: {formatPrice(prices.hardwareTotal)} + instalação: {formatPrice(prices.installation)}.
-                                                                    </p>
                                                                 </div>
 
                                                                 <Button
@@ -1436,7 +1326,8 @@ export default function Simulator() {
                                                                         e.stopPropagation();
                                                                         handleRequestQuote(rec);
                                                                     }}
-                                                                    className={`w-full mt-4 ${idx === 0 ? 'bg-black text-white hover:bg-gray-800' : 'bg-white border-2 border-black text-black hover:bg-gray-50'}`}
+                                                                    className={`w-full mt-auto ${idx === 0 ? 'bg-black text-white hover:bg-gray-800' : 'bg-white border border-gray-300 text-black hover:bg-gray-50'}`}
+                                                                    size="sm"
                                                                 >
                                                                     Solicitar Orçamento
                                                                 </Button>
@@ -1479,7 +1370,7 @@ export default function Simulator() {
                     )}
 
                     {/* Waiting List Section */}
-                    <section className="mt-24 p-10 bg-orange-50 rounded-3xl text-black relative overflow-hidden">
+                    <section className="mt-24 p-10 bg-orange-50 rounded-3xl text-black relative overflow-hidden max-w-5xl mx-auto">
                         <div className="relative z-10 max-w-xl">
                             <h2 className="text-2xl font-bold mb-4">Deseja um Relatório Técnico Completo?</h2>
                             <p className="text-gray-700 mb-6">A nossa equipa realiza um estudo detalhado e perfil de carga específico para a sua empresa ou habitação.</p>
