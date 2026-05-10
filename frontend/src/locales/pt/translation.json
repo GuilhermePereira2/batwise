@@ -91,5 +91,119 @@
             "step4_title": "4. O seu ROI",
             "step4_desc": "Recebe um relatório claro e imparcial mostrando exatamente qual bateria comprar e quando se pagará a si própria."
         }
+    },
+    "terms": {
+        "page_title": "Termos e Condições",
+        "last_updated": "Última atualização: 08/05/2026",
+        "back_button": "Voltar",
+        "sections": [
+            {
+                "title": "1. Identificação",
+                "content": [
+                    "A Watt Builder é um projeto digital atualmente em fase de desenvolvimento, dedicado à análise e recomendação de soluções de armazenamento de energia.",
+                    "Para qualquer contacto: Email: general@watt-builder.com | Website: www.watt-builder.com"
+                ]
+            },
+            {
+                "title": "2. Objeto e Aceitação",
+                "content": [
+                    "Os presentes Termos e Condições regulam o acesso e utilização da plataforma Watt Builder.",
+                    "Ao utilizar a Plataforma, o utilizador declara que leu, compreendeu e aceita integralmente os presentes Termos.",
+                    "Caso não concorde, deverá abster-se de utilizar a Plataforma."
+                ]
+            },
+            {
+                "title": "3. Natureza do Serviço",
+                "content": [
+                    "A Watt Builder disponibiliza uma ferramenta digital que permite: inserir dados energéticos e de consumo; simular cenários de utilização de baterias; e obter recomendações e estimativas de poupança.",
+                    "A Plataforma encontra-se em fase experimental e de desenvolvimento."
+                ]
+            },
+            {
+                "title": "4. Gratuidade do Serviço",
+                "content": [
+                    "A utilização da Plataforma é atualmente gratuita.",
+                    "A Watt Builder reserva-se o direito de, no futuro, introduzir funcionalidades pagas."
+                ]
+            },
+            {
+                "title": "5. Natureza das Recomendações",
+                "content": [
+                    "As recomendações apresentadas são baseadas em modelos de simulação, têm caráter meramente indicativo e não constituem aconselhamento técnico, financeiro ou contratual.",
+                    "As estimativas de poupança não são garantidas e podem variar consoante condições reais.",
+                    "O utilizador reconhece que qualquer decisão tomada com base na informação fornecida é da sua exclusiva responsabilidade."
+                ]
+            },
+            {
+                "title": "6. Limitação de Responsabilidade",
+                "content": [
+                    "Na máxima extensão permitida por lei, a Watt Builder não poderá ser responsabilizada por: decisões tomadas com base nas recomendações apresentadas; diferenças entre estimativas e resultados reais; erros ou omissões nos dados introduzidos pelo utilizador; incompatibilidades técnicas entre equipamentos; ou falhas técnicas ou indisponibilidade da Plataforma.",
+                    "A validação técnica de qualquer solução deverá ser efetuada por profissionais qualificados."
+                ]
+            },
+            {
+                "title": "7. Regras de Utilização",
+                "content": [
+                    "O utilizador compromete-se a: fornecer informações verdadeiras e completas; utilizar a Plataforma de forma lícita; não tentar aceder a sistemas ou dados não autorizados; e não utilizar a Plataforma para fins abusivos, fraudulentos ou ilegais."
+                ]
+            },
+            {
+                "title": "8. Propriedade Intelectual",
+                "content": [
+                    "Todos os conteúdos da Plataforma, incluindo modelos de cálculo, algoritmos, interface e design, textos e gráficos são propriedade da Watt Builder ou utilizados sob licença.",
+                    "É proibida a sua reprodução ou utilização sem autorização."
+                ]
+            },
+            {
+                "title": "9. Proteção de Dados",
+                "content": [
+                    "A utilização da Plataforma implica o tratamento de dados pessoais.",
+                    "Para mais informações, consulte a nossa Política de Privacidade."
+                ]
+            },
+            {
+                "title": "10. Partilha de Dados",
+                "content": [
+                    "Os dados introduzidos não serão partilhados com terceiros sem consentimento explícito do utilizador, exceto quando exigido por lei."
+                ]
+            },
+            {
+                "title": "11. Disponibilidade do Serviço",
+                "content": [
+                    "A Watt Builder não garante que a Plataforma esteja disponível de forma contínua ou isenta de erros.",
+                    "Reserva-se o direito de alterar, suspender ou descontinuar funcionalidades a qualquer momento."
+                ]
+            },
+            {
+                "title": "12. Alterações aos Termos",
+                "content": [
+                    "A Watt Builder pode alterar os presentes Termos a qualquer momento.",
+                    "As alterações entram em vigor após publicação no website."
+                ]
+            },
+            {
+                "title": "13. Lei Aplicável",
+                "content": [
+                    "Os presentes Termos são regidos pela lei portuguesa."
+                ]
+            },
+            {
+                "title": "14. Contacto",
+                "content": [
+                    "Para qualquer questão relacionada com estes Termos, contacte-nos através do email fornecido."
+                ]
+            },
+            {
+                "title": "15. Aceitação",
+                "content": [
+                    "A utilização da Plataforma implica a aceitação integral dos presentes Termos e Condições."
+                ]
+            }
+        ],
+        "contact": {
+            "title": "Contacte-nos",
+            "description": "Se tiver alguma dúvida sobre estes Termos, por favor contacte-nos através de:",
+            "email": "general@watt-builder.com"
+        }
     }
 }

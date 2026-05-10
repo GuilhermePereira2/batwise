@@ -1216,6 +1216,12 @@ export default function Simulator() {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div className="mb-10 text-center">
+                                    <h2 className="text-xl md:text-2xl font-semibold text-gray-800">
+                                        {t("Parâmetros ideais para a sua casa")}
+                                    </h2>
+                                    <div className="mt-2 w-20 h-1 bg-black mx-auto rounded-full" />
+                                </div>
                                 <Card className="border-gray-200 bg-white">
                                     <CardContent className="p-5">
                                         <p className="text-sm text-gray-500">Capacidade ideal</p>
@@ -1280,136 +1286,136 @@ export default function Simulator() {
                                                     const prices = getPriceBreakdown(rec);
 
                                                     return (
-                                                    <Card
-                                                        key={`${group.tier}-${rec.battery?.id || idx}`}
-                                                        onClick={() => setSelectedRecommendation(rec)}
-                                                        className={`cursor-pointer relative overflow-hidden transition-all hover:scale-[1.02] bg-white ${idx === 0 ? 'border-orange-600 border-2 shadow-xl' : 'border-gray-200'}`}
-                                                    >
-                                                        {idx === 0 && (
-                                                            <div className="absolute top-0 right-0 bg-orange-600 text-white px-3 py-1 text-xs font-bold rounded-bl-lg">
-                                                                TOP {group.title.toUpperCase()}
-                                                            </div>
-                                                        )}
-                                                        <CardHeader className="pb-2">
-                                                            <Badge className="w-fit mb-2 bg-black text-white hover:bg-black">Sistema completo</Badge>
-                                                            <CardTitle className="text-xl">{getSystemName(rec)}</CardTitle>
-                                                        </CardHeader>
-                                                        <CardContent className="space-y-4">
-                                                            <div className="flex items-baseline gap-1 border-b border-gray-100 pb-4">
-                                                                <span className="text-3xl font-extrabold">{rec.capex_total_eur.toLocaleString()}€</span>
-                                                                <span className="text-gray-400 text-sm">est.</span>
-                                                            </div>
-
-                                                            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm">
-                                                                <div className="flex justify-between gap-4">
-                                                                    <span className="text-gray-500">Hardware</span>
-                                                                    <span className="font-semibold">{formatPrice(prices.hardwareTotal)}</span>
+                                                        <Card
+                                                            key={`${group.tier}-${rec.battery?.id || idx}`}
+                                                            onClick={() => setSelectedRecommendation(rec)}
+                                                            className={`cursor-pointer relative overflow-hidden transition-all hover:scale-[1.02] bg-white ${idx === 0 ? 'border-orange-600 border-2 shadow-xl' : 'border-gray-200'}`}
+                                                        >
+                                                            {idx === 0 && (
+                                                                <div className="absolute top-0 right-0 bg-orange-600 text-white px-3 py-1 text-xs font-bold rounded-bl-lg">
+                                                                    TOP {group.title.toUpperCase()}
                                                                 </div>
-                                                                <div className="mt-1 flex justify-between gap-4">
-                                                                    <span className="text-gray-500">Instalação</span>
-                                                                    <span className="font-semibold">{formatPrice(prices.installation)}</span>
+                                                            )}
+                                                            <CardHeader className="pb-2">
+                                                                <Badge className="w-fit mb-2 bg-black text-white hover:bg-black">Sistema completo</Badge>
+                                                                <CardTitle className="text-xl">{getSystemName(rec)}</CardTitle>
+                                                            </CardHeader>
+                                                            <CardContent className="space-y-4">
+                                                                <div className="flex items-baseline gap-1 border-b border-gray-100 pb-4">
+                                                                    <span className="text-3xl font-extrabold">{rec.capex_total_eur.toLocaleString()}€</span>
+                                                                    <span className="text-gray-400 text-sm">est.</span>
                                                                 </div>
-                                                            </div>
 
-                                                            <div className="space-y-3">
-                                                                <div className="rounded-lg border border-gray-200 p-3">
-                                                                    <div className="flex items-start gap-3">
-                                                                        <Battery className="w-5 h-5 mt-0.5 text-orange-600" />
+                                                                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm">
+                                                                    <div className="flex justify-between gap-4">
+                                                                        <span className="text-gray-500">Hardware</span>
+                                                                        <span className="font-semibold">{formatPrice(prices.hardwareTotal)}</span>
+                                                                    </div>
+                                                                    <div className="mt-1 flex justify-between gap-4">
+                                                                        <span className="text-gray-500">Instalação</span>
+                                                                        <span className="font-semibold">{formatPrice(prices.installation)}</span>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="space-y-3">
+                                                                    <div className="rounded-lg border border-gray-200 p-3">
+                                                                        <div className="flex items-start gap-3">
+                                                                            <Battery className="w-5 h-5 mt-0.5 text-orange-600" />
+                                                                            <div>
+                                                                                <p className="text-xs uppercase text-gray-400 font-semibold">Bateria</p>
+                                                                                <p className="text-base font-bold leading-tight">{rec.battery.brand} {rec.battery.model}</p>
+                                                                                <p className="text-xs text-gray-500">{rec.new_battery_capacity_kwh || rec.simulated_capacity_kwh} kWh novos</p>
+                                                                                {rec.existing_battery?.has_battery && (
+                                                                                    <p className="text-xs text-gray-500">
+                                                                                        + {rec.existing_battery.capacity_kwh} kWh existentes = {rec.simulated_capacity_kwh} kWh simulados
+                                                                                    </p>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {rec.inverter && (
+                                                                        <div className="rounded-lg border border-gray-200 p-3">
+                                                                            <div className="flex items-start gap-3">
+                                                                                <Zap className="w-5 h-5 mt-0.5 text-orange-600" />
+                                                                                <div>
+                                                                                    <p className="text-xs uppercase text-gray-400 font-semibold">Inversor</p>
+                                                                                    <p className="text-base font-bold leading-tight">{rec.inverter.brand} {rec.inverter.model}</p>
+                                                                                    <p className="text-xs text-gray-500">{rec.inverter.specs?.power_kw} kW</p>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                    {rec.existing_inverter_action === 'replace' && rec.replacement_notes?.length > 0 && (
+                                                                        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-800">
+                                                                            {rec.replacement_notes[0]}
+                                                                        </div>
+                                                                    )}
+                                                                    {rec.solar_panels && (
+                                                                        <div className="rounded-lg border border-gray-200 p-3">
+                                                                            <div className="flex items-start gap-3">
+                                                                                <Sun className="w-5 h-5 mt-0.5 text-orange-600" />
+                                                                                <div>
+                                                                                    <p className="text-xs uppercase text-gray-400 font-semibold">Painéis solares</p>
+                                                                                    <p className="text-base font-bold leading-tight">
+                                                                                        {rec.solar_panels.expanded
+                                                                                            ? `Existentes + ${rec.solar_panels.quantity} x ${rec.solar_panels.panel.brand} ${rec.solar_panels.panel.model}`
+                                                                                            : rec.solar_panels.existing
+                                                                                                ? 'Painéis existentes'
+                                                                                                : `${rec.solar_panels.quantity} x ${rec.solar_panels.panel.brand} ${rec.solar_panels.panel.model}`}
+                                                                                    </p>
+                                                                                    <p className="text-xs text-gray-500">{rec.solar_panels.array_power_kwp} kWp</p>
+                                                                                    {rec.solar_panels.expanded && (
+                                                                                        <p className="text-xs text-gray-500">
+                                                                                            {rec.solar_panels.existing_power_kwp} kWp existentes + {rec.solar_panels.added_power_kwp} kWp novos
+                                                                                        </p>
+                                                                                    )}
+                                                                                    {rec.solar_panels.roof_area_m2 && (
+                                                                                        <p className="text-xs text-gray-500">
+                                                                                            {rec.solar_panels.total_panel_area_m2} m² de {rec.solar_panels.roof_area_m2} m² ({rec.solar_panels.roof_coverage_pct}%)
+                                                                                        </p>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+
+                                                                <div className="space-y-3 pt-2">
+                                                                    <div className="grid grid-cols-2 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm">
                                                                         <div>
-                                                                            <p className="text-xs uppercase text-gray-400 font-semibold">Bateria</p>
-                                                                            <p className="text-base font-bold leading-tight">{rec.battery.brand} {rec.battery.model}</p>
-                                                                            <p className="text-xs text-gray-500">{rec.new_battery_capacity_kwh || rec.simulated_capacity_kwh} kWh novos</p>
-                                                                            {rec.existing_battery?.has_battery && (
-                                                                                <p className="text-xs text-gray-500">
-                                                                                    + {rec.existing_battery.capacity_kwh} kWh existentes = {rec.simulated_capacity_kwh} kWh simulados
-                                                                                </p>
-                                                                            )}
+                                                                            <p className="text-xs text-gray-500">Fatura atual</p>
+                                                                            <p className="font-bold">{formatPrice(rec.annual_bill_before_eur)}/ano</p>
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="text-xs text-gray-500">Após sistema</p>
+                                                                            <p className="font-bold">{formatPrice(rec.annual_bill_after_eur)}/ano</p>
                                                                         </div>
                                                                     </div>
+                                                                    <div className="flex items-center text-sm text-black">
+                                                                        <TrendingUp className="w-4 h-4 mr-2 text-orange-600" />
+                                                                        <span>Poupança anual: <strong>{formatPrice(rec.savings_annual_eur)}/ano</strong></span>
+                                                                    </div>
+                                                                    <div className="flex items-center text-sm text-black">
+                                                                        <Wallet className="w-4 h-4 mr-2 text-orange-600" />
+                                                                        <span>Payback: <strong>{rec.payback_years ? `${rec.payback_years} anos` : 'não aplicável'}</strong></span>
+                                                                    </div>
+                                                                    <p className="text-xs text-gray-500">
+                                                                        Hardware: {formatPrice(prices.hardwareTotal)} + instalação: {formatPrice(prices.installation)}.
+                                                                    </p>
                                                                 </div>
 
-                                                                {rec.inverter && (
-                                                                    <div className="rounded-lg border border-gray-200 p-3">
-                                                                        <div className="flex items-start gap-3">
-                                                                            <Zap className="w-5 h-5 mt-0.5 text-orange-600" />
-                                                                            <div>
-                                                                                <p className="text-xs uppercase text-gray-400 font-semibold">Inversor</p>
-                                                                                <p className="text-base font-bold leading-tight">{rec.inverter.brand} {rec.inverter.model}</p>
-                                                                                <p className="text-xs text-gray-500">{rec.inverter.specs?.power_kw} kW</p>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                                {rec.existing_inverter_action === 'replace' && rec.replacement_notes?.length > 0 && (
-                                                                    <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-800">
-                                                                        {rec.replacement_notes[0]}
-                                                                    </div>
-                                                                )}
-                                                                {rec.solar_panels && (
-                                                                    <div className="rounded-lg border border-gray-200 p-3">
-                                                                        <div className="flex items-start gap-3">
-                                                                            <Sun className="w-5 h-5 mt-0.5 text-orange-600" />
-                                                                            <div>
-                                                                                <p className="text-xs uppercase text-gray-400 font-semibold">Painéis solares</p>
-                                                                                <p className="text-base font-bold leading-tight">
-                                                                                    {rec.solar_panels.expanded
-                                                                                        ? `Existentes + ${rec.solar_panels.quantity} x ${rec.solar_panels.panel.brand} ${rec.solar_panels.panel.model}`
-                                                                                        : rec.solar_panels.existing
-                                                                                        ? 'Painéis existentes'
-                                                                                        : `${rec.solar_panels.quantity} x ${rec.solar_panels.panel.brand} ${rec.solar_panels.panel.model}`}
-                                                                                </p>
-                                                                                <p className="text-xs text-gray-500">{rec.solar_panels.array_power_kwp} kWp</p>
-                                                                                {rec.solar_panels.expanded && (
-                                                                                    <p className="text-xs text-gray-500">
-                                                                                        {rec.solar_panels.existing_power_kwp} kWp existentes + {rec.solar_panels.added_power_kwp} kWp novos
-                                                                                    </p>
-                                                                                )}
-                                                                                {rec.solar_panels.roof_area_m2 && (
-                                                                                    <p className="text-xs text-gray-500">
-                                                                                        {rec.solar_panels.total_panel_area_m2} m² de {rec.solar_panels.roof_area_m2} m² ({rec.solar_panels.roof_coverage_pct}%)
-                                                                                    </p>
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-
-                                                            <div className="space-y-3 pt-2">
-                                                                <div className="grid grid-cols-2 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm">
-                                                                    <div>
-                                                                        <p className="text-xs text-gray-500">Fatura atual</p>
-                                                                        <p className="font-bold">{formatPrice(rec.annual_bill_before_eur)}/ano</p>
-                                                                    </div>
-                                                                    <div>
-                                                                        <p className="text-xs text-gray-500">Após sistema</p>
-                                                                        <p className="font-bold">{formatPrice(rec.annual_bill_after_eur)}/ano</p>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="flex items-center text-sm text-black">
-                                                                    <TrendingUp className="w-4 h-4 mr-2 text-orange-600" />
-                                                                    <span>Poupança anual: <strong>{formatPrice(rec.savings_annual_eur)}/ano</strong></span>
-                                                                </div>
-                                                                <div className="flex items-center text-sm text-black">
-                                                                    <Wallet className="w-4 h-4 mr-2 text-orange-600" />
-                                                                    <span>Payback: <strong>{rec.payback_years ? `${rec.payback_years} anos` : 'não aplicável'}</strong></span>
-                                                                </div>
-                                                                <p className="text-xs text-gray-500">
-                                                                    Hardware: {formatPrice(prices.hardwareTotal)} + instalação: {formatPrice(prices.installation)}.
-                                                                </p>
-                                                            </div>
-
-                                                            <Button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleRequestQuote(rec);
-                                                                }}
-                                                                className={`w-full mt-4 ${idx === 0 ? 'bg-black text-white hover:bg-gray-800' : 'bg-white border-2 border-black text-black hover:bg-gray-50'}`}
-                                                            >
-                                                                Solicitar Orçamento
-                                                            </Button>
-                                                        </CardContent>
-                                                    </Card>
+                                                                <Button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleRequestQuote(rec);
+                                                                    }}
+                                                                    className={`w-full mt-4 ${idx === 0 ? 'bg-black text-white hover:bg-gray-800' : 'bg-white border-2 border-black text-black hover:bg-gray-50'}`}
+                                                                >
+                                                                    Solicitar Orçamento
+                                                                </Button>
+                                                            </CardContent>
+                                                        </Card>
                                                     );
                                                 })}
                                             </div>
@@ -1498,8 +1504,8 @@ export default function Simulator() {
                                                         {selectedRecommendation.solar_panels.expanded
                                                             ? `Painéis existentes + ${selectedRecommendation.solar_panels.quantity} x ${selectedRecommendation.solar_panels.panel.brand} ${selectedRecommendation.solar_panels.panel.model}`
                                                             : selectedRecommendation.solar_panels.existing
-                                                            ? 'Painéis solares existentes'
-                                                            : `${selectedRecommendation.solar_panels.quantity} x ${selectedRecommendation.solar_panels.panel.brand} ${selectedRecommendation.solar_panels.panel.model}`}
+                                                                ? 'Painéis solares existentes'
+                                                                : `${selectedRecommendation.solar_panels.quantity} x ${selectedRecommendation.solar_panels.panel.brand} ${selectedRecommendation.solar_panels.panel.model}`}
                                                     </p>
                                                     <div className="space-y-2 text-sm">
                                                         <p><span className="font-semibold">Potência total:</span> {selectedRecommendation.solar_panels.array_power_kwp} kWp</p>

@@ -91,5 +91,119 @@
             "step4_title": "4. Your ROI",
             "step4_desc": "You get a clear, unbiased report showing exactly which battery to buy and when it will pay for itself."
         }
+    },
+    "terms": {
+        "page_title": "Terms and Conditions",
+        "last_updated": "Last updated: 05/08/2026",
+        "back_button": "Back to Signup",
+        "sections": [
+            {
+                "title": "1. Identification",
+                "content": [
+                    "Watt Builder is a digital project currently in the development phase, dedicated to the analysis and recommendation of energy storage solutions.",
+                    "For any contact: Email: general@watt-builder.com | Website: www.watt-builder.com"
+                ]
+            },
+            {
+                "title": "2. Object and Acceptance",
+                "content": [
+                    "These Terms and Conditions govern the access and use of the Watt Builder platform.",
+                    "By using the Platform, the user declares to have read, understood, and fully accepted these Terms.",
+                    "If you do not agree, you must refrain from using the Platform."
+                ]
+            },
+            {
+                "title": "3. Nature of Service",
+                "content": [
+                    "Watt Builder provides a digital tool that allows users to: input energy and consumption data; simulate battery usage scenarios; and obtain recommendations and savings estimates.",
+                    "The Platform is in an experimental and developmental phase."
+                ]
+            },
+            {
+                "title": "4. Free Service",
+                "content": [
+                    "The use of the Platform is currently free of charge.",
+                    "Watt Builder reserves the right to introduce paid features in the future."
+                ]
+            },
+            {
+                "title": "5. Nature of Recommendations",
+                "content": [
+                    "The recommendations provided are based on simulation models, are strictly indicative, and do not constitute technical, financial, or contractual advice.",
+                    "Savings estimates are not guaranteed and may vary depending on real-world conditions.",
+                    "The user acknowledges that any decision made based on the provided information is their sole responsibility."
+                ]
+            },
+            {
+                "title": "6. Limitation of Liability",
+                "content": [
+                    "To the maximum extent permitted by law, Watt Builder shall not be liable for: decisions made based on the provided recommendations; differences between estimates and actual results; errors or omissions in the data entered by the user; technical incompatibilities between equipment; or technical failures and unavailability of the Platform.",
+                    "The technical validation of any solution must be performed by qualified professionals."
+                ]
+            },
+            {
+                "title": "7. Rules of Use",
+                "content": [
+                    "The user commits to: providing true and complete information; using the Platform lawfully; not attempting to access unauthorized systems or data; and not using the Platform for abusive, fraudulent, or illegal purposes."
+                ]
+            },
+            {
+                "title": "8. Intellectual Property",
+                "content": [
+                    "All Platform content, including calculation models, algorithms, interface and design, texts, and graphics, are the property of Watt Builder or used under license.",
+                    "Reproduction or use without authorization is prohibited."
+                ]
+            },
+            {
+                "title": "9. Data Protection",
+                "content": [
+                    "The use of the Platform implies the processing of personal data.",
+                    "For more information, please consult our Privacy Policy."
+                ]
+            },
+            {
+                "title": "10. Data Sharing",
+                "content": [
+                    "Entered data will not be shared with third parties without the explicit consent of the user, except when required by law."
+                ]
+            },
+            {
+                "title": "11. Service Availability",
+                "content": [
+                    "Watt Builder does not guarantee that the Platform will be continuously available or error-free.",
+                    "We reserve the right to change, suspend, or discontinue features at any time."
+                ]
+            },
+            {
+                "title": "12. Changes to Terms",
+                "content": [
+                    "Watt Builder may change these Terms at any time.",
+                    "Changes take effect upon publication on the website."
+                ]
+            },
+            {
+                "title": "13. Applicable Law",
+                "content": [
+                    "These Terms are governed by Portuguese law."
+                ]
+            },
+            {
+                "title": "14. Contact",
+                "content": [
+                    "For any questions related to these Terms, please contact us via the provided email."
+                ]
+            },
+            {
+                "title": "15. Acceptance",
+                "content": [
+                    "The use of the Platform implies full acceptance of these Terms and Conditions."
+                ]
+            }
+        ],
+        "contact": {
+            "title": "Contact Us",
+            "description": "If you have any questions about these Terms, please contact us at:",
+            "email": "general@watt-builder.com"
+        }
     }
 }
