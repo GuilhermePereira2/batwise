@@ -6,7 +6,14 @@ ROOT_DIR="$SCRIPT_DIR/.."
 
 # Carregar .env da raiz
 if [ -f "$ROOT_DIR/.env" ]; then
-    export $(grep -v '^#' "$ROOT_DIR/.env" | grep -v '^$' | xargs)
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="${line%%#*}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        if [ -n "$line" ] && [[ "$line" == *=* ]]; then
+            export "$line"
+        fi
+    done < "$ROOT_DIR/.env"
 else
     export DYNAMODB_ENDPOINT="http://localhost:8000"
     export AWS_REGION="local"

@@ -4,6 +4,7 @@ Suporta tanto AWS DynamoDB como DynamoDB Local
 """
 import os
 import boto3
+import json
 from botocore.exceptions import ClientError
 from typing import Optional, Dict
 from datetime import datetime, timedelta
@@ -22,7 +23,7 @@ def load_database_env() -> None:
     # Procura na raiz do projeto
     root_env = root_dir / ".env"
     if root_env.exists():
-        load_dotenv(dotenv_path=root_env)
+        load_dotenv(dotenv_path=root_env, override=True)
         return
 
 
@@ -31,13 +32,15 @@ load_database_env()
 
 
 # Configuração - usar variáveis de ambiente
-DYNAMODB_ENDPOINT = os.getenv("DYNAMODB_ENDPOINT", None)  # None = AWS real
+DYNAMODB_ENDPOINT = os.getenv("DYNAMODB_ENDPOINT") or None  # None = AWS real
 AWS_REGION = os.getenv("AWS_REGION", "eu-west-3")
 USERS_TABLE_NAME = os.getenv("USERS_TABLE_NAME", "watt-builder-Users")
+SIMULATION_INPUTS_TABLE_NAME = os.getenv("SIMULATION_INPUTS_TABLE_NAME", "watt-builder-SimulationInputs")
 
 # Debug: Ver se as variáveis foram carregadas
 print(f"🔍 Debug - AWS_REGION: {AWS_REGION}")
 print(f"🔍 Debug - USERS_TABLE_NAME: {USERS_TABLE_NAME}")
+print(f"🔍 Debug - SIMULATION_INPUTS_TABLE_NAME: {SIMULATION_INPUTS_TABLE_NAME}")
 print(f"🔍 Debug - DYNAMODB_ENDPOINT: {DYNAMODB_ENDPOINT}")
 
 # Forçar a variável de ambiente para o boto3
@@ -61,10 +64,34 @@ else:
     print(f"☁️  AWS DynamoDB conectado: {AWS_REGION}")
 
 users_table = dynamodb.Table(USERS_TABLE_NAME)
+simulation_inputs_table = dynamodb.Table(SIMULATION_INPUTS_TABLE_NAME)
 
 
 class DynamoDBUserHandler:
     """Handler para operações de utilizadores no DynamoDB"""
+
+    @staticmethod
+    def save_simulation_input(user: Dict, payload: Dict) -> Optional[Dict]:
+        """
+        Guarda o input completo da simulação para clientes não-admin.
+        Admins são ignorados para não contaminar a base de dados de leads/clientes.
+        """
+        if user.get("admin"):
+            return None
+
+        now = datetime.utcnow().isoformat()
+        item = {
+            "simulationId": str(uuid.uuid4()),
+            "userId": user.get("userId"),
+            "email": user.get("email"),
+            "full_name": user.get("full_name"),
+            "created_at": now,
+            "mode": payload.get("mode"),
+            "payload_json": json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+        }
+
+        simulation_inputs_table.put_item(Item=item)
+        return item
 
     @staticmethod
     def create_or_update_unverified_user(email: str, full_name: str, hashed_password: str, company: Optional[str] = None, credits: int = 5) -> Dict:
@@ -92,6 +119,55 @@ class DynamoDBUserHandler:
             'updated_at': datetime.utcnow().isoformat(),
             'company': company,
             'admin': False
+        }
+
+        users_table.put_item(Item=item)
+        return item
+
+    @staticmethod
+    def create_or_update_google_user(email: str, full_name: str, credits: int = 5) -> Dict:
+        try:
+            existing_user = DynamoDBUserHandler.get_user_by_email(email)
+        except ClientError:
+            raise
+        except Exception as e:
+            print(f"❌ Erro ao aceder ao DynamoDB no login Google: {e}")
+            raise
+        now = datetime.utcnow().isoformat()
+
+        if existing_user:
+            update_expression = "SET full_name = :full_name, is_verified = :verified, updated_at = :now, auth_provider = :provider REMOVE verification_token"
+            users_table.update_item(
+                Key={'userId': existing_user['userId']},
+                UpdateExpression=update_expression,
+                ExpressionAttributeValues={
+                    ':full_name': full_name or existing_user.get('full_name') or email,
+                    ':verified': True,
+                    ':now': now,
+                    ':provider': 'google',
+                }
+            )
+            updated = dict(existing_user)
+            updated.update({
+                'full_name': full_name or existing_user.get('full_name') or email,
+                'is_verified': True,
+                'updated_at': now,
+                'auth_provider': 'google',
+            })
+            updated.pop('verification_token', None)
+            return updated
+
+        item = {
+            'userId': str(uuid.uuid4()),
+            'email': email,
+            'full_name': full_name or email,
+            'credits': credits,
+            'is_verified': True,
+            'created_at': now,
+            'updated_at': now,
+            'company': None,
+            'admin': False,
+            'auth_provider': 'google',
         }
 
         users_table.put_item(Item=item)

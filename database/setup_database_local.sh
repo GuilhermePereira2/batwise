@@ -10,13 +10,21 @@ echo "$ROOT_DIR/.env"
 
 # Carregar .env da raiz
 if [ -f "$ROOT_DIR/.env" ]; then
-    export $(grep -v '^#' "$ROOT_DIR/.env" | grep -v '^$' | xargs)
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="${line%%#*}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        if [ -n "$line" ] && [[ "$line" == *=* ]]; then
+            export "$line"
+        fi
+    done < "$ROOT_DIR/.env"
     echo "✅ Config carregada de .env"
 else
     echo "⚠️  Usando defaults"
     export DYNAMODB_ENDPOINT="http://localhost:8000"
     export AWS_REGION="local"
     export USERS_TABLE_NAME="watt-builder-Users"
+    export SIMULATION_INPUTS_TABLE_NAME="watt-builder-SimulationInputs"
 fi
 
 # Verificar se DynamoDB Local está a correr
@@ -48,11 +56,34 @@ dynamodb = boto3.client(
 )
 
 table_name = os.getenv('USERS_TABLE_NAME')
+simulation_inputs_table_name = os.getenv('SIMULATION_INPUTS_TABLE_NAME', 'watt-builder-SimulationInputs')
 
 try:
     # Verificar se já existe
-    dynamodb.describe_table(TableName=table_name)
+    table = dynamodb.describe_table(TableName=table_name)["Table"]
     print(f"⚠️  Tabela '{table_name}' já existe!")
+    indexes = [index["IndexName"] for index in table.get("GlobalSecondaryIndexes", [])]
+    if "email-index" not in indexes:
+        print("🔧 A adicionar GSI 'email-index'...")
+        dynamodb.update_table(
+            TableName=table_name,
+            AttributeDefinitions=[
+                {'AttributeName': 'email', 'AttributeType': 'S'}
+            ],
+            GlobalSecondaryIndexUpdates=[
+                {
+                    'Create': {
+                        'IndexName': 'email-index',
+                        'KeySchema': [
+                            {'AttributeName': 'email', 'KeyType': 'HASH'}
+                        ],
+                        'Projection': {'ProjectionType': 'ALL'},
+                        'BillingMode': 'PAY_PER_REQUEST'
+                    }
+                }
+            ]
+        )
+        print("✅ GSI 'email-index' criado!")
 except:
     # Criar nova tabela
     dynamodb.create_table(
@@ -61,10 +92,45 @@ except:
             {'AttributeName': 'userId', 'KeyType': 'HASH'}
         ],
         AttributeDefinitions=[
-            {'AttributeName': 'userId', 'AttributeType': 'S'}
+            {'AttributeName': 'userId', 'AttributeType': 'S'},
+            {'AttributeName': 'email', 'AttributeType': 'S'}
+        ],
+        GlobalSecondaryIndexes=[
+            {
+                'IndexName': 'email-index',
+                'KeySchema': [
+                    {'AttributeName': 'email', 'KeyType': 'HASH'}
+                ],
+                'Projection': {'ProjectionType': 'ALL'}
+            }
         ],
         BillingMode='PAY_PER_REQUEST'
     )
     print(f"✅ Tabela '{table_name}' criada com sucesso!")
-EOF
 
+try:
+    dynamodb.describe_table(TableName=simulation_inputs_table_name)
+    print(f"⚠️  Tabela '{simulation_inputs_table_name}' já existe!")
+except:
+    dynamodb.create_table(
+        TableName=simulation_inputs_table_name,
+        KeySchema=[
+            {'AttributeName': 'simulationId', 'KeyType': 'HASH'}
+        ],
+        AttributeDefinitions=[
+            {'AttributeName': 'simulationId', 'AttributeType': 'S'},
+            {'AttributeName': 'email', 'AttributeType': 'S'}
+        ],
+        GlobalSecondaryIndexes=[
+            {
+                'IndexName': 'email-index',
+                'KeySchema': [
+                    {'AttributeName': 'email', 'KeyType': 'HASH'}
+                ],
+                'Projection': {'ProjectionType': 'ALL'}
+            }
+        ],
+        BillingMode='PAY_PER_REQUEST'
+    )
+    print(f"✅ Tabela '{simulation_inputs_table_name}' criada com sucesso!")
+EOF

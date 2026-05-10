@@ -14,5 +14,5 @@ def load_backend_env() -> None:
     # Procura na raiz do projeto
     root_env = root_dir / ".env"
     if root_env.exists():
-        load_dotenv(dotenv_path=root_env)
+        load_dotenv(dotenv_path=root_env, override=True)
         return

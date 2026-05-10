@@ -2,7 +2,7 @@ import token
 from urllib import request
 from dynamodb_handler import DynamoDBUserHandler
 from logic import compute_cell_configurations
-from models import SimulatorRequest, Requirements, PasswordResetConfirm, PasswordResetRequest, ContactRequest, DesignResponse, CellData, UserCreate, UserLogin, Token, UserResponse
+from models import SimulatorRequest, Requirements, PasswordResetConfirm, PasswordResetRequest, ContactRequest, DesignResponse, CellData, UserCreate, UserLogin, GoogleLogin, Token, UserResponse
 import security
 import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, status, Header
@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional, Dict
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from pydantic import ValidationError
+from botocore.exceptions import NoCredentialsError, ClientError
 import os
 import json
 import csv
@@ -500,9 +501,64 @@ def login(creds: UserLogin):
         "access_token": access_token,
         "token_type": "bearer",
         "user_name": user['full_name'],
+        "email": user['email'],
         "credits": user['credits'],
         "trial_started_at": user.get('trial_started_at'),
         "admin": user.get('admin', False)
+    }
+
+
+@app.post("/auth/google-login", response_model=Token)
+def google_login(creds: GoogleLogin):
+    google_client_id = os.getenv("GOOGLE_CLIENT_ID")
+    if not google_client_id:
+        raise HTTPException(status_code=500, detail="Google login is not configured")
+
+    try:
+        from google.auth.transport import requests as google_requests
+        from google.oauth2 import id_token as google_id_token
+
+        idinfo = google_id_token.verify_oauth2_token(
+            creds.credential,
+            google_requests.Request(),
+            google_client_id,
+        )
+    except ImportError:
+        raise HTTPException(status_code=500, detail="Google auth dependency is not installed")
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid Google credential")
+
+    if not idinfo.get("email_verified"):
+        raise HTTPException(status_code=403, detail="Google email is not verified")
+
+    email = idinfo.get("email")
+    if not email:
+        raise HTTPException(status_code=401, detail="Google account has no email")
+
+    full_name = idinfo.get("name") or email
+    try:
+        user = db_users.create_or_update_google_user(email=email, full_name=full_name, credits=5)
+    except NoCredentialsError:
+        raise HTTPException(
+            status_code=500,
+            detail="AWS credentials are not configured for DynamoDB access",
+        )
+    except ClientError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"DynamoDB error: {e.response.get('Error', {}).get('Code', 'unknown')}",
+        )
+
+    access_token = security.create_access_token(data={"sub": user["email"]})
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_name": user["full_name"],
+        "email": user["email"],
+        "credits": user.get("credits", 0),
+        "trial_started_at": user.get("trial_started_at"),
+        "admin": user.get("admin", False)
     }
 
 
@@ -961,9 +1017,9 @@ def load_sqlite_compatibility(conn):
 
 
 @app.post("/api/simulator/size")
-async def size_battery(req: SimulatorRequest):
+async def size_battery(req: SimulatorRequest, current_user: dict = Depends(get_current_user)):
     catalog = load_catalog()
-    return optimize_home_battery(
+    result = optimize_home_battery(
         mode=req.mode,
         input_data=req.input,
         tariff=req.tariff,
@@ -971,6 +1027,15 @@ async def size_battery(req: SimulatorRequest):
         assumptions=req.assumptions,
         catalog=catalog,
     )
+    try:
+        db_users.save_simulation_input(
+            current_user,
+            req.model_dump(mode="json"),
+        )
+    except Exception as e:
+        print(f"❌ Erro ao guardar input da simulação: {e}")
+
+    return result
 
 handler = Mangum(app)
 
