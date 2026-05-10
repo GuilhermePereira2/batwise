@@ -299,5 +299,622 @@
             "description": "If you have any questions regarding data protection, please contact us at:",
             "email": "general@watt-builder.com"
         }
+    },
+    "footer": {
+        "rights": "All rights reserved.",
+        "features": {
+            "title": "Features",
+            "smartHomeSizer": "Smart Home Sizer",
+            "cellExplorer": "Cell Explorer",
+            "batteryBuilder": "Battery Builder",
+            "services": "Services"
+        },
+        "company": {
+            "title": "Company",
+            "home": "Home",
+            "contact": "Contact"
+        },
+        "account": {
+            "title": "Account",
+            "login": "Login",
+            "signUp": "Sign Up",
+            "terms": "Terms and Conditions",
+            "privacy": "Privacy Policy"
+        }
+    },
+    "login": {
+        "backToHome": "Back to Home",
+        "title": "Log In",
+        "description": "Enter your email and password to access your account.",
+        "emailLabel": "Email",
+        "emailPlaceholder": "name@example.com",
+        "passwordLabel": "Password",
+        "forgotPassword": "Forgot password?",
+        "passwordPlaceholder": "••••••••",
+        "capsLock": "Caps Lock is on",
+        "buttonLoading": "Logging in...",
+        "buttonSubmit": "Sign In",
+        "or": "or",
+        "googleDisabled": "Google login not configured",
+        "resendLoading": "Resending...",
+        "resendButton": "Resend Verification Email",
+        "noAccount": "Don't have an account?",
+        "signUpLink": "Sign up",
+        "toasts": {
+            "emailRequired": "Email required",
+            "emailRequiredDesc": "Please enter your email address.",
+            "verifySent": "Verification email sent!",
+            "verifySentDesc": "Please check your inbox and click the verification link.",
+            "resendFailed": "Resend failed",
+            "loginFailed": "Login Failed",
+            "invalidCredentials": "Invalid email or password.",
+            "emailNotVerified": "Email not verified. Please check your inbox or resend the verification email.",
+            "genericError": "Something went wrong. Please try again.",
+            "welcomeBack": "Welcome back!",
+            "loginSuccess": "You have successfully logged in.",
+            "welcomeGoogle": "Welcome!",
+            "googleSuccess": "You have successfully logged in with Google.",
+            "googleFailed": "Google Login Failed",
+            "googleFailedDesc": "Google login failed."
+        }
+    },
+    "signup": {
+        "backToHome": "Back to Home",
+        "titleVerify": "Verify your email",
+        "titleCreate": "Create Account",
+        "descVerify": "We have sent a verification link to your email address.",
+        "descCreate": "Enter your details below to create your account and start building.",
+        "verifySentTo": "A verification link was sent to",
+        "checkSpam": "Please check your spam folder if you don't see it in a few minutes.",
+        "goToLogin": "Go to Login",
+        "nameLabel": "Full Name",
+        "namePlaceholder": "John Doe",
+        "companyLabel": "Company (Optional)",
+        "companyPlaceholder": "Your Company Ltd",
+        "emailLabel": "Email",
+        "emailPlaceholder": "name@example.com",
+        "emailExists": "Account already exists with this email",
+        "emailRegistered": "This email is already registered.",
+        "signInInstead": "Sign in instead",
+        "orDifferentEmail": "or use a different email address.",
+        "passwordLabel": "Password",
+        "passwordPlaceholder": "••••••••",
+        "confirmPasswordLabel": "Confirm Password",
+        "confirmPasswordPlaceholder": "••••••••",
+        "capsLock": "Caps Lock is on",
+        "termsAccept": "I accept the",
+        "termsLink": "Terms and Conditions",
+        "termsAnd": "and the",
+        "privacyLink": "Privacy Policy",
+        "buttonLoading": "Creating account...",
+        "buttonSubmit": "Create Account",
+        "resendLoading": "Sending...",
+        "resendButton": "Did not receive the email? Try again",
+        "hasAccount": "Already have an account?",
+        "signInLink": "Sign in",
+        "toasts": {
+            "termsRequired": "Terms and Conditions",
+            "termsRequiredDesc": "You must accept the terms and conditions to create an account.",
+            "passwordsMismatch": "Passwords do not match",
+            "passwordsMismatchDesc": "Please ensure both passwords are identical.",
+            "accountExists": "Account already exists",
+            "accountExistsDesc": "An account with email {{email}} is already registered. Please log in or use a different email.",
+            "createdTitle": "Account created!",
+            "createdDesc": "Verification email sent. Please check your inbox.",
+            "errorTitle": "Error",
+            "errorDesc": "Something went wrong. Please try again.",
+            "emailRequired": "Email required",
+            "emailRequiredDesc": "Email address is missing.",
+            "resendSuccess": "Email sent!",
+            "resendSuccessDesc": "Check your inbox for the verification link.",
+            "resendFailed": "Failed to resend"
+        }
+    },
+    "batteryForm": {
+        "backToHome": "Back to Home",
+        "title": "Battery Wizard",
+        "subtitle": "Design safe, professional-grade battery packs in seconds.",
+        "step1Title": "1. What are you building?",
+        "selectProject": "Select a project type",
+        "voltagePower": "Voltage & Power",
+        "minVoltage": "Minimum Voltage (V)",
+        "minVoltageTooltip": "Voltage at 0% charge. Don't go below this or the BMS will cut off.",
+        "maxVoltage": "Maximum Voltage (V)",
+        "maxVoltageTooltip": "Voltage at 100% charge. Must match your charger and controller limit.",
+        "continuousPower": "Continuous Power (W)",
+        "continuousPowerTooltip": "The wattage your motor/inverter pulls constantly. Peak power is calculated automatically.",
+        "minEnergy": "Min Energy (Wh)",
+        "minEnergyTooltip": "Determines your range/runtime. More Wh = More Distance.",
+        "physicalLimits": "Physical Limits",
+        "maxLength": "Max Length (m)",
+        "maxWidth": "Max Width (m)",
+        "maxHeight": "Max Height (m)",
+        "maxHeightTooltip": "Critical for skateboards or slim cases.",
+        "maxPrice": "Max Price (€)",
+        "optional": "Optional",
+        "calculating": "Calculating Safe Designs...",
+        "findBattery": "Find My Battery",
+        "recommendedBuilds": "Recommended Builds",
+        "rankedBy": "Ranked by Value (Energy / €) and Safety.",
+        "with": "with",
+        "bestValue": "Best Value",
+        "nominal": "Nominal",
+        "safetyScore": "Safety Score",
+        "configuration": "Configuration",
+        "series": "Series",
+        "parallel": "Parallel",
+        "maxPower": "Max Power",
+        "totalWeight": "Total Weight",
+        "estPrice": "Est. Price",
+        "requiredComponents": "Required Components",
+        "viewWiringDiagram": "View Wiring Diagram",
+        "safetyAdvisory": "Safety Advisory",
+        "howToFix": "How to fix:",
+        "fireRisk": "DO NOT BUILD THIS - FIRE RISK",
+        "toasts": {
+            "presetApplied": "Preset Applied",
+            "presetUpdated": "Values updated for {{label}}",
+            "noSolutions": "No Solutions Found",
+            "relaxConstraints": "Try relaxing your constraints (size, weight or price).",
+            "success": "Success!",
+            "designsFound": "{{count}} valid designs found.",
+            "connectionError": "Connection Error",
+            "backendError": "Ensure Python backend is running."
+        }
+    },
+    "business": {
+        "getInTouch": "Get in Touch",
+        "powerFuture": "",
+        "contactUs": "Contact Us"
+    },
+    "solutionModal": {
+        "buyFromAffiliate": "Buy from Affiliate",
+        "docs": {
+            "title": "BATTERY TECHNICAL DATASHEET",
+            "generatedBy": "Generated by Watt Builder",
+            "config": "Configuration:",
+            "cellModel": "Cell Model:",
+            "electricalSpecs": "Electrical Specifications",
+            "nominalVoltage": "Nominal Voltage:",
+            "capacity": "Capacity:",
+            "totalEnergy": "Total Energy:",
+            "contPower": "Continuous Power:",
+            "peakPower": "Peak Power (30s):",
+            "mechanicalSpecs": "Mechanical Specifications",
+            "cellWeight": "Cell Weight (total):",
+            "cellDimensions": "Cell Dimensions:",
+            "safetyAssessment": "Safety Assessment",
+            "safetyScore": "Safety Score:",
+            "status": "Status:",
+            "pass": "PASS",
+            "warning": "WARNING",
+            "warnings": "Warnings:",
+            "none": "None",
+            "disclaimer": "Disclaimer: This document is automatically generated and intended for preliminary engineering evaluation only.",
+            "noCriticalWarnings": "No critical warnings detected.",
+            "projectOverview": "Project Overview",
+            "totalCells": "Total Cells:"
+        },
+        "toasts": {
+            "loginRequired": "Login required",
+            "loginToDownload": "Log in to download documents."
+        },
+        "bom": {
+            "component": "Component",
+            "model": "Model",
+            "quantity": "Quantity",
+            "details": "Details",
+            "unitPrice": "Unit Price",
+            "totalPrice": "Total Price",
+            "batteryCells": "Battery Cells",
+            "labor": "Labor",
+            "shipping": "Shipping",
+            "cable": "Cable (2m)"
+        },
+        "modal": {
+            "configTitle": "Configuration: {{model}} ({{series}}S{{parallel}}P)",
+            "safetyScore": "Safety Score: {{score}}",
+            "disclaimerTitle": "Disclaimer: This calculation is a theoretical suggestion.",
+            "disclaimerText1": "Building lithium batteries carries significant risks. The results below are automated estimates.",
+            "disclaimerText2": "Always consult a professional.",
+            "safetyAdvisories": "Safety Advisories",
+            "recommendations": "Recommendations:",
+            "specsTitle": "Battery Specs",
+            "specsConfig": "Configuration:",
+            "specsNominalVolt": "Nominal Voltage:",
+            "specsCapacity": "Capacity:",
+            "specsEnergy": "Energy:",
+            "specsContPower": "Continuous Power:",
+            "specsPeakPower": "Peak Power:",
+            "specsCellWeight": "Cells' Weight:",
+            "specsCompPrice": "Components Price:",
+            "cellDataTitle": "Cell Data",
+            "cellBrand": "Brand:",
+            "cellModel": "Model:",
+            "cellNominalVolt": "Nominal Voltage:",
+            "cellContDischarge": "Cont. Discharge:",
+            "cellCapacity": "Capacity:",
+            "cellPrice": "Price/Cell:",
+            "toolsTitle": "Commercial Tools",
+            "laborCost": "Labor Cost ($)",
+            "shippingCost": "Shipping Cost ($)",
+            "profitMargin": "Profit Margin (%)",
+            "baseCost": "Base Cost:",
+            "finalPrice": "Final Price:",
+            "downloadsTitle": "Downloads",
+            "includeCostsBom": "Include costs in BOM",
+            "downloadBom": "Download BOM (Excel/CSV)",
+            "downloadWord": "Download Datasheet (Word)",
+            "downloadPdf": "Download Datasheet (PDF)",
+            "bmsBrand": "Brand:",
+            "bmsModel": "Model:",
+            "bmsSpec": "Spec:",
+            "bmsPrice": "Price:",
+            "fuseModel": "Model:",
+            "fuseRating": "Rating:",
+            "cableCross": "Cross Section:",
+            "show3d": "Show 3D Model",
+            "hide3d": "Hide 3D Model",
+            "interactive3d": "Interactive 3D view based on calculated geometry.",
+            "interactive3dHelp": "Left click to rotate, Right click to pan, Scroll to zoom.",
+            "showDiagram": "Show Wiring Diagram",
+            "hideDiagram": "Hide Wiring Diagram",
+            "cells": "Cells"
+        }
+    },
+    "cellDetails": {
+        "specsTitle": "Specs | Watt Builder",
+        "backToExplorer": "Back to Explorer",
+        "notFound": {
+            "title": "Cell Not Found"
+        },
+        "contactTemplate": "Hello,\nI would like to get the following data about the {{cellName}} cell:\n\n\nBest regards,\n",
+        "buyAffiliate": "Buy from Affiliate",
+        "cylindrical": "Cylindrical",
+        "cell": "Cell",
+        "subtitle": "High-performance {{type}} for advanced applications.",
+        "electrical": {
+            "title": "Electrical Specifications",
+            "capacity": "Nominal Capacity",
+            "voltage": "Nominal Voltage",
+            "energy": "Stored Energy",
+            "impedance": "Internal Impedance"
+        },
+        "power": {
+            "title": "Power Performance",
+            "maxDischarge": "Max Continuous Discharge",
+            "maxCharge": "Max Continuous Charge",
+            "contOutput": "Continuous Power Output",
+            "cycleLife": "Cycle Life",
+            "cycles": "cycles"
+        },
+        "physical": {
+            "title": "Physical Specifications",
+            "weight": "Weight",
+            "height": "Height",
+            "width": "Width",
+            "thickness": "Thickness",
+            "volumetric": "Volumetric Energy Density",
+            "gravimetric": "Gravimetric Energy Density"
+        },
+        "3d": {
+            "title": "3D Model with Dimensions"
+        },
+        "actions": {
+            "requestData": "Request More Data"
+        },
+        "testing": {
+            "badge": "Independent Validation",
+            "title": "Need to verify these specs?",
+            "desc1": "We offer professional validation services for the ",
+            "desc2": " and other cells. Our state-of-the-art lab ensures you get accurate, unbiased data.",
+            "perfTitle": "Performance Verification",
+            "perfDesc": "Confirm the manufacturer's capacity, voltage curves, and internal resistance claims.",
+            "cycleTitle": "Cycle Life Testing",
+            "cycleDesc": "Long-term cycling tests to determine real-world lifespan and degradation patterns.",
+            "thermalTitle": "Thermal Analysis",
+            "thermalDesc": "Monitor temperature profiles under heavy load to ensure safety and thermal stability.",
+            "contactBtn": "Contact Us for Custom Testing"
+        },
+        "toasts": {
+            "notFound": "Cell not found",
+            "errorLoading": "Error loading cell details"
+        }
+    },
+    "contact": {
+        "heroTitle": "Get in Touch",
+        "heroSubtitle": "Need help or want to professionalize your project? Contact us.",
+        "formTitle": "Send us a message",
+        "formDesc": "Fill out the form and we'll get back to you as soon as possible",
+        "nameLabel": "Name",
+        "namePlaceholder": "Your name",
+        "emailLabel": "Email",
+        "emailPlaceholder": "your@email.com",
+        "messageLabel": "Message",
+        "messagePlaceholder": "Tell us about your project or question...",
+        "sending": "Sending...",
+        "sendButton": "Send Message",
+        "infoTitle": "Let's build something great together",
+        "infoDesc": "Whether you're a DIY enthusiast or a business looking for professional battery design solutions, we're here to help.",
+        "emailField": "Email",
+        "validation": {
+            "nameReq": "Name is required",
+            "emailInv": "Invalid email address",
+            "msgReq": "Message is required"
+        },
+        "toasts": {
+            "successTitle": "Message sent!",
+            "successDesc": "We have received your email and will reply shortly.",
+            "valError": "Validation error",
+            "errorTitle": "Error sending message",
+            "errorDesc": "Something went wrong. Please try again later or email us directly."
+        }
+    },
+    "forgot": {
+        "backToLogin": "Back to Login",
+        "title": "Reset Password",
+        "descSubmitted": "Check your email for the reset link.",
+        "descDefault": "Enter your email address and we'll send you a link to reset your password.",
+        "sentLinkTo": "We have sent a password reset link to",
+        "tryAnotherEmail": "Try another email",
+        "emailLabel": "Email",
+        "emailPlaceholder": "name@example.com",
+        "sending": "Sending link...",
+        "sendButton": "Send Reset Link",
+        "rememberPassword": "Remember your password?",
+        "signIn": "Sign in",
+        "toasts": {
+            "successTitle": "Email sent",
+            "successDesc": "Check your inbox for password reset instructions.",
+            "errorTitle": "Error",
+            "errorDesc": "Could not send reset email. Please try again."
+        }
+    },
+    "notFound": {
+        "title": "404",
+        "subtitle": "Oops! Page not found",
+        "returnHome": "Return to Home"
+    },
+    "profile": {
+        "loading": "Loading...",
+        "title": "My Profile",
+        "premium": "Premium",
+        "freePlan": "Free Plan",
+        "availableCredits": "Available Credits",
+        "trial": {
+            "title": "Unlock 15-Day Free Trial",
+            "description": "Accelerate your battery design process with our premium features.",
+            "feature1": "1000 Computation Credits",
+            "feature2": "Advanced Cell Database",
+            "feature3": "No Credit Card Required",
+            "feature4": "Instant Activation",
+            "btnStart": "Start Free Trial Now",
+            "btnActivating": "Activating..."
+        },
+        "details": {
+            "title": "Account Details",
+            "fullName": "Full Name",
+            "email": "Email Address",
+            "company": "Company",
+            "notProvided": "Not provided",
+            "memberSince": "Member Since"
+        },
+        "toasts": {
+            "trialSuccessTitle": "Trial Activated Successfully!",
+            "trialSuccessDesc": "You have received 1000 credits valid for 15 days.",
+            "activationFailed": "Activation Failed"
+        }
+    },
+    "resetPassword": {
+        "title": "Set New Password",
+        "description": "Enter your new password below.",
+        "newPasswordLabel": "New Password",
+        "confirmPasswordLabel": "Confirm Password",
+        "updating": "Updating...",
+        "submitButton": "Reset Password",
+        "toasts": {
+            "invalidLinkTitle": "Invalid Link",
+            "invalidLinkDesc": "Missing reset token or email.",
+            "errorTitle": "Error",
+            "passwordsMismatch": "Passwords do not match",
+            "resetFailed": "Failed to reset password",
+            "successTitle": "Success",
+            "successDesc": "Password reset successfully! Please login."
+        }
+    },
+    "verifyEmail": {
+        "successTitle": "Email Verified!",
+        "successDesc": "Your account is now active. You can log in.",
+        "loginButton": "Login",
+        "errorTitle": "Verification Failed",
+        "errorDesc": "The link is invalid or expired."
+    },
+    "businessHero": {
+        "title1": "Fewer prototypes,",
+        "title2": "more results.",
+        "subtitle": "We help you design better batteries, accelerate development, and reduce costs.",
+        "learnMore": "Learn More"
+    },
+    "businessProduct": {
+        "title": "Smarter Battery Design, Lower Development Costs",
+        "paragraph1": "Our company combines advanced software and expert consulting to deliver optimized battery design solutions. Leveraging real cell testing data and state-of-the-art degradation models, our platform simulates electric vehicles and energy systems while calculating ROI based on each client's business case.",
+        "paragraph2": "It transforms requirements into production-ready designs, in minutes, by generating and comparing all possible configurations from our extensive cell database against market alternatives. Through our consulting services, we provide tailored guidance at every stage of development, while clients who wish to reduce costs can also operate the software independently and access our validated database or integrate their own."
+    },
+    "usageOptions": {
+        "title": "Optimize your battery solution",
+        "softwareTitle": "Optimize your battery with our software",
+        "softwareDesc": "Turn your requirements into reliable designs in minutes, no external help needed.",
+        "teamTitle": "Optimize your battery with our team",
+        "teamDesc": "From concept to final design, our team ensures your battery system is safe, efficient, and fully optimized."
+    },
+    "wiring": {
+        "title": "Assembly Diagram: {{s}}S {{p}}P (Central Layout)",
+        "svg": {
+            "batteryPack": "Battery Pack",
+            "load": "Load",
+            "bat": "Bat",
+            "fuse": "FUSE",
+            "relay": "RELAY",
+            "loadCaps": "LOAD",
+            "currentReading": "Current Reading",
+            "cutoffSignal": "Cutoff Signal"
+        },
+        "guide": {
+            "title": "Assembly Guide",
+            "step1Title": "Physical Assembly (The Core)",
+            "step1Desc": "Assemble the {{s}}S {{p}}P pack first. Connect cells in parallel groups first, then connect those groups in series. Ensure all connections are tight and insulated.",
+            "step2Title": "BMS Sense Wires (Balance Leads)",
+            "step2Desc1": "Start connecting the thin wires from",
+            "step2Bold1": "B- (Main Negative)",
+            "step2Desc2": ", then B1, B2... up to",
+            "step2Bold2": "B+",
+            "step2Warning": "⚠️ IMPORTANT: Do NOT plug the connector into the BMS yet. Check voltages with a multimeter first.",
+            "step3Title": "Negative Power Path (-)",
+            "step3Shunt1_1": "Connect",
+            "step3Shunt1_Bold1": "Battery Pack (-)",
+            "step3Shunt1_2": "to the",
+            "step3Shunt1_Bold2": "Shunt \"BAT\"",
+            "step3Shunt1_3": "side.",
+            "step3Shunt2": "Connect the BMS B- wire (thick black) to the Battery (-) or Shunt depending on BMS instructions.",
+            "step3Shunt3_1": "The",
+            "step3Shunt3_Bold": "Shunt \"LOAD\"",
+            "step3Shunt3_2": "side becomes your new System Main Negative.",
+            "step3Shunt4_Bold": "Data Wire:",
+            "step3Shunt4_1": "Connect the Shunt data cable to the BMS/Monitor.",
+            "step3NoShunt1_1": "Connect the",
+            "step3NoShunt1_Bold": "Battery Pack (-)",
+            "step3NoShunt1_2": "directly to the BMS \"B-\" terminal (if separate) or directly to your System/Load (-).",
+            "step3NoShunt2": "(Current sensing is built-in inside the BMS).",
+            "step4Title": "Positive Power Path (+)",
+            "step4Seq": "Follow this exact sequence for safety:",
+            "step4NoFuse": "NO FUSE",
+            "step4NoRelay": "NO RELAY",
+            "step4Fuse1": "Mount the",
+            "step4FuseBold": "Fuse",
+            "step4Fuse2": "as close to the battery terminal as possible.",
+            "step4Relay1": "Install the",
+            "step4RelayBold": "Relay/Contactor",
+            "step4Relay2": "after the fuse.",
+            "step4Relay3": "Connect the BMS \"Control/Cutoff\" wire to the relay's coil trigger.",
+            "step4NoFuseRelay": "Connect Battery (+) directly to your Load/Charger connector.",
+            "step5Title": "Final Activation",
+            "step5Desc": "Double-check all polarities. Plug in the BMS Sense Connector. Depending on your BMS model, you might need to apply a charge voltage briefly to \"wake up\" the system."
+        }
+    },
+    "featuresSection": {
+        "title": "Six Core Features That Drive Results",
+        "items": {
+            "simulation": {
+                "title": "Realistic Simulation",
+                "desc": "Simulates electric vehicles, residential/industrial energy systems, and others using real cell data and advanced degradation models."
+            },
+            "optimization": {
+                "title": "Design Optimization",
+                "desc": "Transforms requirements into reliable, optimized battery packs considering performance, durability, and cost."
+            },
+            "roi": {
+                "title": "ROI & Cost Assessment",
+                "desc": "Calculates return on investment based on the client's business model, supporting strategic decisions."
+            },
+            "database": {
+                "title": "Extensive Database",
+                "desc": "Includes hundreds of commercial cells, enabling design comparisons and market alternatives."
+            },
+            "flexibility": {
+                "title": "User Flexibility",
+                "desc": "Operate the software independently to reduce consulting costs."
+            },
+            "speed": {
+                "title": "Speed & Efficiency",
+                "desc": "Converts requirements into final preliminary designs in minutes, accelerating product development."
+            }
+        }
+    },
+    "explorer": {
+        "pageTitle": "Cell Explorer",
+        "title": "Cell Explorer",
+        "subtitle": "Use the filters to find the perfect cell for your project.",
+        "cylindricalPrefix": "Cylindrical",
+        "unknown": "Unknown",
+        "filters": {
+            "title": "Cell Filters",
+            "reset": "Reset Filters",
+            "search": "Search",
+            "searchPlaceholder": "e.g., LF280K or EVE",
+            "brand": "Brand",
+            "brandPlaceholder": "Select Brands",
+            "chemistry": "Chemistry",
+            "chemistryPlaceholder": "Select Chemistries",
+            "cellFormat": "Cell Format",
+            "formatPlaceholder": "Select Formats",
+            "sliders": {
+                "capacity": "Capacity",
+                "weight": "Weight",
+                "dischargeRate": "Discharge Rate",
+                "chargeRate": "Charge Rate",
+                "impedance": "Impedance",
+                "cycles": "Cycles"
+            }
+        },
+        "tabs": {
+            "chart": "Chart View",
+            "grid": "Grid View",
+            "sortBy": "Sort by:",
+            "asc": "Ascending",
+            "desc": "Descending",
+            "foundCells": "Found {{count}} matching cells",
+            "showingCells": "showing {{count}}",
+            "sortOpts": {
+                "capacity": "Capacity (Ah)",
+                "energy": "Energy (Wh)",
+                "power": "Power (W)",
+                "weight": "Weight (g)",
+                "density": "Vol. Density (Wh/L)",
+                "gravDensity": "Grav. Density (Wh/Kg)",
+                "gravPower": "Grav. Power (W/Kg)"
+            }
+        },
+        "gridCard": {
+            "capacity": "Capacity:",
+            "voltage": "Voltage:",
+            "energyDensity": "Energy Density:",
+            "weight": "Weight:",
+            "dischargeRate": "Discharge Rate:"
+        },
+        "chart": {
+            "xAxis": "X-Axis Parameter",
+            "yAxis": "Y-Axis Parameter",
+            "capacity": "Capacity (Ah)",
+            "nominalVoltage": "Nominal Voltage (V)",
+            "weight": "Weight (g)",
+            "dischargeRate": "Discharge Rate (C)",
+            "chargeRate": "Charge Rate (C)",
+            "impedance": "Impedance (mΩ)",
+            "cycles": "Cycles",
+            "energy": "Energy (Wh)",
+            "power": "Power (W)",
+            "volume": "Volume (L)",
+            "energyDensityWhL": "Energy Density (Wh/L)",
+            "powerDensityWL": "Power Density (W/L)",
+            "energyDensityWhKg": "Energy Density (Wh/Kg)",
+            "powerDensityWKg": "Power Density (W/Kg)"
+        },
+        "noCellsTitle": "No Cells Found",
+        "noCellsDesc": "Try adjusting your search or filter criteria.",
+        "testing": {
+            "badge": "Professional Cell Testing",
+            "title": "Need Comprehensive Cell Data?",
+            "desc": "We have state-of-the-art equipment to perform a wide variety of tests on battery cells. From capacity verification to rigorous stress testing, we handle everything for you.",
+            "perfTitle": "Performance Verification",
+            "perfDesc": "Verify capacity, voltage curves, and internal resistance with high precision equipment.",
+            "cycleTitle": "Cycle Life Testing",
+            "cycleDesc": "Long-term cycling tests to determine real-world lifespan and degradation patterns.",
+            "thermalTitle": "Thermal Analysis",
+            "thermalDesc": "Monitor temperature profiles under heavy load to ensure safety and thermal stability.",
+            "contactBtn": "Contact Us for Custom Testing"
+        },
+        "toasts": {
+            "errorFetching": "Error fetching cells"
+        }
     }
 }

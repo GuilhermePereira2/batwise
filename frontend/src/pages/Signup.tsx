@@ -1,43 +1,42 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox"; // <-- NOVO IMPORT
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { UserPlus, Mail, Lock, User, Loader2, ArrowLeft, Eye, EyeOff, AlertTriangle, Building, CheckCircle2 } from "lucide-react";
+import { UserPlus, Mail, Lock, User, Loader2, ArrowLeft, Eye, EyeOff, AlertTriangle, Building } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/config";
 import { resendVerificationEmail } from "@/lib/auth-api";
 
 const Signup = () => {
+    const { t } = useTranslation();
+
     const [name, setName] = useState("");
     const [company, setCompany] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-    const [acceptTerms, setAcceptTerms] = useState(false); // <-- NOVO ESTADO
+    const [acceptTerms, setAcceptTerms] = useState(false);
 
     const [isLoading, setIsLoading] = useState(false);
 
-    // ESTADOS PARA OS OLHOS (Independentes)
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    // ESTADO DO CAPS LOCK
     const [capsLockActive, setCapsLockActive] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
 
-    // Estado para email já existente
     const [emailExists, setEmailExists] = useState(false);
     const [isResendingEmail, setIsResendingEmail] = useState(false);
 
     const { toast } = useToast();
     const navigate = useNavigate();
 
-    // --- FUNÇÃO ROBUSTA DO CAPS LOCK ---
     const checkCapsLock = (event: React.KeyboardEvent | React.MouseEvent | React.FocusEvent) => {
         const evt = event as any;
         if (typeof evt.getModifierState !== "function") return;
@@ -59,17 +58,15 @@ const Signup = () => {
         }
     };
 
-
     const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        setEmailExists(false); // Resetar estado
+        setEmailExists(false);
 
-        // <-- NOVA VALIDAÇÃO DOS TERMOS
         if (!acceptTerms) {
             toast({
-                title: "Terms and Conditions",
-                description: "You must accept the terms and conditions to create an account.",
+                title: t('signup.toasts.termsRequired'),
+                description: t('signup.toasts.termsRequiredDesc'),
                 variant: "destructive"
             });
             setIsLoading(false);
@@ -78,8 +75,8 @@ const Signup = () => {
 
         if (password !== confirmPassword) {
             toast({
-                title: "Passwords do not match",
-                description: "Please ensure both passwords are identical.",
+                title: t('signup.toasts.passwordsMismatch'),
+                description: t('signup.toasts.passwordsMismatchDesc'),
                 variant: "destructive"
             });
             setIsLoading(false);
@@ -104,14 +101,13 @@ const Signup = () => {
                 const errorData = await response.json();
                 const errorDetail = errorData.detail || "Registration failed";
 
-                // Detectar se é email já existente
                 if (errorDetail.toLowerCase().includes("already registered") ||
                     errorDetail.toLowerCase().includes("already exists") ||
                     errorDetail.toLowerCase().includes("email already")) {
                     setEmailExists(true);
                     toast({
-                        title: "Account already exists",
-                        description: `An account with email ${email} is already registered. Please log in or use a different email.`,
+                        title: t('signup.toasts.accountExists'),
+                        description: t('signup.toasts.accountExistsDesc', { email }),
                         variant: "destructive"
                     });
                 } else {
@@ -120,16 +116,16 @@ const Signup = () => {
             } else {
                 setIsSubmitted(true);
                 toast({
-                    title: "Account created!",
-                    description: "Verification email sent. Please check your inbox.",
+                    title: t('signup.toasts.createdTitle'),
+                    description: t('signup.toasts.createdDesc'),
                 });
             }
 
         } catch (error: any) {
             console.error("Signup error:", error);
             toast({
-                title: "Error",
-                description: error.message || "Something went wrong. Please try again.",
+                title: t('signup.toasts.errorTitle'),
+                description: error.message || t('signup.toasts.errorDesc'),
                 variant: "destructive"
             });
         } finally {
@@ -140,8 +136,8 @@ const Signup = () => {
     const handleResendVerification = async () => {
         if (!email) {
             toast({
-                title: "Email required",
-                description: "Email address is missing.",
+                title: t('signup.toasts.emailRequired'),
+                description: t('signup.toasts.emailRequiredDesc'),
                 variant: "destructive"
             });
             return;
@@ -152,13 +148,13 @@ const Signup = () => {
             await resendVerificationEmail(email);
 
             toast({
-                title: "Email sent!",
-                description: "Check your inbox for the verification link.",
+                title: t('signup.toasts.resendSuccess'),
+                description: t('signup.toasts.resendSuccessDesc'),
             });
 
         } catch (error: any) {
             toast({
-                title: "Failed to resend",
+                title: t('signup.toasts.resendFailed'),
                 description: error.message,
                 variant: "destructive"
             });
@@ -177,7 +173,7 @@ const Signup = () => {
                     {!isSubmitted && (
                         <Button variant="ghost" asChild className="mb-4 pl-0 hover:bg-transparent text-muted-foreground hover:text-foreground">
                             <Link to="/" className="flex items-center gap-2">
-                                <ArrowLeft className="w-4 h-4" /> Back to Home
+                                <ArrowLeft className="w-4 h-4" /> {t('signup.backToHome')}
                             </Link>
                         </Button>
                     )}
@@ -186,15 +182,15 @@ const Signup = () => {
                         <CardHeader className="space-y-1">
                             <CardTitle className="text-2xl font-bold flex items-center gap-2">
                                 {isSubmitted ? (
-                                    <><Mail className="w-6 h-6 text-accent" /> Verify your email</>
+                                    <><Mail className="w-6 h-6 text-accent" /> {t('signup.titleVerify')}</>
                                 ) : (
-                                    <><UserPlus className="w-6 h-6 text-accent" /> Create Account</>
+                                    <><UserPlus className="w-6 h-6 text-accent" /> {t('signup.titleCreate')}</>
                                 )}
                             </CardTitle>
                             <CardDescription>
                                 {isSubmitted
-                                    ? "We have sent a verification link to your email address."
-                                    : "Enter your details below to create your account and start building."}
+                                    ? t('signup.descVerify')
+                                    : t('signup.descCreate')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -205,26 +201,26 @@ const Signup = () => {
                                     </div>
                                     <div className="space-y-2">
                                         <p className="text-sm text-muted-foreground">
-                                            A verification link was sent to <span className="font-semibold text-foreground">{email}</span>.
+                                            {t('signup.verifySentTo')} <span className="font-semibold text-foreground">{email}</span>.
                                         </p>
                                         <p className="text-xs text-muted-foreground italic">
-                                            Please check your spam folder if you don't see it in a few minutes.
+                                            {t('signup.checkSpam')}
                                         </p>
                                     </div>
                                     <Button asChild className="w-full mt-4">
-                                        <Link to="/login">Go to Login</Link>
+                                        <Link to="/login">{t('signup.goToLogin')}</Link>
                                     </Button>
                                 </div>
                             ) : (
                                 <form onSubmit={handleSignup} className="space-y-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="name">Full Name</Label>
+                                        <Label htmlFor="name">{t('signup.nameLabel')}</Label>
                                         <div className="relative">
                                             <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                             <Input
                                                 id="name"
                                                 type="text"
-                                                placeholder="John Doe"
+                                                placeholder={t('signup.namePlaceholder')}
                                                 className="pl-9"
                                                 value={name}
                                                 onChange={(e) => setName(e.target.value)}
@@ -233,13 +229,13 @@ const Signup = () => {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="company">Company (Optional)</Label>
+                                        <Label htmlFor="company">{t('signup.companyLabel')}</Label>
                                         <div className="relative">
                                             <Building className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                             <Input
                                                 id="company"
                                                 type="text"
-                                                placeholder="Your Company Ltd"
+                                                placeholder={t('signup.companyPlaceholder')}
                                                 className="pl-9"
                                                 value={company}
                                                 onChange={(e) => setCompany(e.target.value)}
@@ -247,35 +243,34 @@ const Signup = () => {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="email">Email</Label>
+                                        <Label htmlFor="email">{t('signup.emailLabel')}</Label>
                                         <div className="relative">
                                             <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                             <Input
                                                 id="email"
                                                 type="email"
-                                                placeholder="name@example.com"
+                                                placeholder={t('signup.emailPlaceholder')}
                                                 className={`pl-9 ${emailExists ? 'border-destructive' : ''}`}
                                                 value={email}
                                                 onChange={(e) => {
                                                     setEmail(e.target.value);
-                                                    setEmailExists(false); // Resetar aviso ao mudar email
+                                                    setEmailExists(false);
                                                 }}
                                                 required
                                             />
                                         </div>
 
-                                        {/* Aviso quando email já existe */}
                                         {emailExists && (
                                             <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-md">
                                                 <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
                                                 <div className="flex-1 text-sm">
-                                                    <p className="text-destructive font-medium">Account already exists with this email</p>
+                                                    <p className="text-destructive font-medium">{t('signup.emailExists')}</p>
                                                     <p className="text-destructive/80 text-xs mt-1">
-                                                        This email is already registered.{" "}
+                                                        {t('signup.emailRegistered')}{" "}
                                                         <Link to="/login" className="underline font-medium hover:text-destructive">
-                                                            Sign in instead
+                                                            {t('signup.signInInstead')}
                                                         </Link>
-                                                        {" "}or use a different email address.
+                                                        {" "}{t('signup.orDifferentEmail')}
                                                     </p>
                                                 </div>
                                             </div>
@@ -283,13 +278,13 @@ const Signup = () => {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="password">Password</Label>
+                                        <Label htmlFor="password">{t('signup.passwordLabel')}</Label>
                                         <div className="relative">
                                             <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                             <Input
                                                 id="password"
                                                 type={showPassword ? "text" : "password"}
-                                                placeholder="••••••••"
+                                                placeholder={t('signup.passwordPlaceholder')}
                                                 className="pl-9 pr-10"
                                                 value={password}
                                                 onChange={(e) => setPassword(e.target.value)}
@@ -313,19 +308,19 @@ const Signup = () => {
                                         {capsLockActive && (
                                             <div className="flex items-center text-xs text-yellow-600 mt-1 animate-in fade-in slide-in-from-top-1">
                                                 <AlertTriangle className="h-3 w-3 mr-1" />
-                                                Caps Lock is on
+                                                {t('signup.capsLock')}
                                             </div>
                                         )}
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="confirmPassword">Confirm Password</Label>
+                                        <Label htmlFor="confirmPassword">{t('signup.confirmPasswordLabel')}</Label>
                                         <div className="relative">
                                             <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                             <Input
                                                 id="confirmPassword"
                                                 type={showConfirmPassword ? "text" : "password"}
-                                                placeholder="••••••••"
+                                                placeholder={t('signup.confirmPasswordPlaceholder')}
                                                 className="pl-9 pr-10"
                                                 value={confirmPassword}
                                                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -349,12 +344,11 @@ const Signup = () => {
                                         {capsLockActive && (
                                             <div className="flex items-center text-xs text-yellow-600 mt-1 animate-in fade-in slide-in-from-top-1">
                                                 <AlertTriangle className="h-3 w-3 mr-1" />
-                                                Caps Lock is on
+                                                {t('signup.capsLock')}
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* <-- NOVA ZONA DOS TERMOS E CONDIÇÕES --> */}
                                     <div className="flex items-center space-x-2 pt-2">
                                         <Checkbox
                                             id="terms"
@@ -365,13 +359,13 @@ const Signup = () => {
                                             htmlFor="terms"
                                             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                         >
-                                            I accept the{" "}
+                                            {t('signup.termsAccept')}{" "}
                                             <Link to="/Terms" className="text-accent hover:underline" target="_blank">
-                                                Terms and Conditions
+                                                {t('signup.termsLink')}
                                             </Link>
-                                            {" "}and the{" "}
+                                            {" "}{t('signup.termsAnd')}{" "}
                                             <Link to="/Privacy" className="text-accent hover:underline" target="_blank">
-                                                Privacy Policy
+                                                {t('signup.privacyLink')}
                                             </Link>
                                         </Label>
                                     </div>
@@ -379,10 +373,10 @@ const Signup = () => {
                                     <Button type="submit" className="w-full mt-2" disabled={isLoading}>
                                         {isLoading ? (
                                             <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating account...
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('signup.buttonLoading')}
                                             </>
                                         ) : (
-                                            "Create Account"
+                                            t('signup.buttonSubmit')
                                         )}
                                     </Button>
                                 </form>
@@ -398,13 +392,13 @@ const Signup = () => {
                                         disabled={isResendingEmail}
                                         className="h-auto p-0 text-accent font-medium cursor-pointer disabled:cursor-not-allowed"
                                     >
-                                        {isResendingEmail ? "Sending..." : "Did not receive the email? Try again"}
+                                        {isResendingEmail ? t('signup.resendLoading') : t('signup.resendButton')}
                                     </Button>
                                 ) : (
                                     <>
-                                        Already have an account?{" "}
+                                        {t('signup.hasAccount')}{" "}
                                         <Link to="/login" className="text-accent hover:underline font-medium">
-                                            Sign in
+                                            {t('signup.signInLink')}
                                         </Link>
                                     </>
                                 )}

@@ -1,7 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const HeroSection = () => {
+  const { t } = useTranslation();
+
   const scrollToProduct = () => {
     document.getElementById("product")?.scrollIntoView({ behavior: "smooth" });
   };
@@ -16,17 +19,17 @@ const HeroSection = () => {
       {/* Content */}
       <div className="container relative z-10 px-4 py-20 mx-auto text-center animate-fade-in">
         <h1 className="text-5xl md:text-7xl font-bold text-foreground mb-6 leading-tight">
-          Fewer prototypes,<br />more results.
+          {t('businessHero.title1')}<br />{t('businessHero.title2')}
         </h1>
         <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto">
-          We help you design better batteries, accelerate development, and reduce costs.
+          {t('businessHero.subtitle')}
         </p>
-        <Button 
+        <Button
           onClick={scrollToProduct}
           size="lg"
           className="text-lg"
         >
-          Learn More
+          {t('businessHero.learnMore')}
           <ArrowRight className="ml-2 h-5 w-5" />
         </Button>
       </div>

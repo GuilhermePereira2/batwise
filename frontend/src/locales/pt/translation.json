@@ -299,5 +299,622 @@
             "description": "Para qualquer questão relacionada com a proteção de dados, por favor contacte-nos através de:",
             "email": "general@watt-builder.com"
         }
+    },
+    "footer": {
+        "rights": "Todos os direitos reservados.",
+        "features": {
+            "title": "Ferramentas",
+            "smartHomeSizer": "Smart Home Sizer",
+            "cellExplorer": "Cell Explorer",
+            "batteryBuilder": "Battery Builder",
+            "services": "Serviços"
+        },
+        "company": {
+            "title": "Empresa",
+            "home": "Início",
+            "contact": "Contacto"
+        },
+        "account": {
+            "title": "Conta",
+            "login": "Entrar",
+            "signUp": "Registar",
+            "terms": "Termos e Condições",
+            "privacy": "Política de Privacidade"
+        }
+    },
+    "login": {
+        "backToHome": "Voltar ao Início",
+        "title": "Entrar",
+        "description": "Insira o seu email e password para aceder à sua conta.",
+        "emailLabel": "Email",
+        "emailPlaceholder": "nome@exemplo.com",
+        "passwordLabel": "Password",
+        "forgotPassword": "Esqueceu-se da password?",
+        "passwordPlaceholder": "••••••••",
+        "capsLock": "O Caps Lock está ativado",
+        "buttonLoading": "A iniciar sessão...",
+        "buttonSubmit": "Entrar",
+        "or": "ou",
+        "googleDisabled": "O login com o Google não está configurado",
+        "resendLoading": "A reenviar...",
+        "resendButton": "Reenviar Email de Verificação",
+        "noAccount": "Não tem conta?",
+        "signUpLink": "Registe-se",
+        "toasts": {
+            "emailRequired": "Email necessário",
+            "emailRequiredDesc": "Por favor, insira o seu endereço de email.",
+            "verifySent": "Email de verificação enviado!",
+            "verifySentDesc": "Por favor, verifique a sua caixa de entrada e clique no link de verificação.",
+            "resendFailed": "Falha ao reenviar",
+            "loginFailed": "Falha no Login",
+            "invalidCredentials": "Email ou password inválidos.",
+            "emailNotVerified": "Email não verificado. Por favor, verifique a sua caixa de entrada ou reenvie o email de verificação.",
+            "genericError": "Algo correu mal. Por favor, tente novamente.",
+            "welcomeBack": "Bem-vindo de volta!",
+            "loginSuccess": "Iniciou sessão com sucesso.",
+            "welcomeGoogle": "Bem-vindo!",
+            "googleSuccess": "Iniciou sessão com sucesso através do Google.",
+            "googleFailed": "Falha no login com o Google",
+            "googleFailedDesc": "O login com o Google falhou."
+        }
+    },
+    "signup": {
+        "backToHome": "Voltar ao Início",
+        "titleVerify": "Verifique o seu email",
+        "titleCreate": "Criar Conta",
+        "descVerify": "Enviámos um link de verificação para o seu endereço de email.",
+        "descCreate": "Introduza os seus dados abaixo para criar a sua conta e começar.",
+        "verifySentTo": "Foi enviado um link de verificação para",
+        "checkSpam": "Por favor, verifique a sua pasta de spam se não o vir em alguns minutos.",
+        "goToLogin": "Ir para o Login",
+        "nameLabel": "Nome Completo",
+        "namePlaceholder": "João Silva",
+        "companyLabel": "Empresa (Opcional)",
+        "companyPlaceholder": "A sua Empresa, Lda",
+        "emailLabel": "Email",
+        "emailPlaceholder": "nome@exemplo.com",
+        "emailExists": "Já existe uma conta com este email",
+        "emailRegistered": "Este email já se encontra registado.",
+        "signInInstead": "Iniciar sessão",
+        "orDifferentEmail": "ou use um endereço de email diferente.",
+        "passwordLabel": "Password",
+        "passwordPlaceholder": "••••••••",
+        "confirmPasswordLabel": "Confirmar Password",
+        "confirmPasswordPlaceholder": "••••••••",
+        "capsLock": "O Caps Lock está ativado",
+        "termsAccept": "Aceito os",
+        "termsLink": "Termos e Condições",
+        "termsAnd": "e a",
+        "privacyLink": "Política de Privacidade",
+        "buttonLoading": "A criar conta...",
+        "buttonSubmit": "Criar Conta",
+        "resendLoading": "A enviar...",
+        "resendButton": "Não recebeu o email? Tente novamente",
+        "hasAccount": "Já tem uma conta?",
+        "signInLink": "Iniciar sessão",
+        "toasts": {
+            "termsRequired": "Termos e Condições",
+            "termsRequiredDesc": "Tem de aceitar os termos e condições para criar uma conta.",
+            "passwordsMismatch": "As passwords não coincidem",
+            "passwordsMismatchDesc": "Certifique-se de que ambas as passwords são idênticas.",
+            "accountExists": "A conta já existe",
+            "accountExistsDesc": "Já existe uma conta registada com o email {{email}}. Por favor, inicie sessão ou utilize um email diferente.",
+            "createdTitle": "Conta criada!",
+            "createdDesc": "Email de verificação enviado. Por favor, verifique a sua caixa de entrada.",
+            "errorTitle": "Erro",
+            "errorDesc": "Algo correu mal. Por favor, tente novamente.",
+            "emailRequired": "Email necessário",
+            "emailRequiredDesc": "Falta o endereço de email.",
+            "resendSuccess": "Email enviado!",
+            "resendSuccessDesc": "Verifique a sua caixa de entrada para obter o link de verificação.",
+            "resendFailed": "Falha ao reenviar"
+        }
+    },
+    "batteryForm": {
+        "backToHome": "Voltar ao Início",
+        "title": "Assistente de Baterias",
+        "subtitle": "Desenhe packs de baterias seguros e profissionais em segundos.",
+        "step1Title": "1. O que está a construir?",
+        "selectProject": "Selecione um tipo de projeto",
+        "voltagePower": "Tensão e Potência",
+        "minVoltage": "Tensão Mínima (V)",
+        "minVoltageTooltip": "Tensão a 0% de carga. Não desça abaixo disto ou o BMS cortará a energia.",
+        "maxVoltage": "Tensão Máxima (V)",
+        "maxVoltageTooltip": "Tensão a 100% de carga. Deve coincidir com o limite do seu carregador e controlador.",
+        "continuousPower": "Potência Contínua (W)",
+        "continuousPowerTooltip": "Os watts que o seu motor/inversor puxa constantemente. A potência de pico é calculada automaticamente.",
+        "minEnergy": "Energia Mín. (Wh)",
+        "minEnergyTooltip": "Determina a sua autonomia. Mais Wh = Mais Distância.",
+        "physicalLimits": "Limites Físicos",
+        "maxLength": "Comprimento Máx. (m)",
+        "maxWidth": "Largura Máx. (m)",
+        "maxHeight": "Altura Máx. (m)",
+        "maxHeightTooltip": "Crítico para skates ou caixas finas.",
+        "maxPrice": "Preço Máx. (€)",
+        "optional": "Opcional",
+        "calculating": "A calcular designs seguros...",
+        "findBattery": "Encontrar a Minha Bateria",
+        "recommendedBuilds": "Configurações Recomendadas",
+        "rankedBy": "Ordenado por Valor (Energia / €) e Segurança.",
+        "with": "com",
+        "bestValue": "Melhor Valor",
+        "nominal": "Nominal",
+        "safetyScore": "Índice de Segurança",
+        "configuration": "Configuração",
+        "series": "Série",
+        "parallel": "Paralelo",
+        "maxPower": "Potência Máx.",
+        "totalWeight": "Peso Total",
+        "estPrice": "Preço Est.",
+        "requiredComponents": "Componentes Necessários",
+        "viewWiringDiagram": "Ver Diagrama de Ligações",
+        "safetyAdvisory": "Aviso de Segurança",
+        "howToFix": "Como resolver:",
+        "fireRisk": "NÃO CONSTRUA ISTO - RISCO DE INCÊNDIO",
+        "toasts": {
+            "presetApplied": "Predefinição Aplicada",
+            "presetUpdated": "Valores atualizados para {{label}}",
+            "noSolutions": "Nenhuma Solução Encontrada",
+            "relaxConstraints": "Tente flexibilizar as suas restrições (tamanho, peso ou preço).",
+            "success": "Sucesso!",
+            "designsFound": "{{count}} designs válidos encontrados.",
+            "connectionError": "Erro de Conexão",
+            "backendError": "Certifique-se de que o backend Python está a correr."
+        }
+    },
+    "business": {
+        "getInTouch": "Fale Connosco",
+        "powerFuture": "",
+        "contactUs": "Contactar"
+    },
+    "solutionModal": {
+        "buyFromAffiliate": "Comprar via Parceiro",
+        "docs": {
+            "title": "FICHA TÉCNICA DA BATERIA",
+            "generatedBy": "Gerado por Watt Builder",
+            "config": "Configuração:",
+            "cellModel": "Modelo da Célula:",
+            "electricalSpecs": "Especificações Elétricas",
+            "nominalVoltage": "Tensão Nominal:",
+            "capacity": "Capacidade:",
+            "totalEnergy": "Energia Total:",
+            "contPower": "Potência Contínua:",
+            "peakPower": "Potência de Pico (30s):",
+            "mechanicalSpecs": "Especificações Mecânicas",
+            "cellWeight": "Peso das Células (total):",
+            "cellDimensions": "Dimensões da Célula:",
+            "safetyAssessment": "Avaliação de Segurança",
+            "safetyScore": "Índice de Segurança:",
+            "status": "Estado:",
+            "pass": "APROVADO",
+            "warning": "AVISO",
+            "warnings": "Avisos:",
+            "none": "Nenhum",
+            "disclaimer": "Aviso legal: Este documento foi gerado automaticamente e destina-se apenas a uma avaliação preliminar de engenharia.",
+            "noCriticalWarnings": "Não foram detetados avisos críticos.",
+            "projectOverview": "Visão Geral do Projeto",
+            "totalCells": "Total de Células:"
+        },
+        "toasts": {
+            "loginRequired": "Início de sessão obrigatório",
+            "loginToDownload": "Inicie sessão para descarregar documentos."
+        },
+        "bom": {
+            "component": "Componente",
+            "model": "Modelo",
+            "quantity": "Quantidade",
+            "details": "Detalhes",
+            "unitPrice": "Preço Unitário",
+            "totalPrice": "Preço Total",
+            "batteryCells": "Células de Bateria",
+            "labor": "Mão de obra",
+            "shipping": "Envio",
+            "cable": "Cabo (2m)"
+        },
+        "modal": {
+            "configTitle": "Configuração: {{model}} ({{series}}S{{parallel}}P)",
+            "safetyScore": "Índice de Segurança: {{score}}",
+            "disclaimerTitle": "Aviso Legal: Este cálculo é uma sugestão teórica.",
+            "disclaimerText1": "Construir baterias de lítio acarreta riscos significativos. Os resultados abaixo são estimativas automáticas.",
+            "disclaimerText2": "Consulte sempre um profissional.",
+            "safetyAdvisories": "Avisos de Segurança",
+            "recommendations": "Recomendações:",
+            "specsTitle": "Especificações da Bateria",
+            "specsConfig": "Configuração:",
+            "specsNominalVolt": "Tensão Nominal:",
+            "specsCapacity": "Capacidade:",
+            "specsEnergy": "Energia:",
+            "specsContPower": "Potência Contínua:",
+            "specsPeakPower": "Potência de Pico:",
+            "specsCellWeight": "Peso das Células:",
+            "specsCompPrice": "Preço dos Componentes:",
+            "cellDataTitle": "Dados da Célula",
+            "cellBrand": "Marca:",
+            "cellModel": "Modelo:",
+            "cellNominalVolt": "Tensão Nominal:",
+            "cellContDischarge": "Descarga Cont.:",
+            "cellCapacity": "Capacidade:",
+            "cellPrice": "Preço/Célula:",
+            "toolsTitle": "Ferramentas Comerciais",
+            "laborCost": "Custo de Mão de Obra (€)",
+            "shippingCost": "Custo de Envio (€)",
+            "profitMargin": "Margem de Lucro (%)",
+            "baseCost": "Custo Base:",
+            "finalPrice": "Preço Final:",
+            "downloadsTitle": "Downloads",
+            "includeCostsBom": "Incluir custos no BOM",
+            "downloadBom": "Descarregar BOM (Excel/CSV)",
+            "downloadWord": "Descarregar Ficha (Word)",
+            "downloadPdf": "Descarregar Ficha (PDF)",
+            "bmsBrand": "Marca:",
+            "bmsModel": "Modelo:",
+            "bmsSpec": "Espec.:",
+            "bmsPrice": "Preço:",
+            "fuseModel": "Modelo:",
+            "fuseRating": "Classificação:",
+            "cableCross": "Secção Transversal:",
+            "show3d": "Mostrar Modelo 3D",
+            "hide3d": "Ocultar Modelo 3D",
+            "interactive3d": "Vista 3D interativa baseada na geometria calculada.",
+            "interactive3dHelp": "Clique esquerdo para rodar, clique direito para mover, deslize para aproximar.",
+            "showDiagram": "Mostrar Diagrama de Ligações",
+            "hideDiagram": "Ocultar Diagrama de Ligações",
+            "cells": "Células"
+        }
+    },
+    "cellDetails": {
+        "specsTitle": "Especificações | Watt Builder",
+        "backToExplorer": "Voltar ao Explorador",
+        "notFound": {
+            "title": "Célula Não Encontrada"
+        },
+        "contactTemplate": "Olá,\nGostaria de obter os seguintes dados sobre a célula {{cellName}}:\n\n\nCom os melhores cumprimentos,\n",
+        "buyAffiliate": "Comprar via Parceiro",
+        "cylindrical": "Cilíndrica",
+        "cell": "Célula",
+        "subtitle": "{{type}} de alta performance para aplicações avançadas.",
+        "electrical": {
+            "title": "Especificações Elétricas",
+            "capacity": "Capacidade Nominal",
+            "voltage": "Tensão Nominal",
+            "energy": "Energia Armazenada",
+            "impedance": "Impedância Interna"
+        },
+        "power": {
+            "title": "Performance de Potência",
+            "maxDischarge": "Descarga Contínua Máxima",
+            "maxCharge": "Carga Contínua Máxima",
+            "contOutput": "Potência de Saída Contínua",
+            "cycleLife": "Ciclos de Vida",
+            "cycles": "ciclos"
+        },
+        "physical": {
+            "title": "Especificações Físicas",
+            "weight": "Peso",
+            "height": "Altura",
+            "width": "Largura",
+            "thickness": "Espessura",
+            "volumetric": "Dens. Energética Volumétrica",
+            "gravimetric": "Dens. Energética Gravimétrica"
+        },
+        "3d": {
+            "title": "Modelo 3D com Dimensões"
+        },
+        "actions": {
+            "requestData": "Solicitar Mais Dados"
+        },
+        "testing": {
+            "badge": "Validação Independente",
+            "title": "Precisa de verificar estas especificações?",
+            "desc1": "Oferecemos serviços de validação profissional para a célula ",
+            "desc2": " e outras. O nosso laboratório de ponta garante-lhe dados precisos e imparciais.",
+            "perfTitle": "Verificação de Performance",
+            "perfDesc": "Confirme a capacidade, curvas de tensão e a resistência interna anunciadas pelo fabricante.",
+            "cycleTitle": "Teste de Ciclos de Vida",
+            "cycleDesc": "Testes de ciclo prolongados para determinar a vida útil real e padrões de degradação.",
+            "thermalTitle": "Análise Térmica",
+            "thermalDesc": "Monitorização de perfis de temperatura sob carga pesada para garantir segurança e estabilidade térmica.",
+            "contactBtn": "Contactar para Testes Personalizados"
+        },
+        "toasts": {
+            "notFound": "Célula não encontrada",
+            "errorLoading": "Erro ao carregar detalhes da célula"
+        }
+    },
+    "contact": {
+        "heroTitle": "Fale Connosco",
+        "heroSubtitle": "Precisa de ajuda ou quer profissionalizar o seu projeto? Contacte-nos.",
+        "formTitle": "Envie-nos uma mensagem",
+        "formDesc": "Preencha o formulário e responderemos o mais breve possível",
+        "nameLabel": "Nome",
+        "namePlaceholder": "O seu nome",
+        "emailLabel": "Email",
+        "emailPlaceholder": "o.seu@email.com",
+        "messageLabel": "Mensagem",
+        "messagePlaceholder": "Fale-nos do seu projeto ou dúvida...",
+        "sending": "A enviar...",
+        "sendButton": "Enviar Mensagem",
+        "infoTitle": "Vamos construir algo incrível juntos",
+        "infoDesc": "Quer seja um entusiasta DIY ou uma empresa à procura de soluções profissionais para baterias, estamos aqui para ajudar.",
+        "emailField": "Email",
+        "validation": {
+            "nameReq": "O nome é obrigatório",
+            "emailInv": "Endereço de email inválido",
+            "msgReq": "A mensagem é obrigatória"
+        },
+        "toasts": {
+            "successTitle": "Mensagem enviada!",
+            "successDesc": "Recebemos o seu email e responderemos em breve.",
+            "valError": "Erro de validação",
+            "errorTitle": "Erro ao enviar mensagem",
+            "errorDesc": "Algo correu mal. Por favor tente mais tarde ou envie-nos um email diretamente."
+        }
+    },
+    "forgot": {
+        "backToLogin": "Voltar ao Login",
+        "title": "Repor Password",
+        "descSubmitted": "Verifique o seu email para encontrar o link de reposição.",
+        "descDefault": "Insira o seu endereço de email e enviar-lhe-emos um link para repor a password.",
+        "sentLinkTo": "Enviámos um link de reposição de password para",
+        "tryAnotherEmail": "Tentar outro email",
+        "emailLabel": "Email",
+        "emailPlaceholder": "nome@exemplo.com",
+        "sending": "A enviar link...",
+        "sendButton": "Enviar Link de Reposição",
+        "rememberPassword": "Lembra-se da password?",
+        "signIn": "Iniciar sessão",
+        "toasts": {
+            "successTitle": "Email enviado",
+            "successDesc": "Verifique a sua caixa de entrada para obter instruções de reposição.",
+            "errorTitle": "Erro",
+            "errorDesc": "Não foi possível enviar o email de reposição. Por favor, tente novamente."
+        }
+    },
+    "notFound": {
+        "title": "404",
+        "subtitle": "Oops! Página não encontrada",
+        "returnHome": "Voltar à Página Inicial"
+    },
+    "profile": {
+        "loading": "A carregar...",
+        "title": "O Meu Perfil",
+        "premium": "Premium",
+        "freePlan": "Plano Gratuito",
+        "availableCredits": "Créditos Disponíveis",
+        "trial": {
+            "title": "Desbloquear 15 Dias de Teste Grátis",
+            "description": "Acelere o seu processo de design de baterias com as nossas funcionalidades premium.",
+            "feature1": "1000 Créditos de Computação",
+            "feature2": "Base de Dados de Células Avançada",
+            "feature3": "Sem Cartão de Crédito Necessário",
+            "feature4": "Ativação Imediata",
+            "btnStart": "Começar Teste Grátis Agora",
+            "btnActivating": "A ativar..."
+        },
+        "details": {
+            "title": "Detalhes da Conta",
+            "fullName": "Nome Completo",
+            "email": "Endereço de Email",
+            "company": "Empresa",
+            "notProvided": "Não fornecido",
+            "memberSince": "Membro Desde"
+        },
+        "toasts": {
+            "trialSuccessTitle": "Teste Ativado com Sucesso!",
+            "trialSuccessDesc": "Recebeu 1000 créditos válidos por 15 dias.",
+            "activationFailed": "Falha na Ativação"
+        }
+    },
+    "resetPassword": {
+        "title": "Definir Nova Password",
+        "description": "Insira a sua nova password abaixo.",
+        "newPasswordLabel": "Nova Password",
+        "confirmPasswordLabel": "Confirmar Password",
+        "updating": "A atualizar...",
+        "submitButton": "Repor Password",
+        "toasts": {
+            "invalidLinkTitle": "Link Inválido",
+            "invalidLinkDesc": "Falta o token de reposição ou o email.",
+            "errorTitle": "Erro",
+            "passwordsMismatch": "As passwords não coincidem",
+            "resetFailed": "Falha ao repor a password",
+            "successTitle": "Sucesso",
+            "successDesc": "Password reposta com sucesso! Por favor, inicie sessão."
+        }
+    },
+    "verifyEmail": {
+        "successTitle": "Email Verificado!",
+        "successDesc": "A sua conta está agora ativa. Já pode iniciar sessão.",
+        "loginButton": "Iniciar Sessão",
+        "errorTitle": "Falha na Verificação",
+        "errorDesc": "O link é inválido ou expirou."
+    },
+    "businessHero": {
+        "title1": "Menos protótipos,",
+        "title2": "mais resultados.",
+        "subtitle": "Ajudamos a desenhar baterias melhores, a acelerar o desenvolvimento e a reduzir custos.",
+        "learnMore": "Saber Mais"
+    },
+    "businessProduct": {
+        "title": "Design de Baterias Mais Inteligente, Menores Custos de Desenvolvimento",
+        "paragraph1": "A nossa empresa combina software avançado e consultoria especializada para fornecer soluções otimizadas de design de baterias. Aproveitando dados reais de testes de células e modelos de degradação de ponta, a nossa plataforma simula veículos elétricos e sistemas de energia, ao mesmo tempo que calcula o ROI com base no modelo de negócio de cada cliente.",
+        "paragraph2": "Transforma requisitos em designs prontos para produção, em minutos, gerando e comparando todas as configurações possíveis a partir da nossa extensa base de dados de células face a alternativas de mercado. Através dos nossos serviços de consultoria, fornecemos orientação personalizada em todas as fases do desenvolvimento, enquanto os clientes que pretendem reduzir custos também podem operar o software de forma independente e aceder à nossa base de dados validada ou integrar a sua própria."
+    },
+    "usageOptions": {
+        "title": "Otimize a sua solução de bateria",
+        "softwareTitle": "Otimize a sua bateria com o nosso software",
+        "softwareDesc": "Transforme os seus requisitos em designs fiáveis em minutos, sem necessidade de ajuda externa.",
+        "teamTitle": "Otimize a sua bateria com a nossa equipa",
+        "teamDesc": "Do conceito ao design final, a nossa equipa garante que o seu sistema de bateria é seguro, eficiente e totalmente otimizado."
+    },
+    "wiring": {
+        "title": "Diagrama de Montagem: {{s}}S {{p}}P (Layout Central)",
+        "svg": {
+            "batteryPack": "Pack de Bateria",
+            "load": "Carga",
+            "bat": "Bat",
+            "fuse": "FUSÍVEL",
+            "relay": "RELÉ",
+            "loadCaps": "CARGA",
+            "currentReading": "Leitura de Corrente",
+            "cutoffSignal": "Sinal de Corte"
+        },
+        "guide": {
+            "title": "Guia de Montagem",
+            "step1Title": "Montagem Física (O Núcleo)",
+            "step1Desc": "Monte primeiro o pack {{s}}S {{p}}P. Ligue primeiro as células em grupos paralelos, depois ligue esses grupos em série. Certifique-se de que todas as ligações estão firmes e isoladas.",
+            "step2Title": "Fios de Sensor do BMS (Cabos de Balanceamento)",
+            "step2Desc1": "Comece por ligar os fios finos a partir do",
+            "step2Bold1": "B- (Negativo Principal)",
+            "step2Desc2": ", depois B1, B2... até ao",
+            "step2Bold2": "B+",
+            "step2Warning": "⚠️ IMPORTANTE: NÃO ligue ainda a ficha ao BMS. Verifique primeiro as tensões com um multímetro.",
+            "step3Title": "Caminho de Potência Negativo (-)",
+            "step3Shunt1_1": "Ligue o",
+            "step3Shunt1_Bold1": "Pack de Bateria (-)",
+            "step3Shunt1_2": "ao lado",
+            "step3Shunt1_Bold2": "Shunt \"BAT\"",
+            "step3Shunt1_3": ".",
+            "step3Shunt2": "Ligue o fio B- do BMS (preto grosso) ao (-) da bateria ou ao Shunt, consoante as instruções do BMS.",
+            "step3Shunt3_1": "O lado",
+            "step3Shunt3_Bold": "Shunt \"LOAD\"",
+            "step3Shunt3_2": "torna-se o novo Negativo Principal do seu Sistema.",
+            "step3Shunt4_Bold": "Fio de Dados:",
+            "step3Shunt4_1": "Ligue o cabo de dados do Shunt ao BMS/Monitor.",
+            "step3NoShunt1_1": "Ligue o",
+            "step3NoShunt1_Bold": "Pack de Bateria (-)",
+            "step3NoShunt1_2": "diretamente ao terminal \"B-\" do BMS (se separado) ou diretamente ao seu Sistema/Carga (-).",
+            "step3NoShunt2": "(A leitura de corrente está integrada no interior do BMS).",
+            "step4Title": "Caminho de Potência Positivo (+)",
+            "step4Seq": "Siga esta sequência exata por segurança:",
+            "step4NoFuse": "SEM FUSÍVEL",
+            "step4NoRelay": "SEM RELÉ",
+            "step4Fuse1": "Monte o",
+            "step4FuseBold": "Fusível",
+            "step4Fuse2": "o mais próximo possível do terminal da bateria.",
+            "step4Relay1": "Instale o",
+            "step4RelayBold": "Relé/Contator",
+            "step4Relay2": "após o fusível.",
+            "step4Relay3": "Ligue o fio \"Controlo/Corte\" do BMS ao gatilho da bobina do relé.",
+            "step4NoFuseRelay": "Ligue o Positivo (+) da bateria diretamente ao seu conetor de Carga/Carregador.",
+            "step5Title": "Ativação Final",
+            "step5Desc": "Verifique duas vezes todas as polaridades. Ligue a Ficha de Sensores do BMS. Dependendo do modelo do seu BMS, poderá ser necessário aplicar uma tensão de carga brevemente para \"acordar\" o sistema."
+        }
+    },
+    "featuresSection": {
+        "title": "Seis Funcionalidades Principais Que Geram Resultados",
+        "items": {
+            "simulation": {
+                "title": "Simulação Realista",
+                "desc": "Simula veículos elétricos, sistemas de energia residenciais/industriais e outros utilizando dados reais de células e modelos de degradação avançados."
+            },
+            "optimization": {
+                "title": "Otimização de Design",
+                "desc": "Transforma requisitos em packs de baterias fiáveis e otimizados, considerando o desempenho, a durabilidade e o custo."
+            },
+            "roi": {
+                "title": "Avaliação de ROI e Custos",
+                "desc": "Calcula o retorno do investimento com base no modelo de negócio do cliente, apoiando decisões estratégicas."
+            },
+            "database": {
+                "title": "Base de Dados Extensa",
+                "desc": "Inclui centenas de células comerciais, permitindo comparações de design e explorar alternativas de mercado."
+            },
+            "flexibility": {
+                "title": "Flexibilidade para o Utilizador",
+                "desc": "Opere o software de forma independente para reduzir os custos de consultoria."
+            },
+            "speed": {
+                "title": "Velocidade e Eficiência",
+                "desc": "Converte requisitos em designs preliminares finais em minutos, acelerando o desenvolvimento do produto."
+            }
+        }
+    },
+    "explorer": {
+        "pageTitle": "Explorador de Células",
+        "title": "Explorador de Células",
+        "subtitle": "Utilize os filtros para encontrar a célula perfeita para o seu projeto.",
+        "cylindricalPrefix": "Cilíndrica",
+        "unknown": "Desconhecido",
+        "filters": {
+            "title": "Filtros de Células",
+            "reset": "Repor Filtros",
+            "search": "Pesquisar",
+            "searchPlaceholder": "ex., LF280K ou EVE",
+            "brand": "Marca",
+            "brandPlaceholder": "Selecionar Marcas",
+            "chemistry": "Química",
+            "chemistryPlaceholder": "Selecionar Químicas",
+            "cellFormat": "Formato da Célula",
+            "formatPlaceholder": "Selecionar Formatos",
+            "sliders": {
+                "capacity": "Capacidade",
+                "weight": "Peso",
+                "dischargeRate": "Taxa de Descarga",
+                "chargeRate": "Taxa de Carga",
+                "impedance": "Impedância",
+                "cycles": "Ciclos"
+            }
+        },
+        "tabs": {
+            "chart": "Vista de Gráfico",
+            "grid": "Vista de Grelha",
+            "sortBy": "Ordenar por:",
+            "asc": "Crescente",
+            "desc": "Decrescente",
+            "foundCells": "Foram encontradas {{count}} células correspondentes",
+            "showingCells": "a mostrar {{count}}",
+            "sortOpts": {
+                "capacity": "Capacidade (Ah)",
+                "energy": "Energia (Wh)",
+                "power": "Potência (W)",
+                "weight": "Peso (g)",
+                "density": "Densidade Vol. (Wh/L)",
+                "gravDensity": "Densidade Grav. (Wh/Kg)",
+                "gravPower": "Potência Grav. (W/Kg)"
+            }
+        },
+        "gridCard": {
+            "capacity": "Capacidade:",
+            "voltage": "Tensão:",
+            "energyDensity": "Densidade de Energia:",
+            "weight": "Peso:",
+            "dischargeRate": "Taxa de Descarga:"
+        },
+        "chart": {
+            "xAxis": "Parâmetro Eixo-X",
+            "yAxis": "Parâmetro Eixo-Y",
+            "capacity": "Capacidade (Ah)",
+            "nominalVoltage": "Tensão Nominal (V)",
+            "weight": "Peso (g)",
+            "dischargeRate": "Taxa de Descarga (C)",
+            "chargeRate": "Taxa de Carga (C)",
+            "impedance": "Impedância (mΩ)",
+            "cycles": "Ciclos",
+            "energy": "Energia (Wh)",
+            "power": "Potência (W)",
+            "volume": "Volume (L)",
+            "energyDensityWhL": "Densidade de Energia (Wh/L)",
+            "powerDensityWL": "Densidade de Potência (W/L)",
+            "energyDensityWhKg": "Densidade de Energia (Wh/Kg)",
+            "powerDensityWKg": "Densidade de Potência (W/Kg)"
+        },
+        "noCellsTitle": "Nenhuma Célula Encontrada",
+        "noCellsDesc": "Tente ajustar os seus critérios de pesquisa ou filtros.",
+        "testing": {
+            "badge": "Testes Profissionais de Células",
+            "title": "Precisa de Dados Completos de Células?",
+            "desc": "Dispomos de equipamento de ponta para realizar uma grande variedade de testes em células de bateria. Da verificação de capacidade a testes de stress rigorosos, tratamos de tudo por si.",
+            "perfTitle": "Verificação de Performance",
+            "perfDesc": "Verifique a capacidade, as curvas de tensão e a resistência interna com equipamento de alta precisão.",
+            "cycleTitle": "Teste de Ciclos de Vida",
+            "cycleDesc": "Testes de ciclo prolongados para determinar a vida útil real e padrões de degradação.",
+            "thermalTitle": "Análise Térmica",
+            "thermalDesc": "Monitorização de perfis de temperatura sob carga pesada para garantir segurança e estabilidade térmica.",
+            "contactBtn": "Contactar para Testes Personalizados"
+        },
+        "toasts": {
+            "errorFetching": "Erro ao carregar células"
+        }
     }
 }

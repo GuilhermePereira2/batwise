@@ -6,10 +6,12 @@ import FeaturesSection from "@/components/FeaturesSection";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Analytics } from "@vercel/analytics/next";
+import { useTranslation } from "react-i18next";
 
 const Business = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+
   return (
     <div className="min-h-screen">
       <Navigation />
@@ -18,8 +20,8 @@ const Business = () => {
         <UsageOptionsSection />
         <FeaturesSection />
         <ProductSection />
+
         <section id="contact" className="relative py-24 overflow-hidden">
-          {/* Animated Background Elements */}
           <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-background to-primary/5">
             <div className="absolute top-20 right-10 w-72 h-72 bg-accent/10 rounded-full blur-3xl animate-pulse" />
             <div className="absolute bottom-20 left-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
@@ -27,17 +29,17 @@ const Business = () => {
 
           <div className="container px-4 mx-auto max-w-4xl relative z-10 text-center">
             <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4 animate-fade-in">
-              Get in Touch
+              {t('business.getInTouch')}
             </h2>
             <p className="text-xl text-muted-foreground mb-8 animate-fade-in">
-              Let's power the future together.
+              {t('business.powerFuture')}
             </p>
             <Button
               size="lg"
               className="bg-foreground text-background hover:bg-foreground/90 animate-scale-in"
               onClick={() => navigate('/contact')}
             >
-              Contact Us
+              {t('business.contactUs')}
             </Button>
           </div>
         </section>

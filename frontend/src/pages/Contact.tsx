@@ -5,21 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, MessageSquare, MapPin, Loader2 } from "lucide-react"; // Adicionei Loader2
+import { Mail, MessageSquare, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
-import { getApiUrl } from "@/lib/config"; // <--- IMPORTANTE: Usa o helper que criámos
-import { useSearchParams } from "react-router-dom"; // Adiciona esta linha
-import { useState, useEffect } from "react"; // Garante que o useEffect está importado
-import { Analytics } from "@vercel/analytics/next";
-
-const contactSchema = z.object({
-  name: z.string().trim().min(1, "Name is required").max(100),
-  email: z.string().trim().email("Invalid email address").max(255),
-  message: z.string().trim().min(1, "Message is required").max(1000),
-});
+import { getApiUrl } from "@/lib/config";
+import { useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 const Contact = () => {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
@@ -38,15 +33,19 @@ const Contact = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Movido para dentro para usar as traduções (t)
+    const contactSchema = z.object({
+      name: z.string().trim().min(1, t('contact.validation.nameReq')).max(100),
+      email: z.string().trim().email(t('contact.validation.emailInv')).max(255),
+      message: z.string().trim().min(1, t('contact.validation.msgReq')).max(1000),
+    });
+
     try {
-      // 1. Validação local
       contactSchema.parse(formData);
       setIsSubmitting(true);
 
-      // 2. Definir URL do Backend
       const url = getApiUrl("send-contact-email");
 
-      // 3. Enviar para o Python
       const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -59,28 +58,26 @@ const Contact = () => {
         throw new Error("Failed to send message via server");
       }
 
-      // 4. Sucesso
       toast({
-        title: "Message sent!",
-        description: "We have received your email and will reply shortly.",
-        variant: "default", // Verde/Positivo
+        title: t('contact.toasts.successTitle'),
+        description: t('contact.toasts.successDesc'),
+        variant: "default",
       });
 
       setFormData({ name: "", email: "", message: "" });
 
     } catch (error) {
-      // Tratamento de erros
       if (error instanceof z.ZodError) {
         toast({
-          title: "Validation error",
+          title: t('contact.toasts.valError'),
           description: error.errors[0].message,
           variant: "destructive",
         });
       } else {
         console.error("Submission error:", error);
         toast({
-          title: "Error sending message",
-          description: "Something went wrong. Please try again later or email us directly.",
+          title: t('contact.toasts.errorTitle'),
+          description: t('contact.toasts.errorDesc'),
           variant: "destructive",
         });
       }
@@ -97,10 +94,10 @@ const Contact = () => {
       <section className="pt-32 pb-16 bg-gradient-to-b from-muted/30 to-background">
         <div className="container px-4 mx-auto max-w-6xl text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6 animate-fade-in">
-            Get in Touch
+            {t('contact.heroTitle')}
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto animate-fade-in">
-            Need help or want to professionalize your project? Contact us.
+            {t('contact.heroSubtitle')}
           </p>
         </div>
       </section>
@@ -114,19 +111,19 @@ const Contact = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-2xl">
                   <MessageSquare className="w-6 h-6 text-accent" />
-                  Send us a message
+                  {t('contact.formTitle')}
                 </CardTitle>
                 <CardDescription>
-                  Fill out the form and we'll get back to you as soon as possible
+                  {t('contact.formDesc')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Name</Label>
+                    <Label htmlFor="name">{t('contact.nameLabel')}</Label>
                     <Input
                       id="name"
-                      placeholder="Your name"
+                      placeholder={t('contact.namePlaceholder')}
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
@@ -135,11 +132,11 @@ const Contact = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">{t('contact.emailLabel')}</Label>
                     <Input
                       id="email"
                       type="email"
-                      placeholder="your@email.com"
+                      placeholder={t('contact.emailPlaceholder')}
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       required
@@ -148,10 +145,10 @@ const Contact = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="message">Message</Label>
+                    <Label htmlFor="message">{t('contact.messageLabel')}</Label>
                     <Textarea
                       id="message"
-                      placeholder="Tell us about your project or question..."
+                      placeholder={t('contact.messagePlaceholder')}
                       rows={6}
                       value={formData.message}
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
@@ -163,24 +160,24 @@ const Contact = () => {
                   <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
                     {isSubmitting ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('contact.sending')}
                       </>
                     ) : (
-                      "Send Message"
+                      t('contact.sendButton')
                     )}
                   </Button>
                 </form>
               </CardContent>
             </Card>
 
-            {/* Contact Info (Mantém-se igual ao teu código original) */}
+            {/* Contact Info */}
             <div className="space-y-8 animate-slide-up" style={{ animationDelay: "100ms" }}>
               <div>
                 <h2 className="text-3xl font-bold text-foreground mb-4">
-                  Let's build something great together
+                  {t('contact.infoTitle')}
                 </h2>
                 <p className="text-muted-foreground text-lg">
-                  Whether you're a DIY enthusiast or a business looking for professional battery design solutions, we're here to help.
+                  {t('contact.infoDesc')}
                 </p>
               </div>
 
@@ -192,13 +189,12 @@ const Contact = () => {
                         <Mail className="w-5 h-5 text-accent" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-foreground mb-1">Email</h3>
+                        <h3 className="font-semibold text-foreground mb-1">{t('contact.emailField')}</h3>
                         <p className="text-muted-foreground">general@watt-builder.com</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-
               </div>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,8 @@ import { getApiUrl } from "@/lib/config";
 import { resendVerificationEmail } from "@/lib/auth-api";
 
 const Login = () => {
+    const { t } = useTranslation();
+
     // Estados do Formulário
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -22,7 +25,7 @@ const Login = () => {
     // Novos Estados para UI
     const [showPassword, setShowPassword] = useState(false);
     const [capsLockActive, setCapsLockActive] = useState(false);
-    
+
     // Estados para verificação de email
     const [showResendVerification, setShowResendVerification] = useState(false);
     const [isResendingEmail, setIsResendingEmail] = useState(false);
@@ -67,18 +70,16 @@ const Login = () => {
         document.body.appendChild(script);
     }, []);
 
-    // Função para detetar Caps Lock
     const checkCapsLock = (event: React.KeyboardEvent<HTMLInputElement>) => {
         const capsLockOn: boolean = event.getModifierState('CapsLock');
         setCapsLockActive(capsLockOn);
     };
 
-    // Função para reenviar email de verificação
     const handleResendVerification = async () => {
         if (!email) {
             toast({
-                title: "Email required",
-                description: "Please enter your email address.",
+                title: t('login.toasts.emailRequired'),
+                description: t('login.toasts.emailRequiredDesc'),
                 variant: "destructive"
             });
             return;
@@ -89,15 +90,15 @@ const Login = () => {
             await resendVerificationEmail(email);
 
             toast({
-                title: "Verification email sent!",
-                description: "Please check your inbox and click the verification link.",
+                title: t('login.toasts.verifySent'),
+                description: t('login.toasts.verifySentDesc'),
             });
 
             setShowResendVerification(false);
 
         } catch (error: any) {
             toast({
-                title: "Resend failed",
+                title: t('login.toasts.resendFailed'),
                 description: error.message,
                 variant: "destructive"
             });
@@ -120,35 +121,34 @@ const Login = () => {
 
             if (!response.ok) {
                 if (response.status === 401) {
-                    throw new Error("Invalid email or password.");
+                    throw new Error(t('login.toasts.invalidCredentials'));
                 }
                 if (response.status === 403) {
-                    // Email não verificado
                     setShowResendVerification(true);
-                    throw new Error("Email not verified. Please check your inbox or resend the verification email.");
+                    throw new Error(t('login.toasts.emailNotVerified'));
                 }
-                throw new Error("Something went wrong. Please try again.");
+                throw new Error(t('login.toasts.genericError'));
             }
 
             const data = await response.json();
 
             login(data.access_token, {
-                id: email, // Use email as unique ID
+                id: email,
                 email: email,
                 name: data.user_name,
                 credits: data.credits
             });
 
             toast({
-                title: "Welcome back!",
-                description: "You have successfully logged in.",
+                title: t('login.toasts.welcomeBack'),
+                description: t('login.toasts.loginSuccess'),
             });
 
             navigate(redirectTo);
 
         } catch (error: any) {
             toast({
-                title: "Login Failed",
+                title: t('login.toasts.loginFailed'),
                 description: error.message,
                 variant: "destructive"
             });
@@ -170,7 +170,7 @@ const Login = () => {
 
             if (!res.ok) {
                 const data = await res.json().catch(() => ({}));
-                throw new Error(data.detail || "Google login failed.");
+                throw new Error(data.detail || t('login.toasts.googleFailedDesc'));
             }
 
             const data = await res.json();
@@ -184,13 +184,13 @@ const Login = () => {
             });
 
             toast({
-                title: "Welcome!",
-                description: "You have successfully logged in with Google.",
+                title: t('login.toasts.welcomeGoogle'),
+                description: t('login.toasts.googleSuccess'),
             });
             navigate(redirectTo);
         } catch (error: any) {
             toast({
-                title: "Google Login Failed",
+                title: t('login.toasts.googleFailed'),
                 description: error.message,
                 variant: "destructive",
             });
@@ -208,29 +208,29 @@ const Login = () => {
 
                     <Button variant="ghost" asChild className="mb-4 pl-0 hover:bg-transparent text-muted-foreground hover:text-foreground">
                         <Link to="/" className="flex items-center gap-2">
-                            <ArrowLeft className="w-4 h-4" /> Back to Home
+                            <ArrowLeft className="w-4 h-4" /> {t('login.backToHome')}
                         </Link>
                     </Button>
 
                     <Card className="border-border shadow-lg">
                         <CardHeader className="space-y-1">
                             <CardTitle className="text-2xl font-bold flex items-center gap-2">
-                                <LogIn className="w-6 h-6 text-accent" /> Log In
+                                <LogIn className="w-6 h-6 text-accent" /> {t('login.title')}
                             </CardTitle>
                             <CardDescription>
-                                Enter your email and password to access your account.
+                                {t('login.description')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={handleLogin} className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="email">Email</Label>
+                                    <Label htmlFor="email">{t('login.emailLabel')}</Label>
                                     <div className="relative">
                                         <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                         <Input
                                             id="email"
                                             type="email"
-                                            placeholder="name@example.com"
+                                            placeholder={t('login.emailPlaceholder')}
                                             className="pl-9"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
@@ -240,42 +240,36 @@ const Login = () => {
                                 </div>
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between">
-                                        <Label htmlFor="password">Password</Label>
+                                        <Label htmlFor="password">{t('login.passwordLabel')}</Label>
                                         <Link
                                             to="/forgot-password"
                                             className="text-xs text-muted-foreground hover:text-accent hover:underline"
                                         >
-                                            Forgot password?
+                                            {t('login.forgotPassword')}
                                         </Link>
                                     </div>
 
-                                    {/* Campo Password Modificado */}
                                     <div className="relative">
                                         <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-
                                         <Input
                                             id="password"
-                                            // Lógica para mostrar/esconder texto
                                             type={showPassword ? "text" : "password"}
-                                            placeholder="••••••••"
-                                            // Adicionado pr-10 para o texto não ficar atrás do olho
+                                            placeholder={t('login.passwordPlaceholder')}
                                             className="pl-9 pr-10"
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
-                                            // Eventos do Caps Lock
                                             onKeyDown={checkCapsLock}
                                             onKeyUp={checkCapsLock}
-                                            onClick={checkCapsLock} // Verifica se clicar já com ele ligado
-                                            onBlur={() => setCapsLockActive(false)} // Esconde aviso se sair do campo
+                                            onClick={checkCapsLock}
+                                            onBlur={() => setCapsLockActive(false)}
                                             required
                                         />
 
-                                        {/* Botão do Olho */}
                                         <button
-                                            type="button" // Importante para não submeter o form
+                                            type="button"
                                             onClick={() => setShowPassword(!showPassword)}
                                             className="absolute right-3 top-3 text-muted-foreground hover:text-foreground focus:outline-none"
-                                            tabIndex={-1} // Opcional: para não focar no tab
+                                            tabIndex={-1}
                                         >
                                             {showPassword ? (
                                                 <EyeOff className="h-4 w-4" />
@@ -285,11 +279,10 @@ const Login = () => {
                                         </button>
                                     </div>
 
-                                    {/* Aviso de Caps Lock */}
                                     {capsLockActive && (
                                         <div className="flex items-center text-xs text-yellow-600 mt-1 animate-in fade-in slide-in-from-top-1">
                                             <AlertTriangle className="h-3 w-3 mr-1" />
-                                            Caps Lock is on
+                                            {t('login.capsLock')}
                                         </div>
                                     )}
                                 </div>
@@ -297,10 +290,10 @@ const Login = () => {
                                 <Button type="submit" className="w-full" disabled={isLoading}>
                                     {isLoading ? (
                                         <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Logging in...
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('login.buttonLoading')}
                                         </>
                                     ) : (
-                                        "Sign In"
+                                        t('login.buttonSubmit')
                                     )}
                                 </Button>
 
@@ -309,7 +302,7 @@ const Login = () => {
                                         <span className="w-full border-t border-border" />
                                     </div>
                                     <div className="relative flex justify-center text-xs uppercase">
-                                        <span className="bg-card px-2 text-muted-foreground">or</span>
+                                        <span className="bg-card px-2 text-muted-foreground">{t('login.or')}</span>
                                     </div>
                                 </div>
 
@@ -318,27 +311,26 @@ const Login = () => {
                                         <div ref={googleButtonRef} className={isGoogleLoading ? "pointer-events-none opacity-60" : ""} />
                                     ) : (
                                         <Button type="button" variant="outline" className="w-full" disabled>
-                                            Google login not configured
+                                            {t('login.googleDisabled')}
                                         </Button>
                                     )}
                                 </div>
 
-                                {/* Botão para Reenviar Email de Verificação */}
                                 {showResendVerification && (
-                                    <Button 
-                                        type="button" 
-                                        variant="outline" 
+                                    <Button
+                                        type="button"
+                                        variant="outline"
                                         className="w-full"
                                         onClick={handleResendVerification}
                                         disabled={isResendingEmail}
                                     >
                                         {isResendingEmail ? (
                                             <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Resending...
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('login.resendLoading')}
                                             </>
                                         ) : (
                                             <>
-                                                <Mail className="mr-2 h-4 w-4" /> Resend Verification Email
+                                                <Mail className="mr-2 h-4 w-4" /> {t('login.resendButton')}
                                             </>
                                         )}
                                     </Button>
@@ -347,9 +339,9 @@ const Login = () => {
                         </CardContent>
                         <CardFooter className="flex flex-col space-y-4 border-t bg-muted/20 p-6">
                             <div className="text-center text-sm text-muted-foreground">
-                                Don't have an account?{" "}
+                                {t('login.noAccount')}{" "}
                                 <Link to="/signup" className="text-accent hover:underline font-medium">
-                                    Sign up
+                                    {t('login.signUpLink')}
                                 </Link>
                             </div>
                         </CardFooter>

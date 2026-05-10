@@ -1,6 +1,6 @@
-// src/pages/CellDetails.tsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,6 @@ import { createCellSlug } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Cell3DViewer } from "@/components/Cell3DViewer";
 
-// Interface igual à do Explorer
 interface Cell {
     Brand: string;
     CellModelNo: string;
@@ -34,6 +33,7 @@ const CellDetails = () => {
     const { slug } = useParams();
     const navigate = useNavigate();
     const { toast } = useToast();
+    const { t } = useTranslation();
     const [cell, setCell] = useState<Cell | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -46,27 +46,26 @@ const CellDetails = () => {
                 if (!res.ok) throw new Error("Failed to fetch data");
                 const data: Cell[] = await res.json();
 
-                // Encontrar a célula que corresponde ao Slug
                 const foundCell = data.find(c =>
                     createCellSlug(c.Brand, c.CellModelNo) === slug
                 );
 
                 if (foundCell) {
                     setCell(foundCell);
-                    document.title = `${foundCell.Brand} ${foundCell.CellModelNo} Specs | Watt Builder`;
+                    document.title = `${foundCell.Brand} ${foundCell.CellModelNo} ${t('cellDetails.specsTitle')}`;
                 } else {
-                    toast({ title: "Cell not found", variant: "destructive" });
+                    toast({ title: t('cellDetails.toasts.notFound'), variant: "destructive" });
                 }
             } catch (error) {
                 console.error(error);
-                toast({ title: "Error loading cell details", variant: "destructive" });
+                toast({ title: t('cellDetails.toasts.errorLoading'), variant: "destructive" });
             } finally {
                 setIsLoading(false);
             }
         };
 
         fetchCellData();
-    }, [slug, toast]);
+    }, [slug, toast, t]);
 
     if (isLoading) {
         return (
@@ -85,8 +84,8 @@ const CellDetails = () => {
             <div className="min-h-screen flex flex-col">
                 <Navigation />
                 <div className="flex-grow flex flex-col justify-center items-center gap-4">
-                    <h1 className="text-2xl font-bold">Cell Not Found</h1>
-                    <Link to="/cell-explorer"><Button>Back to Explorer</Button></Link>
+                    <h1 className="text-2xl font-bold">{t('cellDetails.notFound.title')}</h1>
+                    <Link to="/cell-explorer"><Button>{t('cellDetails.backToExplorer')}</Button></Link>
                 </div>
                 <Footer />
             </div>
@@ -105,7 +104,7 @@ const CellDetails = () => {
 
     const handleGetData = () => {
         const cellName = `${cell.Brand || "Unknown"} ${cell.CellModelNo}`;
-        const messageTemplate = `Hello,\nI would like to get the following data about the ${cellName} cell:\n\n\nBest regards,\n`;
+        const messageTemplate = t('cellDetails.contactTemplate', { cellName });
         const encodedMessage = encodeURIComponent(messageTemplate);
         navigate(`/contact?message=${encodedMessage}`);
     };
@@ -114,10 +113,17 @@ const CellDetails = () => {
         if (!link || link === "Solder" || link === "") return null;
         return (
             <a href={link} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline flex items-center gap-1 mt-2 font-medium">
-                Buy from Affiliate <ExternalLink className="inline w-4 h-4" />
+                {t('cellDetails.buyAffiliate')} <ExternalLink className="inline w-4 h-4" />
             </a>
         );
     };
+
+    // Formatar tipo de célula
+    let stackType = cell.Cell_Stack?.replace(/C\s*-\s*/, '') || '';
+    if (cell.Cell_Stack && /C\s*-\s*\d+/.test(cell.Cell_Stack)) {
+        stackType = `${t('cellDetails.cylindrical')} ${stackType}`;
+    }
+    const cellTypeStr = stackType ? `${stackType} ${t('cellDetails.cell')}` : t('cellDetails.cell');
 
     return (
         <div className="min-h-screen flex flex-col bg-background">
@@ -127,7 +133,7 @@ const CellDetails = () => {
                 <div className="container px-4 mx-auto max-w-5xl">
                     <Link to="/cell-explorer">
                         <Button variant="ghost" className="mb-6 hover:-translate-x-1 transition-transform">
-                            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Explorer
+                            <ArrowLeft className="mr-2 h-4 w-4" /> {t('cellDetails.backToExplorer')}
                         </Button>
                     </Link>
 
@@ -140,9 +146,7 @@ const CellDetails = () => {
                             {cell.Brand} <span className="text-accent">{cell.CellModelNo}</span>
                         </h1>
                         <p className="text-lg text-muted-foreground">
-                            High-performance {cell.Cell_Stack && /C\s*-\s*\d+/.test(cell.Cell_Stack) 
-                                ? cell.Cell_Stack.replace(/C\s*-\s*/, 'Cylindrical ') + ' Cell'
-                                : cell.Cell_Stack?.replace(/C\s*-\s*/, '') + ' Cell' || ''} for advanced applications.
+                            {t('cellDetails.subtitle', { type: cellTypeStr })}
                         </p>
                     </div>
 
@@ -153,23 +157,23 @@ const CellDetails = () => {
                         <div className="space-y-8">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="flex items-center gap-2"><Battery className="text-accent" /> Electrical Specifications</CardTitle>
+                                    <CardTitle className="flex items-center gap-2"><Battery className="text-accent" /> {t('cellDetails.electrical.title')}</CardTitle>
                                 </CardHeader>
                                 <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div className="space-y-1">
-                                        <p className="text-sm text-muted-foreground">Nominal Capacity</p>
+                                        <p className="text-sm text-muted-foreground">{t('cellDetails.electrical.capacity')}</p>
                                         <p className="text-2xl font-semibold">{(cell.Capacity / 1000).toFixed(2)} Ah</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-sm text-muted-foreground">Nominal Voltage</p>
+                                        <p className="text-sm text-muted-foreground">{t('cellDetails.electrical.voltage')}</p>
                                         <p className="text-2xl font-semibold">{cell.NominalVoltage.toFixed(2)} V</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-sm text-muted-foreground">Stored Energy</p>
+                                        <p className="text-sm text-muted-foreground">{t('cellDetails.electrical.energy')}</p>
                                         <p className="text-2xl font-semibold">{energyWh.toFixed(2)} Wh</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-sm text-muted-foreground">Internal Impedance</p>
+                                        <p className="text-sm text-muted-foreground">{t('cellDetails.electrical.impedance')}</p>
                                         <p className="text-2xl font-semibold">{cell.Impedance} mΩ</p>
                                     </div>
                                 </CardContent>
@@ -177,55 +181,55 @@ const CellDetails = () => {
 
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="flex items-center gap-2"><Zap className="text-accent" /> Power Performance</CardTitle>
+                                    <CardTitle className="flex items-center gap-2"><Zap className="text-accent" /> {t('cellDetails.power.title')}</CardTitle>
                                 </CardHeader>
                                 <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div className="space-y-1">
-                                        <p className="text-sm text-muted-foreground">Max Continuous Discharge</p>
+                                        <p className="text-sm text-muted-foreground">{t('cellDetails.power.maxDischarge')}</p>
                                         <p className="text-xl font-medium">{cell.MaxContinuousDischargeRate} C</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-sm text-muted-foreground">Max Continuous Charge</p>
+                                        <p className="text-sm text-muted-foreground">{t('cellDetails.power.maxCharge')}</p>
                                         <p className="text-xl font-medium">{cell.MaxContinuousChargeRate} C</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-sm text-muted-foreground">Continuous Power Output</p>
+                                        <p className="text-sm text-muted-foreground">{t('cellDetails.power.contOutput')}</p>
                                         <p className="text-xl font-medium">{powerW.toFixed(0)} W</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-sm text-muted-foreground">Cycle Life</p>
-                                        <p className="text-xl font-medium">{cell.Cycles} cycles</p>
+                                        <p className="text-sm text-muted-foreground">{t('cellDetails.power.cycleLife')}</p>
+                                        <p className="text-xl font-medium">{cell.Cycles} {t('cellDetails.power.cycles')}</p>
                                     </div>
                                 </CardContent>
                             </Card>
 
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="flex items-center gap-2"><Scale className="text-accent" /> Physical Specifications</CardTitle>
+                                    <CardTitle className="flex items-center gap-2"><Scale className="text-accent" /> {t('cellDetails.physical.title')}</CardTitle>
                                 </CardHeader>
                                 <CardContent className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1">
-                                        <p className="text-sm text-muted-foreground">Weight</p>
+                                        <p className="text-sm text-muted-foreground">{t('cellDetails.physical.weight')}</p>
                                         <p className="text-xl font-semibold">{cell.Weight} g</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-sm text-muted-foreground">Height</p>
+                                        <p className="text-sm text-muted-foreground">{t('cellDetails.physical.height')}</p>
                                         <p className="text-xl font-semibold">{cell.Cell_Height} mm</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-sm text-muted-foreground">Width</p>
+                                        <p className="text-sm text-muted-foreground">{t('cellDetails.physical.width')}</p>
                                         <p className="text-xl font-semibold">{cell.Cell_Width} mm</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-sm text-muted-foreground">Thickness</p>
+                                        <p className="text-sm text-muted-foreground">{t('cellDetails.physical.thickness')}</p>
                                         <p className="text-xl font-semibold">{cell.Cell_Thickness} mm</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-sm text-muted-foreground">Volumetric Energy Density</p>
+                                        <p className="text-sm text-muted-foreground">{t('cellDetails.physical.volumetric')}</p>
                                         <p className="text-xl font-semibold">{energyDensityWhL.toFixed(0)} Wh/L</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-sm text-muted-foreground">Gravimetric Energy Density</p>
+                                        <p className="text-sm text-muted-foreground">{t('cellDetails.physical.gravimetric')}</p>
                                         <p className="text-xl font-semibold">{energyDensityWhKg.toFixed(0)} Wh/kg</p>
                                     </div>
                                 </CardContent>
@@ -236,12 +240,12 @@ const CellDetails = () => {
                         <div className="space-y-8">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="flex items-center gap-2"><Box className="text-accent" /> 3D Model with Dimensions</CardTitle>
+                                    <CardTitle className="flex items-center gap-2"><Box className="text-accent" /> {t('cellDetails.3d.title')}</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <Cell3DViewer 
-                                        width={cell.Cell_Width} 
-                                        height={cell.Cell_Height} 
+                                    <Cell3DViewer
+                                        width={cell.Cell_Width}
+                                        height={cell.Cell_Height}
                                         thickness={cell.Cell_Thickness}
                                         arrowOffset={0.5}
                                     />
@@ -250,7 +254,7 @@ const CellDetails = () => {
 
                             <div className="space-y-4">
                                 <Button size="lg" className="w-full text-lg h-12" onClick={handleGetData}>
-                                    Request More Data
+                                    {t('cellDetails.actions.requestData')}
                                 </Button>
                                 <div className="text-center">
                                     <AffiliateLink link={cell.Connection} />
@@ -262,53 +266,51 @@ const CellDetails = () => {
             </main>
 
             {/* Nova Secção: Serviços de Teste de Células */}
-
             <section className="py-24 bg-muted/30 w-full">
                 <div className="container px-4 mx-auto max-w-5xl text-center">
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 rounded-full text-accent font-medium mb-6">
                         <Microscope size={18} />
-                        <span>Independent Validation</span>
+                        <span>{t('cellDetails.testing.badge')}</span>
                     </div>
                     <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
-                        Need to verify these specs?
+                        {t('cellDetails.testing.title')}
                     </h2>
                     <p className="text-xl text-muted-foreground mb-12 max-w-3xl mx-auto">
-                        We offer professional validation services for the <strong>{cell.Brand} {cell.CellModelNo}</strong> and other cells.
-                        Our state-of-the-art lab ensures you get accurate, unbiased data.
+                        {t('cellDetails.testing.desc1')} <strong>{cell.Brand} {cell.CellModelNo}</strong> {t('cellDetails.testing.desc2')}
                     </p>
 
                     <div className="grid md:grid-cols-3 gap-8 mb-12 text-left">
                         <Card className="bg-background border-border shadow-sm">
                             <CardHeader>
                                 <FlaskConical className="w-10 h-10 text-accent mb-4" />
-                                <CardTitle>Performance Verification</CardTitle>
+                                <CardTitle>{t('cellDetails.testing.perfTitle')}</CardTitle>
                                 <CardDescription>
-                                    Confirm the manufacturer's capacity, voltage curves, and internal resistance claims.
+                                    {t('cellDetails.testing.perfDesc')}
                                 </CardDescription>
                             </CardHeader>
                         </Card>
                         <Card className="bg-background border-border shadow-sm">
                             <CardHeader>
                                 <ClipboardCheck className="w-10 h-10 text-accent mb-4" />
-                                <CardTitle>Cycle Life Testing</CardTitle>
+                                <CardTitle>{t('cellDetails.testing.cycleTitle')}</CardTitle>
                                 <CardDescription>
-                                    Long-term cycling tests to determine real-world lifespan and degradation patterns.
+                                    {t('cellDetails.testing.cycleDesc')}
                                 </CardDescription>
                             </CardHeader>
                         </Card>
                         <Card className="bg-background border-border shadow-sm">
                             <CardHeader>
                                 <BarChart3 className="w-10 h-10 text-accent mb-4" />
-                                <CardTitle>Thermal Analysis</CardTitle>
+                                <CardTitle>{t('cellDetails.testing.thermalTitle')}</CardTitle>
                                 <CardDescription>
-                                    Monitor temperature profiles under heavy load to ensure safety and thermal stability.
+                                    {t('cellDetails.testing.thermalDesc')}
                                 </CardDescription>
                             </CardHeader>
                         </Card>
                     </div>
 
                     <Button size="lg" className="text-lg px-8 py-6 h-auto" onClick={() => navigate("/contact")}>
-                        Contact Us for Custom Testing
+                        {t('cellDetails.testing.contactBtn')}
                     </Button>
                 </div>
             </section>

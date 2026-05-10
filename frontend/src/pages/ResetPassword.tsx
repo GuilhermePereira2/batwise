@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/config";
 
 const ResetPassword = () => {
+    const { t } = useTranslation();
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const { toast } = useToast();
@@ -27,19 +29,23 @@ const ResetPassword = () => {
     useEffect(() => {
         if (!token || !email) {
             toast({
-                title: "Invalid Link",
-                description: "Missing reset token or email.",
+                title: t('resetPassword.toasts.invalidLinkTitle'),
+                description: t('resetPassword.toasts.invalidLinkDesc'),
                 variant: "destructive"
             });
             navigate("/login");
         }
-    }, [token, email, navigate, toast]);
+    }, [token, email, navigate, toast, t]);
 
     const handleReset = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (password !== confirmPassword) {
-            toast({ title: "Error", description: "Passwords do not match", variant: "destructive" });
+            toast({
+                title: t('resetPassword.toasts.errorTitle'),
+                description: t('resetPassword.toasts.passwordsMismatch'),
+                variant: "destructive"
+            });
             return;
         }
 
@@ -55,11 +61,11 @@ const ResetPassword = () => {
 
             const data = await response.json();
 
-            if (!response.ok) throw new Error(data.detail || "Failed to reset password");
+            if (!response.ok) throw new Error(data.detail || t('resetPassword.toasts.resetFailed'));
 
             toast({
-                title: "Success",
-                description: "Password reset successfully! Please login.",
+                title: t('resetPassword.toasts.successTitle'),
+                description: t('resetPassword.toasts.successDesc'),
                 className: "bg-green-600 text-white border-none"
             });
 
@@ -67,7 +73,7 @@ const ResetPassword = () => {
 
         } catch (error: any) {
             toast({
-                title: "Error",
+                title: t('resetPassword.toasts.errorTitle'),
                 description: error.message,
                 variant: "destructive"
             });
@@ -83,14 +89,14 @@ const ResetPassword = () => {
                 <Card className="w-full max-w-md shadow-lg">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <KeyRound className="w-6 h-6 text-accent" /> Set New Password
+                            <KeyRound className="w-6 h-6 text-accent" /> {t('resetPassword.title')}
                         </CardTitle>
-                        <CardDescription>Enter your new password below.</CardDescription>
+                        <CardDescription>{t('resetPassword.description')}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleReset} className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="pass">New Password</Label>
+                                <Label htmlFor="pass">{t('resetPassword.newPasswordLabel')}</Label>
                                 <div className="relative">
                                     <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                     <Input
@@ -107,7 +113,7 @@ const ResetPassword = () => {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="conf">Confirm Password</Label>
+                                <Label htmlFor="conf">{t('resetPassword.confirmPasswordLabel')}</Label>
                                 <div className="relative">
                                     <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                     <Input
@@ -121,7 +127,7 @@ const ResetPassword = () => {
                                 </div>
                             </div>
                             <Button type="submit" className="w-full" disabled={isLoading}>
-                                {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Updating...</> : "Reset Password"}
+                                {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('resetPassword.updating')}</> : t('resetPassword.submitButton')}
                             </Button>
                         </form>
                     </CardContent>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/config";
 
 const ForgotPassword = () => {
+    const { t } = useTranslation();
     const [email, setEmail] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
@@ -31,17 +33,16 @@ const ForgotPassword = () => {
 
             if (!response.ok) throw new Error("Request failed");
 
-            // Independentemente do resultado (segurança), mostramos sucesso
             setIsSubmitted(true);
             toast({
-                title: "Email sent",
-                description: "Check your inbox for password reset instructions.",
+                title: t('forgot.toasts.successTitle'),
+                description: t('forgot.toasts.successDesc'),
             });
 
         } catch (error) {
             toast({
-                title: "Error",
-                description: "Could not send reset email. Please try again.",
+                title: t('forgot.toasts.errorTitle'),
+                description: t('forgot.toasts.errorDesc'),
                 variant: "destructive"
             });
         } finally {
@@ -58,19 +59,19 @@ const ForgotPassword = () => {
 
                     <Button variant="ghost" asChild className="mb-4 pl-0 hover:bg-transparent text-muted-foreground hover:text-foreground">
                         <Link to="/login" className="flex items-center gap-2">
-                            <ArrowLeft className="w-4 h-4" /> Back to Login
+                            <ArrowLeft className="w-4 h-4" /> {t('forgot.backToLogin')}
                         </Link>
                     </Button>
 
                     <Card className="border-border shadow-lg">
                         <CardHeader className="space-y-1">
                             <CardTitle className="text-2xl font-bold flex items-center gap-2">
-                                <KeyRound className="w-6 h-6 text-accent" /> Reset Password
+                                <KeyRound className="w-6 h-6 text-accent" /> {t('forgot.title')}
                             </CardTitle>
                             <CardDescription>
                                 {isSubmitted
-                                    ? "Check your email for the reset link."
-                                    : "Enter your email address and we'll send you a link to reset your password."}
+                                    ? t('forgot.descSubmitted')
+                                    : t('forgot.descDefault')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -81,23 +82,23 @@ const ForgotPassword = () => {
                                     </div>
                                     <div className="space-y-2">
                                         <p className="text-sm text-muted-foreground">
-                                            We have sent a password reset link to <strong>{email}</strong>.
+                                            {t('forgot.sentLinkTo')} <strong>{email}</strong>.
                                         </p>
                                         <Button variant="outline" onClick={() => setIsSubmitted(false)} className="mt-4">
-                                            Try another email
+                                            {t('forgot.tryAnotherEmail')}
                                         </Button>
                                     </div>
                                 </div>
                             ) : (
                                 <form onSubmit={handleReset} className="space-y-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="email">Email</Label>
+                                        <Label htmlFor="email">{t('forgot.emailLabel')}</Label>
                                         <div className="relative">
                                             <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                             <Input
                                                 id="email"
                                                 type="email"
-                                                placeholder="name@example.com"
+                                                placeholder={t('forgot.emailPlaceholder')}
                                                 className="pl-9"
                                                 value={email}
                                                 onChange={(e) => setEmail(e.target.value)}
@@ -108,10 +109,10 @@ const ForgotPassword = () => {
                                     <Button type="submit" className="w-full" disabled={isLoading}>
                                         {isLoading ? (
                                             <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending link...
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('forgot.sending')}
                                             </>
                                         ) : (
-                                            "Send Reset Link"
+                                            t('forgot.sendButton')
                                         )}
                                     </Button>
                                 </form>
@@ -120,9 +121,9 @@ const ForgotPassword = () => {
                         {!isSubmitted && (
                             <CardFooter className="flex justify-center border-t bg-muted/20 p-6">
                                 <div className="text-sm text-muted-foreground">
-                                    Remember your password?{" "}
+                                    {t('forgot.rememberPassword')}{" "}
                                     <Link to="/login" className="text-accent hover:underline font-medium">
-                                        Sign in
+                                        {t('forgot.signIn')}
                                     </Link>
                                 </div>
                             </CardFooter>

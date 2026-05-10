@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/context/AuthContext";
@@ -10,11 +11,12 @@ import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/config";
 
 const Profile = () => {
+    const { t, i18n } = useTranslation();
     const { user, token, updateUser } = useAuth();
     const { toast } = useToast();
     const [isLoadingTrial, setIsLoadingTrial] = useState(false);
 
-    if (!user) return <div>Loading...</div>;
+    if (!user) return <div>{t('profile.loading')}</div>;
 
     const getInitials = (name: string) => {
         if (!name) return "U";
@@ -24,26 +26,17 @@ const Profile = () => {
     };
 
     const isTrialActive = (() => {
-        // 1. Verificar se a data existe
         if (!user?.trial_started_at) return false;
-
         const startDate = Date.parse(user.trial_started_at);
-
-        // 2. Verificar se a data é válida
         if (isNaN(startDate)) return false;
 
-        // 3. Calcular a diferença de tempo
         const now = new Date().getTime();
-        const fifteenDaysInMs = 15 * 24 * 60 * 60 * 1000; // 15 dias em milissegundos
-
-        // O trial está ativo apenas se (Data Atual - Data Início) for menor que 15 dias
+        const fifteenDaysInMs = 15 * 24 * 60 * 60 * 1000;
         return (now - startDate) < fifteenDaysInMs;
     })();
 
     const hasActivatedTrial = Boolean(user?.trial_started_at);
 
-
-    // --- FUNÇÃO PARA ATIVAR O TRIAL ---
     const handleActivateTrial = async () => {
         setIsLoadingTrial(true);
         try {
@@ -60,7 +53,7 @@ const Profile = () => {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.detail || "Failed to activate trial");
+                throw new Error(data.detail || t('profile.toasts.activationFailed'));
             }
 
             if (updateUser) {
@@ -75,17 +68,16 @@ const Profile = () => {
                 .then(res => res.json())
                 .then(freshUser => updateUser(freshUser));
 
-
             toast({
-                title: "Trial Activated Successfully!",
-                description: "You have received 1000 credits valid for 15 days.",
+                title: t('profile.toasts.trialSuccessTitle'),
+                description: t('profile.toasts.trialSuccessDesc'),
                 className: "bg-green-600 text-white border-none"
             });
 
         } catch (error: any) {
             console.error(error);
             toast({
-                title: "Activation Failed",
+                title: t('profile.toasts.activationFailed'),
                 description: error.message,
                 variant: "destructive"
             });
@@ -94,27 +86,23 @@ const Profile = () => {
         }
     };
 
-    console.log("DADOS DO USER:", user);
-    console.log("DATA TRIAL:", (user as any).trial_started_at);
     return (
         <div className="min-h-screen flex flex-col font-sans bg-muted/10">
             <Navigation />
 
             <main className="flex-1 container max-w-5xl mx-auto p-6 mt-20 animate-fade-in">
                 <div className="flex justify-between items-center mb-8">
-                    <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('profile.title')}</h1>
 
-                    {/* Badge de estado da conta */}
                     <div className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide border ${isTrialActive
                         ? "bg-orange-100 text-orange-700 border-orange-200"
                         : "bg-gray-100 text-gray-600 border-gray-200"
                         }`}>
-                        {isTrialActive ? "Premium" : "Free Plan"}
+                        {isTrialActive ? t('profile.premium') : t('profile.freePlan')}
                     </div>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-3">
-
                     {/* --- COLUNA ESQUERDA: RESUMO --- */}
                     <Card className="md:col-span-1 shadow-sm h-fit">
                         <CardHeader className="text-center pb-2">
@@ -130,7 +118,9 @@ const Profile = () => {
                         </CardHeader>
                         <CardContent className="text-center space-y-4 pt-4 border-t mt-4">
                             <div className="flex flex-col items-center justify-center p-4 bg-muted/30 rounded-xl">
-                                <span className="text-sm text-muted-foreground uppercase font-semibold tracking-wider mb-1">Available Credits</span>
+                                <span className="text-sm text-muted-foreground uppercase font-semibold tracking-wider mb-1">
+                                    {t('profile.availableCredits')}
+                                </span>
                                 <div className="flex items-center gap-2 text-3xl font-bold text-foreground">
                                     <Coins className="w-6 h-6 text-yellow-500 fill-yellow-500" />
                                     {user.credits}
@@ -141,37 +131,32 @@ const Profile = () => {
 
                     {/* --- COLUNA DIREITA: AÇÕES E DETALHES --- */}
                     <div className="md:col-span-2 space-y-6">
-
-                        {/* CARTÃO DE FREE TRIAL 
-                            Só aparece se !isTrialActive (se user.trial_started_at for nulo/vazio)
-                        */}
                         {!hasActivatedTrial && (
                             <Card className="bg-gradient-to-br from-orange-500 to-amber-600 text-white border-none shadow-md overflow-hidden relative">
-                                {/* Efeito de fundo subtil */}
                                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full blur-3xl pointer-events-none"></div>
 
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2 text-xl text-white">
                                         <Zap className="w-6 h-6 fill-white text-white" />
-                                        Unlock 15-Day Free Trial
+                                        {t('profile.trial.title')}
                                     </CardTitle>
                                     <CardDescription className="text-orange-100 text-base">
-                                        Accelerate your battery design process with our premium features.
+                                        {t('profile.trial.description')}
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="grid sm:grid-cols-2 gap-4 mb-2">
                                         <div className="flex items-center gap-2 text-orange-50 text-sm">
-                                            <CheckCircle2 className="w-4 h-4 text-white" /> 1000 Computation Credits
+                                            <CheckCircle2 className="w-4 h-4 text-white" /> {t('profile.trial.feature1')}
                                         </div>
                                         <div className="flex items-center gap-2 text-orange-50 text-sm">
-                                            <CheckCircle2 className="w-4 h-4 text-white" /> Advanced Cell Database
+                                            <CheckCircle2 className="w-4 h-4 text-white" /> {t('profile.trial.feature2')}
                                         </div>
                                         <div className="flex items-center gap-2 text-orange-50 text-sm">
-                                            <CheckCircle2 className="w-4 h-4 text-white" /> No Credit Card Required
+                                            <CheckCircle2 className="w-4 h-4 text-white" /> {t('profile.trial.feature3')}
                                         </div>
                                         <div className="flex items-center gap-2 text-orange-50 text-sm">
-                                            <CheckCircle2 className="w-4 h-4 text-white" /> Instant Activation
+                                            <CheckCircle2 className="w-4 h-4 text-white" /> {t('profile.trial.feature4')}
                                         </div>
                                     </div>
                                 </CardContent>
@@ -182,26 +167,25 @@ const Profile = () => {
                                         className="bg-white text-orange-600 hover:bg-orange-50 hover:text-orange-700 font-bold border-none w-full sm:w-auto shadow-sm"
                                     >
                                         {isLoadingTrial ? (
-                                            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Activating...</>
+                                            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('profile.trial.btnActivating')}</>
                                         ) : (
-                                            "Start Free Trial Now"
+                                            t('profile.trial.btnStart')
                                         )}
                                     </Button>
                                 </CardFooter>
                             </Card>
                         )}
 
-                        {/* --- DETALHES DA CONTA --- */}
                         <Card className="shadow-sm">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg">
                                     <User className="w-5 h-5 text-muted-foreground" />
-                                    Account Details
+                                    {t('profile.details.title')}
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-5">
                                 <div className="grid gap-1.5">
-                                    <label className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">Full Name</label>
+                                    <label className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">{t('profile.details.fullName')}</label>
                                     <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg border border-border">
                                         <User className="w-4 h-4 text-muted-foreground" />
                                         <span className="font-medium text-foreground">{user.name}</span>
@@ -209,7 +193,7 @@ const Profile = () => {
                                 </div>
 
                                 <div className="grid gap-1.5">
-                                    <label className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">Email Address</label>
+                                    <label className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">{t('profile.details.email')}</label>
                                     <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg border border-border">
                                         <Mail className="w-4 h-4 text-muted-foreground" />
                                         <span className="font-medium text-foreground">{user.email}</span>
@@ -217,22 +201,22 @@ const Profile = () => {
                                 </div>
 
                                 <div className="grid gap-1.5">
-                                    <label className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">Company</label>
+                                    <label className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">{t('profile.details.company')}</label>
                                     <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg border border-border">
                                         <Building className="w-4 h-4 text-muted-foreground" />
                                         <span className="font-medium text-foreground">
-                                            {(user as any).company || "Not provided"}
+                                            {(user as any).company || t('profile.details.notProvided')}
                                         </span>
                                     </div>
                                 </div>
 
                                 {(user as any).created_at && (
                                     <div className="grid gap-1.5">
-                                        <label className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">Member Since</label>
+                                        <label className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">{t('profile.details.memberSince')}</label>
                                         <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg border border-border">
                                             <Calendar className="w-4 h-4 text-muted-foreground" />
                                             <span className="font-medium text-foreground">
-                                                {new Date((user as any).created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                                                {new Date((user as any).created_at).toLocaleDateString(i18n.language || 'en', { year: 'numeric', month: 'long', day: 'numeric' })}
                                             </span>
                                         </div>
                                     </div>

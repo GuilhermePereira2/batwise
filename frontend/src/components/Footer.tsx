@@ -1,8 +1,11 @@
 import { Mail } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import wattBuilderLogo from "../assets/wattbuilder-only-logo-white.svg";
 
 const Footer = () => {
+  const { t } = useTranslation();
+
   return (
     <footer className="bg-primary text-primary-foreground py-12">
       <div className="container px-4 mx-auto max-w-7xl">
@@ -11,39 +14,38 @@ const Footer = () => {
 
           {/* ESQUERDA: Marca e Copyright */}
           <div className="text-center md:text-left shrink-0">
-            <img src={wattBuilderLogo} alt="Watt Builder" className="h-10 mb-2" />
+            <img src={wattBuilderLogo} alt="Watt Builder" className="h-10 mb-2 mx-auto md:mx-0" />
             <p className="text-primary-foreground/80 text-sm">
-              © 2026 Watt Builder.<br />All rights reserved.
+              © 2026 Watt Builder.<br />{t('footer.rights')}
             </p>
           </div>
 
           {/* MEIO/DIREITA: Links de Navegação */}
-          {/* Alterações aqui: md:ml-auto empurra para a direita, removido flex-grow */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-sm md:ml-auto justify-items-center md:justify-items-start">
 
             {/* Coluna 1: Ferramentas */}
             <div className="flex flex-col gap-2 text-center md:text-left">
-              <h4 className="font-bold mb-1 text-white">Features</h4>
-              <Link to="/simulator" className="text-primary-foreground/70 hover:text-white transition-colors">Smart Home Sizer</Link>
-              <Link to="/cell-explorer" className="text-primary-foreground/70 hover:text-white transition-colors">Cell Explorer</Link>
-              <Link to="/diy" className="text-primary-foreground/70 hover:text-white transition-colors">Battery Builder</Link>
-              <Link to="/business" className="text-primary-foreground/70 hover:text-white transition-colors">Services</Link>
+              <h4 className="font-bold mb-1 text-white">{t('footer.features.title')}</h4>
+              <Link to="/simulator" className="text-primary-foreground/70 hover:text-white transition-colors">{t('footer.features.smartHomeSizer')}</Link>
+              <Link to="/cell-explorer" className="text-primary-foreground/70 hover:text-white transition-colors">{t('footer.features.cellExplorer')}</Link>
+              <Link to="/diy" className="text-primary-foreground/70 hover:text-white transition-colors">{t('footer.features.batteryBuilder')}</Link>
+              <Link to="/business" className="text-primary-foreground/70 hover:text-white transition-colors">{t('footer.features.services')}</Link>
             </div>
 
             {/* Coluna 2: Empresa */}
             <div className="flex flex-col gap-2 text-center md:text-left">
-              <h4 className="font-bold mb-1 text-white">Company</h4>
-              <Link to="/" className="text-primary-foreground/70 hover:text-white transition-colors">Home</Link>
-              <Link to="/contact" className="text-primary-foreground/70 hover:text-white transition-colors">Contact</Link>
+              <h4 className="font-bold mb-1 text-white">{t('footer.company.title')}</h4>
+              <Link to="/" className="text-primary-foreground/70 hover:text-white transition-colors">{t('footer.company.home')}</Link>
+              <Link to="/contact" className="text-primary-foreground/70 hover:text-white transition-colors">{t('footer.company.contact')}</Link>
             </div>
 
             {/* Coluna 3: Conta & Legal */}
-            <div className="flex flex-col gap-2 text-center md:text-left">
-              <h4 className="font-bold mb-1 text-white">Account</h4>
-              <Link to="/login" className="text-primary-foreground/70 hover:text-white transition-colors">Login</Link>
-              <Link to="/signup" className="text-primary-foreground/70 hover:text-white transition-colors">Sign Up</Link>
-              <Link to="/terms" className="text-primary-foreground/70 hover:text-white transition-colors">Terms and Conditions</Link>
-              <Link to="/privacy" className="text-primary-foreground/70 hover:text-white transition-colors">Privacy Policy</Link>
+            <div className="flex flex-col gap-2 text-center md:text-left col-span-2 md:col-span-1">
+              <h4 className="font-bold mb-1 text-white">{t('footer.account.title')}</h4>
+              <Link to="/login" className="text-primary-foreground/70 hover:text-white transition-colors">{t('footer.account.login')}</Link>
+              <Link to="/signup" className="text-primary-foreground/70 hover:text-white transition-colors">{t('footer.account.signUp')}</Link>
+              <Link to="/terms" className="text-primary-foreground/70 hover:text-white transition-colors">{t('footer.account.terms')}</Link>
+              <Link to="/privacy" className="text-primary-foreground/70 hover:text-white transition-colors">{t('footer.account.privacy')}</Link>
             </div>
           </div>
 
