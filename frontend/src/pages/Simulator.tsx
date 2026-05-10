@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { getApiUrl } from '@/lib/config';
 import { useAuth } from '@/context/AuthContext';
+import RecommendationModal from '@/components/RecommendationModal';
 import {
     Battery, Home, FileText, Zap, Sun, Car,
     ChevronRight, ChevronLeft, Loader2,
@@ -1449,173 +1450,17 @@ export default function Simulator() {
                                 ))}
                             </div>
 
+                            {/* Modal de Detalhes Refatorado */}
                             {selectedRecommendation && (
-                                <div
-                                    className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-start justify-center p-6 overflow-y-auto"
-                                    onClick={() => setSelectedRecommendation(null)}
-                                >
-                                    <div className="relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                                        <div className="flex items-start justify-between gap-4 p-6 border-b border-gray-200">
-                                            <div>
-                                                <p className="text-sm text-gray-500">Detalhes da recomendação</p>
-                                                <h2 className="text-2xl font-bold">{getSystemName(selectedRecommendation)}</h2>
-                                                <p className="text-sm text-gray-500 mt-1">Capacidade simulada: {selectedRecommendation.simulated_capacity_kwh} kWh úteis</p>
-                                            </div>
-                                            <Button variant="ghost" onClick={() => setSelectedRecommendation(null)} className="text-gray-500 hover:text-black">
-                                                <ChevronLeft className="w-6 h-6" />
-                                            </Button>
-                                        </div>
-
-                                        <div className="p-6 space-y-6">
-                                            <div className="grid gap-6 lg:grid-cols-3">
-                                                <div className="rounded-3xl border border-gray-200 p-5 bg-gray-50">
-                                                    <p className="text-xs uppercase text-gray-400 font-semibold mb-2">Investimento estimado</p>
-                                                    <p className="text-3xl font-bold">{selectedRecommendation.capex_total_eur.toLocaleString()}€</p>
-                                                    <p className="text-sm text-gray-500 mt-1">inclui hardware e instalação</p>
-                                                </div>
-                                                <div className="rounded-3xl border border-gray-200 p-5 bg-gray-50">
-                                                    <p className="text-xs uppercase text-gray-400 font-semibold mb-2">Fatura anual</p>
-                                                    <p className="text-3xl font-bold">{formatPrice(selectedRecommendation.annual_bill_after_eur)}</p>
-                                                    <p className="text-sm text-gray-500 mt-1">antes: {formatPrice(selectedRecommendation.annual_bill_before_eur)}/ano</p>
-                                                </div>
-                                                <div className="rounded-3xl border border-gray-200 p-5 bg-gray-50">
-                                                    <p className="text-xs uppercase text-gray-400 font-semibold mb-2">Payback</p>
-                                                    <p className="text-3xl font-bold">{selectedRecommendation.payback_years ? `${selectedRecommendation.payback_years} anos` : 'não aplicável'}</p>
-                                                    <p className="text-sm text-gray-500 mt-1">poupança: {formatPrice(selectedRecommendation.savings_annual_eur)}/ano</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="grid gap-6 lg:grid-cols-2">
-                                                <div className="rounded-3xl border border-gray-200 p-6">
-                                                    <h3 className="text-lg font-bold mb-4">Bateria</h3>
-                                                    <p className="text-sm text-gray-500 mb-2">{selectedRecommendation.battery.brand} {selectedRecommendation.battery.model}</p>
-                                                    <div className="space-y-2 text-sm">
-                                                        <p><span className="font-semibold">Capacidade nova:</span> {selectedRecommendation.new_battery_capacity_kwh || selectedRecommendation.simulated_capacity_kwh} kWh</p>
-                                                        {selectedRecommendation.existing_battery?.has_battery && (
-                                                            <>
-                                                                <p><span className="font-semibold">Bateria existente:</span> {getExistingBatteryDescription(selectedRecommendation.existing_battery)}</p>
-                                                                <p><span className="font-semibold">Capacidade total simulada:</span> {selectedRecommendation.simulated_capacity_kwh} kWh</p>
-                                                            </>
-                                                        )}
-                                                        <p><span className="font-semibold">Tensão:</span> {selectedRecommendation.battery.specs?.voltage || 'N/A'}</p>
-                                                        <p><span className="font-semibold">Ciclos estimados:</span> {selectedRecommendation.battery.specs?.cycles || 'N/A'}</p>
-                                                    </div>
-                                                </div>
-
-                                                {selectedRecommendation.inverter && (
-                                                    <div className="rounded-3xl border border-gray-200 p-6">
-                                                        <h3 className="text-lg font-bold mb-4">Inversor</h3>
-                                                        <p className="text-sm text-gray-500 mb-2">{selectedRecommendation.inverter.brand} {selectedRecommendation.inverter.model}</p>
-                                                        <div className="space-y-2 text-sm">
-                                                            <p><span className="font-semibold">Potência:</span> {selectedRecommendation.inverter.specs?.power_kw || 'N/A'} kW</p>
-                                                            <p><span className="font-semibold">Eficiência:</span> {selectedRecommendation.inverter.specs?.efficiency || 'N/A'}</p>
-                                                            <p><span className="font-semibold">Tipo:</span> {selectedRecommendation.inverter.specs?.type || 'N/A'}</p>
-                                                        </div>
-                                                        {selectedRecommendation.existing_inverter_action === 'replace' && selectedRecommendation.replacement_notes?.length > 0 && (
-                                                            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-800">
-                                                                {selectedRecommendation.replacement_notes.map((note: string) => (
-                                                                    <p key={note}>{note}</p>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {selectedRecommendation.solar_panels && (
-                                                <div className="rounded-3xl border border-gray-200 p-6">
-                                                    <h3 className="text-lg font-bold mb-4">Painéis solares</h3>
-                                                    <p className="text-sm text-gray-500 mb-2">
-                                                        {selectedRecommendation.solar_panels.expanded
-                                                            ? `Painéis existentes + ${selectedRecommendation.solar_panels.quantity} x ${selectedRecommendation.solar_panels.panel.brand} ${selectedRecommendation.solar_panels.panel.model}`
-                                                            : selectedRecommendation.solar_panels.existing
-                                                                ? 'Painéis solares existentes'
-                                                                : `${selectedRecommendation.solar_panels.quantity} x ${selectedRecommendation.solar_panels.panel.brand} ${selectedRecommendation.solar_panels.panel.model}`}
-                                                    </p>
-                                                    <div className="space-y-2 text-sm">
-                                                        <p><span className="font-semibold">Potência total:</span> {selectedRecommendation.solar_panels.array_power_kwp} kWp</p>
-                                                        {selectedRecommendation.solar_panels.expanded && (
-                                                            <>
-                                                                <p><span className="font-semibold">Potência existente:</span> {selectedRecommendation.solar_panels.existing_power_kwp} kWp</p>
-                                                                <p><span className="font-semibold">Potência nova:</span> {selectedRecommendation.solar_panels.added_power_kwp} kWp</p>
-                                                            </>
-                                                        )}
-                                                        {selectedRecommendation.solar_panels.roof_area_m2 && (
-                                                            <>
-                                                                <p><span className="font-semibold">Área estimada do telhado:</span> {selectedRecommendation.solar_panels.roof_area_m2} m²</p>
-                                                                <p><span className="font-semibold">Área ocupada por painéis:</span> {selectedRecommendation.solar_panels.total_panel_area_m2} m²</p>
-                                                                <p><span className="font-semibold">Ocupação do telhado:</span> {selectedRecommendation.solar_panels.roof_coverage_pct}%</p>
-                                                            </>
-                                                        )}
-                                                        {(!selectedRecommendation.solar_panels.existing || selectedRecommendation.solar_panels.expanded) && (
-                                                            <>
-                                                                <p><span className="font-semibold">Potência por painel novo:</span> {selectedRecommendation.solar_panels.panel.specs?.power_w || 'N/A'} W</p>
-                                                                <p><span className="font-semibold">Área dos painéis novos:</span> {selectedRecommendation.solar_panels.additional_panel_set?.total_panel_area_m2 || selectedRecommendation.solar_panels.total_panel_area_m2} m²</p>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {selectedPrices && (
-                                                <div className="rounded-3xl border border-gray-200 p-6 bg-gray-50">
-                                                    <h3 className="text-lg font-bold mb-4">Resumo do investimento</h3>
-                                                    <div className="space-y-3 text-sm text-gray-700">
-                                                        <div className="flex justify-between gap-4">
-                                                            <span>Total hardware</span>
-                                                            <span className="font-semibold text-black">{formatPrice(selectedPrices.hardwareTotal)}</span>
-                                                        </div>
-                                                        <div className="flex justify-between gap-4">
-                                                            <span>Instalação</span>
-                                                            <span className="font-semibold text-black">{formatPrice(selectedPrices.installation)}</span>
-                                                        </div>
-                                                        <div className="border-t border-gray-300 pt-3 flex justify-between gap-4 text-base">
-                                                            <span className="font-bold text-black">Total estimado</span>
-                                                            <span className="font-extrabold text-black">{formatPrice(selectedRecommendation.capex_total_eur)}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            <div className="flex flex-col gap-3 sm:flex-row">
-                                                <Button className="flex-1 bg-white border-2 border-black text-black hover:bg-gray-50" onClick={() => setSelectedRecommendation(null)}>
-                                                    Fechar Detalhes
-                                                </Button>
-                                                <Button className="flex-1 bg-black text-white hover:bg-gray-800" onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    const products = [];
-                                                    if (selectedRecommendation.battery) {
-                                                        products.push(`Bateria: ${selectedRecommendation.battery.quantity} x ${selectedRecommendation.battery.model}`);
-                                                    }
-                                                    if (selectedRecommendation.existing_battery?.has_battery) {
-                                                        products.push(`Bateria existente considerada: ${getExistingBatteryDescription(selectedRecommendation.existing_battery)}`);
-                                                    }
-                                                    if (selectedRecommendation.inverter) {
-                                                        products.push(`Inversor: ${selectedRecommendation.inverter.brand} ${selectedRecommendation.inverter.model}`);
-                                                    }
-                                                    if (selectedRecommendation.solar_panels) {
-                                                        if (selectedRecommendation.solar_panels.expanded) {
-                                                            products.push(`Painéis solares existentes: ${selectedRecommendation.solar_panels.existing_power_kwp} kWp`);
-                                                            products.push(`Reforço solar: ${selectedRecommendation.solar_panels.quantity} x ${selectedRecommendation.solar_panels.panel.brand} ${selectedRecommendation.solar_panels.panel.model} (${selectedRecommendation.solar_panels.added_power_kwp} kWp adicionais)`);
-                                                        } else if (selectedRecommendation.solar_panels.existing) {
-                                                            products.push(`Painéis solares existentes: ${selectedRecommendation.solar_panels.array_power_kwp} kWp`);
-                                                        } else {
-                                                            products.push(`Painéis solares: ${selectedRecommendation.solar_panels.quantity} x ${selectedRecommendation.solar_panels.panel.brand} ${selectedRecommendation.solar_panels.panel.model}`);
-                                                        }
-                                                    }
-                                                    if (selectedRecommendation.replacement_notes?.length) {
-                                                        products.push(...selectedRecommendation.replacement_notes.map((note: string) => `Nota: ${note}`));
-                                                    }
-                                                    const body = `Olá, gostaria de solicitar um orçamento para a instalação dos seguintes produtos sugeridos pela simulação:\n\n${products.join('\n')}\n\nLocal da casa: ${formData.solar.city}, ${formData.house.area_m2} m²\n\nObrigado.`;
-                                                    localStorage.setItem('Message', body);
-                                                    window.location.href = '/contact';
-                                                }}>
-                                                    Solicitar Orçamento
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <RecommendationModal
+                                    recommendation={selectedRecommendation}
+                                    onClose={() => setSelectedRecommendation(null)}
+                                    onRequestQuote={handleRequestQuote}
+                                    formatPrice={formatPrice}
+                                    getSystemName={getSystemName}
+                                    getExistingBatteryDescription={getExistingBatteryDescription}
+                                    getPriceBreakdown={getPriceBreakdown}
+                                />
                             )}
 
                             <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 text-sm text-gray-500">
