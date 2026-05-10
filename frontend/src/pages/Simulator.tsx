@@ -527,14 +527,14 @@ export default function Simulator() {
             doc.setPage(i); // Vai para a página 'i'
 
             doc.saveGraphicsState();
-            doc.setGState(new (doc as any).GState({ opacity: 0.12 })); // Transparência (12%)
+            doc.setGState(new (doc as any).GState({ opacity: 0.22 })); // Transparência (22%)
             doc.setFont("helvetica", "bold");
             doc.setFontSize(70); // Tamanho da letra
             doc.setTextColor(150, 150, 150); // Cor acinzentada
 
             // Calcular o centro exato da página
-            const centerX = pageWidth / 2;
-            const centerY = pageHeight / 2;
+            const centerX = pageWidth / 3;
+            const centerY = pageHeight / 3;
 
             // Desenhar o texto rodado a 45 graus no centro
             doc.text("Watt Builder", centerX, centerY, { align: "center", angle: 45 });
