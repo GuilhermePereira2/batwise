@@ -529,7 +529,7 @@ export default function Simulator() {
             doc.saveGraphicsState();
             doc.setGState(new (doc as any).GState({ opacity: 0.22 })); // Transparência (22%)
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(70); // Tamanho da letra
+            doc.setFontSize(90); // Tamanho da letra
             doc.setTextColor(150, 150, 150); // Cor acinzentada
 
             // Calcular o centro exato da página
