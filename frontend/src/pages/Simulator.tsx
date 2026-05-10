@@ -1218,7 +1218,7 @@ export default function Simulator() {
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <div className="mb-10 text-center">
                                     <h2 className="text-xl md:text-2xl font-semibold text-gray-800">
-                                        {t("Parâmetros ideais para a sua casa")}
+                                        {("Parâmetros ideais para a sua casa")}
                                     </h2>
                                     <div className="mt-2 w-20 h-1 bg-black mx-auto rounded-full" />
                                 </div>
