@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogIn, User, LogOut, Coins, UserCircle, ChevronDown } from "lucide-react";
+import { Menu, X, LogIn, LogOut, Coins, UserCircle, ChevronDown } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import logo from "@/assets/wattbuilder-logo-orange.svg";
 import { useTranslation } from "react-i18next";
@@ -80,18 +80,24 @@ const Navigation = () => {
                   <span className="text-xs text-muted-foreground mt-0.5">{t("nav.smartHomeSizerDesc")}</span>
                 </Link>
                 <div className="h-px bg-border/50 my-1 mx-2" />
-                <Link to="/diy" className="flex flex-col p-3 rounded-lg hover:bg-muted transition-colors">
-                  <span className="font-medium text-foreground">{t("nav.batteryBuilder")}</span>
-                  <span className="text-xs text-muted-foreground mt-0.5">{t("nav.batteryBuilderDesc")}</span>
-                </Link>
                 <Link to="/cell-explorer" className="flex flex-col p-3 rounded-lg hover:bg-muted transition-colors">
                   <span className="font-medium text-foreground">{t("nav.cellExplorer")}</span>
                   <span className="text-xs text-muted-foreground mt-0.5">{t("nav.cellExplorerDesc")}</span>
                 </Link>
+                <div className="h-px bg-border/50 my-1 mx-2" />
+                <Link to="/diy" className="flex flex-col p-3 rounded-lg hover:bg-muted transition-colors">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-foreground">{t("nav.batteryBuilder")}</span>
+                    <span className="px-1.5 py-0.5 rounded-md bg-orange-100 text-orange-600 text-[10px] font-bold tracking-wider uppercase">Beta</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground mt-0.5">{t("nav.batteryBuilderDesc")}</span>
+                </Link>
+
+
               </div>
             </div>
 
-            {/* Renderiza os restantes (Services, Blog, Contact) */}
+            {/* Renderiza os restantes (Services, Contact) */}
             {menuItems.slice(1).map((item) => (
               <Link
                 key={item.path}
@@ -201,8 +207,9 @@ const Navigation = () => {
                     <Link to="/simulator" onClick={() => setIsOpen(false)} className="py-2 text-[#FF6600] font-medium text-sm">
                       {t("nav.smartHomeSizer")}
                     </Link>
-                    <Link to="/diy" onClick={() => setIsOpen(false)} className="py-2 text-muted-foreground hover:text-foreground text-sm">
+                    <Link to="/diy" onClick={() => setIsOpen(false)} className="py-2 text-muted-foreground hover:text-foreground text-sm flex items-center gap-2">
                       {t("nav.batteryBuilder")}
+                      <span className="px-1.5 py-0.5 rounded-md bg-orange-100 text-orange-600 text-[10px] font-bold tracking-wider uppercase">Beta</span>
                     </Link>
                     <Link to="/cell-explorer" onClick={() => setIsOpen(false)} className="py-2 text-muted-foreground hover:text-foreground text-sm">
                       {t("nav.cellExplorer")}

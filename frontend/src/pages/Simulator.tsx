@@ -431,12 +431,17 @@ export default function Simulator() {
         if (recommendation.replacement_notes?.length) {
             products.push(...recommendation.replacement_notes.map((note: string) => `Nota: ${note}`));
         }
-        const body = `Olá, gostaria de solicitar um orçamento para a instalação dos seguintes produtos sugeridos pela simulação:\n\n${products.join('\n')}\n\nLocal da casa: ${formData.solar.city}, ${formData.house.area_m2} m²\n\nObrigado.`;
+
+        const body = `Olá, \ngostaria de solicitar um orçamento para a instalação dos seguintes produtos sugeridos pela simulação:\n\n${products.join('\n')}\n\nLocal da casa: ${formData.solar.city}, ${formData.house.area_m2} m²\n\nObrigado.`;
         const subject = 'Solicitação de Orçamento para instalação';
-        localStorage.setItem('Message', body);
-        localStorage.setItem('message', body);
-        localStorage.setItem('subject', subject);
-        window.location.href = '/contact';
+
+        // Removemos o localStorage e o window.location.href
+        // Codificamos as strings para garantir que quebras de linha (\n) e caracteres especiais não quebram o URL
+        const encodedMessage = encodeURIComponent(body);
+        const encodedSubject = encodeURIComponent(subject);
+
+        // Usamos o React Router para manter a navegação suave (SPA)
+        navigate(`/contact?subject=${encodedSubject}&message=${encodedMessage}`);
     };
 
     const budgetSections = [
@@ -586,13 +591,13 @@ export default function Simulator() {
             doc.saveGraphicsState();
             doc.setGState(new (doc as any).GState({ opacity: 0.22 }));
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(90);
+            doc.setFontSize(100);
             doc.setTextColor(150, 150, 150);
 
             const centerX = pageWidth / 2;
             const centerY = pageHeight / 2;
 
-            doc.text("Watt Builder", centerX + 50, centerY + 100, { align: "center", angle: 45 });
+            doc.text("Watt Builder", centerX + 50, centerY + 70, { align: "center", angle: 45 });
             doc.restoreGraphicsState();
         }
 

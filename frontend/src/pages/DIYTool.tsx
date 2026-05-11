@@ -364,7 +364,10 @@ const DIYTool = () => {
       {/* Interactive Calculator Section */}
       <section id="calculator" className="py-24 bg-background">
         <div className="container px-4 mx-auto max-w-6xl">
-          <div className="text-center mb-12 animate-slide-up">
+          <div className="text-center mb-12 animate-slide-up flex flex-col items-center">
+            <span className="mb-4 px-3 py-1 rounded-full bg-orange-100 text-orange-600 text-xs font-bold tracking-widest uppercase shadow-sm">
+              Beta Version
+            </span>
             <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">Battery Design Calculator</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Configure your battery specifications and get instant recommendations
