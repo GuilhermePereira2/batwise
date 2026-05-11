@@ -22,11 +22,9 @@ const topBrands = [
   { id: "tesla", src: teslaLogo, alt: "Tesla", className: "h-30 md:h-10 max-w-[220px]" },
   { id: "huawei", src: huaweiLogo, alt: "Huawei" },
   { id: "lg", src: lgLogo, alt: "LG Energy" },
-  { id: "samsung", src: samsungLogo, alt: "Samsung SDI" },
   { id: "solaredge", src: solaredgeLogo, alt: "SolarEdge" },
   { id: "byd", src: bydLogo, alt: "BYD" },
   { id: "enphase", src: enphaseLogo, alt: "Enphase" },
-  { id: "sonnen", src: sonnenLogo, alt: "Sonnen" },
   { id: "victron", src: victronLogo, alt: "Victron" },
 ];
 
