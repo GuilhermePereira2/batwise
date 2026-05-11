@@ -1046,43 +1046,27 @@ def is_component_set_compatible(
     solar_panel: Optional[Dict[str, Any]],
     compatibility: Optional[Dict[str, Any]],
 ) -> bool:
-    """Evaluate catalogue compatibility rules for battery/inverter/panel sets."""
+    """Check the direct battery/inverter list and derived PV compatibility."""
 
-    if not compatibility:
-        return True
-
-    battery_inverter_ok = is_battery_inverter_compatible_from_sqlite(
-        battery, inverter, compatibility)
+    battery_inverter_ok = is_battery_inverter_compatible(battery, inverter)
     if not battery_inverter_ok:
         return False
     if solar_panel is None:
         return True
     return is_inverter_panel_compatible_from_specs(inverter, solar_panel)
 
-def is_battery_inverter_compatible_from_sqlite(
+def is_battery_inverter_compatible(
     battery: Dict[str, Any],
     inverter: Optional[Dict[str, Any]],
-    compatibility: Dict[str, Any],
 ) -> bool:
     if not inverter:
         return False
     if inverter.get("existing"):
         return True
 
-    default = bool(compatibility.get("default_compatible", False))
-    matched_rules = [
-        rule for rule in compatibility.get("rules", [])
-        if rule_applies_to_components(rule, battery, inverter, compatibility)
-    ]
-    if not matched_rules:
-        return default
-
-    # Blocking/not-verified rules are safety critical and override allows.
-    for rule in matched_rules:
-        if not bool(rule.get("compatible")):
-            return False
-
-    return any(bool(rule.get("compatible")) for rule in matched_rules)
+    compatible_ids = set(
+        battery.get("specs", {}).get("compatible_inverter_ids") or [])
+    return inverter.get("id") in compatible_ids
 
 def is_inverter_panel_compatible_from_specs(
     inverter: Optional[Dict[str, Any]],
@@ -1096,96 +1080,3 @@ def is_inverter_panel_compatible_from_specs(
     specs = inverter.get("specs") or {}
     return bool(specs.get("has_direct_pv_input")) and float(
         specs.get("max_pv_input_kwp") or 0) > 0
-
-def rule_applies_to_components(
-    rule: Dict[str, Any],
-    battery: Dict[str, Any],
-    inverter: Dict[str, Any],
-    compatibility: Dict[str, Any],
-) -> bool:
-    if not role_constraints_match(rule, "battery", "battery", battery, compatibility):
-        return False
-    if not role_constraints_match(rule, "inverter", "inverter", inverter, compatibility):
-        return False
-    return rule_conditions_match(rule, battery, inverter, compatibility)
-
-def role_constraints_match(
-    rule: Dict[str, Any],
-    role: str,
-    component_type: str,
-    component: Dict[str, Any],
-    compatibility: Dict[str, Any],
-) -> bool:
-    direct_constraints = [
-        item for item in rule.get("components", {}).get(role, [])
-        if item.get("component_type") == component_type
-    ]
-    group_constraints = [
-        item for item in rule.get("groups", {}).get(role, [])
-        if item.get("component_type") == component_type
-    ]
-
-    if not direct_constraints and not group_constraints:
-        return True
-
-    component_id = component.get("id")
-    if any(item.get("component_id") == component_id for item in direct_constraints):
-        return True
-
-    component_groups = set(
-        compatibility.get("group_members", {})
-        .get(component_type, {})
-        .get(component_id, [])
-    )
-    return any(item.get("group_id") in component_groups for item in group_constraints)
-
-def rule_conditions_match(
-    rule: Dict[str, Any],
-    battery: Dict[str, Any],
-    inverter: Dict[str, Any],
-    compatibility: Dict[str, Any],
-) -> bool:
-    for condition in rule.get("conditions", []):
-        key = condition.get("key")
-        value = condition.get("value")
-        if key == "applies_to_battery_group":
-            if value not in get_component_groups("battery", battery, compatibility):
-                return False
-        elif key == "applies_to_inverter_group":
-            if value not in get_component_groups("inverter", inverter, compatibility):
-                return False
-        elif key == "applies_when":
-            if not isinstance(value, dict):
-                return False
-            battery_type = normalize_voltage_class(
-                battery.get("specs", {}).get("battery_type")
-                or battery.get("specs", {}).get("nominal_voltage_class")
-            )
-            inverter_type = normalize_voltage_class(
-                inverter.get("specs", {}).get("battery_type")
-                or inverter.get("specs", {}).get("battery_technology")
-            )
-            expected_battery_type = normalize_voltage_class(
-                value.get("battery_type"))
-            expected_inverter_type = normalize_voltage_class(
-                value.get("inverter_battery_technology"))
-            if expected_battery_type and battery_type != expected_battery_type:
-                return False
-            if expected_inverter_type and inverter_type != expected_inverter_type:
-                return False
-    return True
-
-def get_component_groups(component_type: str, component: Dict[str, Any], compatibility: Dict[str, Any]) -> set:
-    return set(
-        compatibility.get("group_members", {})
-        .get(component_type, {})
-        .get(component.get("id"), [])
-    )
-
-def normalize_voltage_class(value: Any) -> str:
-    text = str(value or "").lower()
-    if "high" in text:
-        return "high_voltage"
-    if "low" in text or "48" in text:
-        return "low_voltage"
-    return text

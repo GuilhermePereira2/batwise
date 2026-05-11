@@ -30,8 +30,9 @@ CREATE TABLE home_batteries (
   currency TEXT,
   source_url TEXT,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  data_quality_issues TEXT,
   data_completeness_score REAL,
-  compatibility_group_ids_json TEXT NOT NULL DEFAULT '[]'
+  compatible_inverter_ids_json TEXT NOT NULL DEFAULT '[]'
 );
 
 CREATE TABLE home_inverters (
@@ -69,9 +70,9 @@ CREATE TABLE home_inverters (
   currency TEXT,
   source_url TEXT,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  data_quality_issues TEXT,
   has_direct_pv_input BOOLEAN,
-  data_completeness_score REAL,
-  compatibility_group_ids_json TEXT NOT NULL DEFAULT '[]'
+  data_completeness_score REAL
 );
 
 CREATE TABLE home_solar_panels (
@@ -94,25 +95,6 @@ CREATE TABLE home_solar_panels (
   currency TEXT,
   source_url TEXT,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  data_completeness_score REAL,
-  compatibility_group_ids_json TEXT NOT NULL DEFAULT '[]'
-);
-
--- One row contains the full match criteria instead of spreading one rule over
--- several normalized rule tables.
-CREATE TABLE battery_inverter_compatibility_rules (
-  id TEXT PRIMARY KEY,
-  compatible BOOLEAN NOT NULL,
-  status TEXT,
-  evidence_level TEXT,
-  battery_ids_json TEXT,
-  battery_group_ids_json TEXT,
-  inverter_ids_json TEXT,
-  inverter_group_ids_json TEXT,
-  conditions_json TEXT,
-  notes TEXT,
-  source_rule_id TEXT,
-  is_default_policy BOOLEAN NOT NULL DEFAULT FALSE,
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  sort_order INTEGER
+  data_quality_issues TEXT,
+  data_completeness_score REAL
 );

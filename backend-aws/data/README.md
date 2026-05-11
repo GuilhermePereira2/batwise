@@ -23,56 +23,32 @@ This folder contains the product data used by the backend.
 
 ## Compatibility Model
 
-The simulator loads compatibility from `home_energy_catalog.sqlite`. The schema
-is documented in `home_database_schema.sql`.
+The simulator loads product compatibility from `home_energy_catalog.sqlite`.
+The schema is documented in `home_database_schema.sql`.
 
-The current policy is conservative: `rule-00-default-deny` makes unknown
-combinations incompatible. A battery/inverter pair is only accepted when at
-least one allow rule matches and no blocking rule matches.
-
-The home catalogue is intentionally small. It should stay at four tables:
+The home catalogue is intentionally small. It should stay at three tables:
 
 - `home_batteries`
 - `home_inverters`
 - `home_solar_panels`
-- `battery_inverter_compatibility_rules`
 
 ## Battery to Inverter Rules
 
-Use `battery_inverter_compatibility_rules` for new edits. Each row contains:
+Battery/inverter compatibility is stored directly on each battery row:
 
-- product ids: `battery_ids_json`, `inverter_ids_json`;
-- group ids: `battery_group_ids_json`, `inverter_group_ids_json`;
-- extra checks: `conditions_json`;
-- result: `compatible`, `status`, `evidence_level`, `notes`.
+- `home_batteries.compatible_inverter_ids_json`
 
-`backend-aws/main.py` reads the SQLite tables in
-`load_sqlite_compatibility()` and converts them into the in-memory
-`catalog["compatibility"]` object.
+Example:
 
-`HomeBatterys/recommendations.py` then checks each candidate system with:
+```json
+["inv-014", "inv-015", "inv-016"]
+```
 
-1. `is_component_set_compatible()`
-2. `is_battery_inverter_compatible_from_sqlite()`
-3. `rule_applies_to_components()`
-4. `role_constraints_match()`
-5. `rule_conditions_match()`
+`backend-aws/main.py` loads that JSON into
+`battery["specs"]["compatible_inverter_ids"]`.
 
-A rule can match by exact component id, by component group, or by a condition.
-Product group membership is stored directly on each product row in
-`compatibility_group_ids_json`.
-
-Examples:
-
-- `allow-victron-48v-with-pylontech-us`
-  Allows Pylontech US batteries with Victron 48 V inverter/chargers.
-
-- `block-low-voltage-battery-on-high-voltage-inverter`
-  Blocks a 48 V battery on an HV/400 V inverter.
-
-- `not-verified-same-voltage-without-bms-protocol`
-  Blocks combinations where voltage alone looks right but there is no official
-  BMS/protocol compatibility rule.
+`HomeBatterys/recommendations.py` checks it in
+`is_battery_inverter_compatible()`.
 
 ## Inverter to Panel Rules
 
