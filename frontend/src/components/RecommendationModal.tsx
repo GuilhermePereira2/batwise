@@ -25,6 +25,24 @@ export default function RecommendationModal({
     if (!recommendation) return null;
 
     const prices = getPriceBreakdown(recommendation);
+    const batteryQuantity = Number(recommendation.battery?.quantity || 1);
+    const batteryPrefix = batteryQuantity > 1 ? `${batteryQuantity} x ` : '';
+    const batteryDescription = `${batteryPrefix}${recommendation.battery?.brand || ''} ${recommendation.battery?.model || ''}`.trim();
+    const componentPrices = recommendation.component_prices_eur || {};
+    const priceRows = [
+        {
+            label: 'Bateria',
+            value: componentPrices.battery ?? recommendation.battery?.pricing?.unit_price ?? 0,
+        },
+        {
+            label: 'Inversor',
+            value: componentPrices.inverter ?? recommendation.inverter?.pricing?.unit_price ?? 0,
+        },
+        {
+            label: 'Painéis solares',
+            value: componentPrices.solar_panels ?? recommendation.solar_panels?.total_price_eur ?? 0,
+        },
+    ];
 
     return (
         <Dialog open={!!recommendation} onOpenChange={(open) => !open && onClose()}>
@@ -63,6 +81,44 @@ export default function RecommendationModal({
                         </div>
                     </div>
 
+                    {/* Price Breakdown */}
+                    <div className="rounded-2xl border border-gray-200 p-6 bg-white">
+                        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between mb-4">
+                            <div>
+                                <h3 className="text-lg font-bold">Preço discriminado</h3>
+                                <p className="text-sm text-gray-500">Valores estimados por componente e instalação.</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xs uppercase text-gray-500 font-semibold">Total estimado</p>
+                                <p className="text-2xl font-extrabold text-orange-600">{formatPrice(recommendation.capex_total_eur)}</p>
+                            </div>
+                        </div>
+
+                        <div className="overflow-hidden rounded-xl border border-gray-100">
+                            <div className="grid grid-cols-[1fr_120px] gap-3 bg-gray-50 px-4 py-2 text-xs font-semibold uppercase text-gray-500">
+                                <span>Item</span>
+                                <span className="text-right">Preço</span>
+                            </div>
+                            {priceRows.map((row) => (
+                                <div key={row.label} className="grid grid-cols-[1fr_120px] gap-3 border-t border-gray-100 px-4 py-3 text-sm">
+                                    <span className="font-medium text-gray-800">{row.label}</span>
+                                    <span className="text-right font-semibold text-gray-900">{formatPrice(row.value)}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="mt-4 grid gap-3 md:grid-cols-2">
+                            <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                                <p className="text-xs text-gray-500">Subtotal hardware</p>
+                                <p className="font-bold text-gray-900">{formatPrice(componentPrices.hardware_total ?? prices.hardwareTotal)}</p>
+                            </div>
+                            <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                                <p className="text-xs text-gray-500">Instalação</p>
+                                <p className="font-bold text-gray-900">{formatPrice(componentPrices.installation_margin ?? prices.installation)}</p>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Hardware Details */}
                     <div className="grid gap-6 lg:grid-cols-2">
                         {/* Battery Specs */}
@@ -71,7 +127,7 @@ export default function RecommendationModal({
                                 <div className="p-2 bg-orange-100 rounded-lg"><Battery className="w-5 h-5 text-orange-600" /></div>
                                 <h3 className="text-lg font-bold">Bateria</h3>
                             </div>
-                            <p className="text-base font-semibold text-gray-900 mb-4">{recommendation.battery?.brand} {recommendation.battery?.model}</p>
+                            <p className="text-base font-semibold text-gray-900 mb-4">{batteryDescription}</p>
 
                             <div className="space-y-3 text-sm">
                                 <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 space-y-1">

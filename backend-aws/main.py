@@ -22,7 +22,7 @@ from mangum import Mangum
 from cells_loader import Database
 from datetime import datetime, timedelta
 import uuid
-from HomeBatterys.ideal_battery_capacity import optimize_home_battery
+from HomeBatterys.optimizer import optimize_home_battery
 
 # Carregar variáveis de ambiente antes de importar módulos que dependem delas
 from env_loader import load_backend_env

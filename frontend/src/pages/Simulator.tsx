@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -18,6 +18,16 @@ import {
 } from 'lucide-react';
 
 type InputMode = 'house' | 'bill';
+
+const parseStepParam = (value: string | null) => {
+    if (value === 'input') return 2;
+    if (value === 'results') return 3;
+    return 1;
+};
+
+const parseModeParam = (value: string | null): InputMode | null => {
+    return value === 'house' || value === 'bill' ? value : null;
+};
 
 const DEFAULT_STATE = {
     house: { occupants: 3, area_m2: 120, floors: 1 },
@@ -65,10 +75,11 @@ const DEFAULT_STATE = {
 
 export default function Simulator() {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { isAuthenticated, token } = useAuth();
-    const [step, setStep] = useState(1);
+    const [step, setStep] = useState(() => parseStepParam(searchParams.get('step')));
     const [loading, setLoading] = useState(false);
-    const [mode, setMode] = useState<InputMode | null>(null);
+    const [mode, setMode] = useState<InputMode | null>(() => parseModeParam(searchParams.get('mode')));
     const [results, setResults] = useState<any>(null);
     const [selectedRecommendation, setSelectedRecommendation] = useState<any>(null);
     const [reportEmail, setReportEmail] = useState('');
@@ -143,6 +154,51 @@ export default function Simulator() {
         localStorage.setItem('simulator_v2', JSON.stringify(formData));
     }, [formData]);
 
+    const goToStep = (
+        nextStep: number,
+        nextMode: InputMode | null = mode,
+        options: { replace?: boolean } = {},
+    ) => {
+        setStep(nextStep);
+        if (nextMode) setMode(nextMode);
+
+        const params = new URLSearchParams(searchParams);
+        if (nextStep === 1) {
+            params.delete('step');
+            params.delete('mode');
+        } else {
+            params.set('step', nextStep === 3 ? 'results' : 'input');
+            if (nextMode) params.set('mode', nextMode);
+            else params.delete('mode');
+        }
+
+        setSearchParams(params, { replace: options.replace ?? false });
+    };
+
+    const canOpenStep = (targetStep: number) => {
+        if (targetStep === 1) return true;
+        if (targetStep === 2) return Boolean(mode);
+        return Boolean(results);
+    };
+
+    const handleStepperClick = (targetStep: number) => {
+        if (!canOpenStep(targetStep)) return;
+        goToStep(targetStep, mode);
+    };
+
+    useEffect(() => {
+        const urlStep = parseStepParam(searchParams.get('step'));
+        const urlMode = parseModeParam(searchParams.get('mode'));
+
+        if (urlStep === 3 && !results) {
+            goToStep(urlMode ? 2 : 1, urlMode, { replace: true });
+            return;
+        }
+
+        if (urlStep !== step) setStep(urlStep);
+        if (urlMode && urlMode !== mode) setMode(urlMode);
+    }, [searchParams]);
+
     useEffect(() => {
         if (!isAuthenticated) return;
         const pending = localStorage.getItem('simulator_pending_auth');
@@ -152,7 +208,7 @@ export default function Simulator() {
             const parsed = JSON.parse(pending);
             if (parsed.formData) setFormData(parsed.formData);
             if (parsed.mode) setMode(parsed.mode);
-            setStep(2);
+            goToStep(2, parsed.mode || mode, { replace: true });
         } catch {
         } finally {
             localStorage.removeItem('simulator_pending_auth');
@@ -320,7 +376,7 @@ export default function Simulator() {
                     },
                     tariff: tariffPayload,
                     solar: formData.solar,
-                    assumptions: { battery_dod: 0.9, system_losses: 0.1, component_margin: 0.1, installation_margin: 0.1 }
+                    assumptions: { battery_dod: 0.9, system_losses: 0.1, component_margin: 0.1, installation_margin: 0.25 }
                 }),
             });
 
@@ -334,7 +390,7 @@ export default function Simulator() {
 
             const data = await response.json();
             setResults(data);
-            setStep(3);
+            goToStep(3, mode);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (error) {
             console.error("Erro na simulação:", error);
@@ -344,10 +400,17 @@ export default function Simulator() {
         }
     };
 
+    function getBatteryDescription(recommendation: any) {
+        const battery = recommendation?.battery || {};
+        const quantity = Number(battery.quantity || 1);
+        const prefix = quantity > 1 ? `${quantity} x ` : '';
+        return `${prefix}${battery.brand || ''} ${battery.model || ''}`.trim();
+    }
+
     const handleRequestQuote = (recommendation: any) => {
         const products = [];
         if (recommendation.battery) {
-            products.push(`Bateria: ${recommendation.battery.quantity} x ${recommendation.battery.model}`);
+            products.push(`Bateria: ${getBatteryDescription(recommendation)}`);
         }
         if (recommendation.existing_battery?.has_battery) {
             products.push(`Bateria existente considerada: ${getExistingBatteryDescription(recommendation.existing_battery)}`);
@@ -410,7 +473,7 @@ export default function Simulator() {
         const inverter = componentPrices.inverter ?? recommendation?.inverter?.pricing?.unit_price ?? 0;
         const solarPanels = componentPrices.solar_panels ?? recommendation?.solar_panels?.total_price_eur ?? 0;
         const hardwareTotal = componentPrices.hardware_total ?? recommendation?.hardware_total_eur ?? (battery + inverter + solarPanels);
-        const installation = componentPrices.installation_margin ?? recommendation?.installation_margin_eur ?? hardwareTotal * 0.1;
+        const installation = componentPrices.installation_margin ?? recommendation?.installation_margin_eur ?? hardwareTotal * 0.25;
 
         return {
             hardwareTotal,
@@ -495,7 +558,7 @@ export default function Simulator() {
                 addText(`Solução ${index + 1}: ${getSystemName(rec)}`, margin, 11, 'bold', 5);
                 addText(`Investimento estimado: ${formatPrice(rec.capex_total_eur)} | Hardware: ${formatPrice(prices.hardwareTotal)} | Instalação: ${formatPrice(prices.installation)}`, margin, 9);
                 addText(`Fatura atual: ${formatPrice(rec.annual_bill_before_eur)}/ano | Após sistema: ${formatPrice(rec.annual_bill_after_eur)}/ano | Poupança: ${formatPrice(rec.savings_annual_eur)}/ano | Payback: ${rec.payback_years ? `${rec.payback_years} anos` : 'não aplicável'}`, margin, 9);
-                addText(`Bateria: ${rec.battery.brand} ${rec.battery.model} (${rec.new_battery_capacity_kwh || rec.simulated_capacity_kwh} kWh)`, margin, 9);
+                addText(`Bateria: ${getBatteryDescription(rec)} (${rec.new_battery_capacity_kwh || rec.simulated_capacity_kwh} kWh)`, margin, 9);
                 if (rec.existing_battery?.has_battery) {
                     addText(`Bateria existente: ${getExistingBatteryDescription(rec.existing_battery)}`, margin, 9);
                 }
@@ -557,9 +620,15 @@ export default function Simulator() {
                     <div className="flex items-center justify-center mb-12 space-x-4">
                         {[1, 2, 3].map((i) => (
                             <React.Fragment key={i}>
-                                <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold ${step >= i ? 'bg-orange-600 text-white' : 'bg-white text-gray-300 border-2 border-gray-200'}`}>
+                                <button
+                                    type="button"
+                                    onClick={() => handleStepperClick(i)}
+                                    disabled={!canOpenStep(i)}
+                                    aria-label={`Ir para o passo ${i}`}
+                                    className={`flex items-center justify-center w-10 h-10 rounded-full font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${step >= i ? 'bg-orange-600 text-white' : 'bg-white text-gray-300 border-2 border-gray-200'} ${canOpenStep(i) ? 'cursor-pointer hover:scale-105 hover:shadow-md' : 'cursor-not-allowed opacity-50'}`}
+                                >
                                     {step > i ? <CheckCircle2 className="w-6 h-6" /> : i}
-                                </div>
+                                </button>
                                 {i < 3 && <div className={`w-12 h-1 ${step > i ? 'bg-orange-600' : 'bg-gray-200'}`} />}
                             </React.Fragment>
                         ))}
@@ -569,7 +638,7 @@ export default function Simulator() {
                     {step === 1 && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-500">
                             <Card
-                                onClick={() => { setMode('house'); setStep(2); }}
+                                onClick={() => goToStep(2, 'house')}
                                 className={`cursor-pointer border-2 transition-all hover:shadow-lg ${mode === 'house' ? 'border-orange-600 bg-orange-50/50' : 'border-gray-200 hover:border-black'}`}
                             >
                                 <CardContent className="p-8 text-center">
@@ -582,7 +651,7 @@ export default function Simulator() {
                             </Card>
 
                             <Card
-                                onClick={() => { setMode('bill'); setStep(2); }}
+                                onClick={() => goToStep(2, 'bill')}
                                 className={`cursor-pointer border-2 transition-all hover:shadow-lg ${mode === 'bill' ? 'border-orange-600 bg-orange-50/50' : 'border-gray-200 hover:border-black'}`}
                             >
                                 <CardContent className="p-8 text-center">
@@ -1201,7 +1270,7 @@ export default function Simulator() {
                                 )}
 
                                 <div className="flex gap-3 pt-4">
-                                    <Button variant="outline" className="border-gray-300 text-black hover:bg-gray-100" onClick={() => setStep(1)}>
+                                    <Button variant="outline" className="border-gray-300 text-black hover:bg-gray-100" onClick={() => goToStep(1, null)}>
                                         <ChevronLeft className="mr-2 w-4 h-4" /> Voltar
                                     </Button>
                                     <Button className="flex-grow bg-orange-600 hover:bg-orange-700 text-white h-12 text-lg" onClick={runSimulation} disabled={loading}>
@@ -1285,7 +1354,7 @@ export default function Simulator() {
                                                 {group.items.map((rec: any, idx: number) => {
                                                     return (
                                                         <Card
-                                                            key={`${group.tier}-${rec.battery?.id || idx}`}
+                                                            key={`${group.tier}-${rec.system_name || rec.battery?.id || idx}`}
                                                             onClick={() => setSelectedRecommendation(rec)}
                                                             className={`cursor-pointer relative overflow-hidden transition-all hover:scale-[1.02] bg-white flex flex-col h-full ${idx === 0 ? 'border-orange-600 border-2 shadow-md' : 'border-gray-200 shadow-sm'}`}
                                                         >
@@ -1298,7 +1367,7 @@ export default function Simulator() {
                                                             <CardHeader className="p-4 pb-2">
                                                                 <CardTitle className="text-lg leading-tight">Solução {idx + 1}</CardTitle>
                                                                 <CardDescription className="text-xs mt-1 line-clamp-2">
-                                                                    {rec.battery?.brand} {rec.battery?.model}
+                                                                    {getBatteryDescription(rec)}
                                                                     {rec.inverter && ` • Inv. ${rec.inverter.brand}`}
                                                                     {rec.solar_panels && ` • ${rec.solar_panels.quantity} Painéis`}
                                                                 </CardDescription>
@@ -1364,7 +1433,7 @@ export default function Simulator() {
                             </div>
 
                             <div className="text-center">
-                                <Button variant="link" onClick={() => setStep(1)} className="text-gray-500 hover:text-black">Refazer Simulação</Button>
+                                <Button variant="link" onClick={() => goToStep(1, null)} className="text-gray-500 hover:text-black">Refazer Simulação</Button>
                             </div>
                         </div>
                     )}
