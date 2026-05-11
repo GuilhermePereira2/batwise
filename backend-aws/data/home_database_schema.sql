@@ -30,7 +30,8 @@ CREATE TABLE home_batteries (
   currency TEXT,
   source_url TEXT,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  data_completeness_score REAL
+  data_completeness_score REAL,
+  compatibility_group_ids_json TEXT NOT NULL DEFAULT '[]'
 );
 
 CREATE TABLE home_inverters (
@@ -69,7 +70,8 @@ CREATE TABLE home_inverters (
   source_url TEXT,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   has_direct_pv_input BOOLEAN,
-  data_completeness_score REAL
+  data_completeness_score REAL,
+  compatibility_group_ids_json TEXT NOT NULL DEFAULT '[]'
 );
 
 CREATE TABLE home_solar_panels (
@@ -92,81 +94,25 @@ CREATE TABLE home_solar_panels (
   currency TEXT,
   source_url TEXT,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  data_completeness_score REAL
+  data_completeness_score REAL,
+  compatibility_group_ids_json TEXT NOT NULL DEFAULT '[]'
 );
 
-CREATE TABLE component_groups (
+-- One row contains the full match criteria instead of spreading one rule over
+-- several normalized rule tables.
+CREATE TABLE battery_inverter_compatibility_rules (
   id TEXT PRIMARY KEY,
-  component_type TEXT NOT NULL,
-  label TEXT,
-  voltage_class TEXT,
-  has_direct_pv_input BOOLEAN,
-  notes TEXT
-);
-
-CREATE TABLE component_group_members (
-  id TEXT PRIMARY KEY,
-  group_id TEXT NOT NULL REFERENCES component_groups(id),
-  component_type TEXT NOT NULL,
-  component_id TEXT NOT NULL,
-  sort_order INTEGER
-);
-
-CREATE TABLE compatibility_rules (
-  id TEXT PRIMARY KEY,
-  relation_type TEXT NOT NULL,
   compatible BOOLEAN NOT NULL,
   status TEXT,
   evidence_level TEXT,
-  notes TEXT
-);
-
-CREATE TABLE compatibility_rule_components (
-  id TEXT PRIMARY KEY,
-  rule_id TEXT NOT NULL REFERENCES compatibility_rules(id),
-  role TEXT NOT NULL,
-  component_type TEXT NOT NULL,
-  component_id TEXT NOT NULL
-);
-
-CREATE TABLE compatibility_rule_groups (
-  id TEXT PRIMARY KEY,
-  rule_id TEXT NOT NULL REFERENCES compatibility_rules(id),
-  role TEXT NOT NULL,
-  component_type TEXT NOT NULL,
-  group_id TEXT NOT NULL REFERENCES component_groups(id)
-);
-
-CREATE TABLE compatibility_rule_requirements (
-  id TEXT PRIMARY KEY,
-  rule_id TEXT NOT NULL REFERENCES compatibility_rules(id),
-  requirement TEXT NOT NULL,
+  battery_ids_json TEXT,
+  battery_group_ids_json TEXT,
+  inverter_ids_json TEXT,
+  inverter_group_ids_json TEXT,
+  conditions_json TEXT,
+  notes TEXT,
+  source_rule_id TEXT,
+  is_default_policy BOOLEAN NOT NULL DEFAULT FALSE,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
   sort_order INTEGER
-);
-
-CREATE TABLE compatibility_sources (
-  id TEXT PRIMARY KEY,
-  description TEXT,
-  url TEXT,
-  source_type TEXT
-);
-
-CREATE TABLE compatibility_rule_sources (
-  id TEXT PRIMARY KEY,
-  rule_id TEXT NOT NULL REFERENCES compatibility_rules(id),
-  source_id TEXT NOT NULL REFERENCES compatibility_sources(id)
-);
-
-CREATE TABLE inverter_solar_panel_rules (
-  id TEXT PRIMARY KEY,
-  inverter_id TEXT NOT NULL REFERENCES home_inverters(id),
-  solar_panel_id TEXT REFERENCES home_solar_panels(id),
-  compatible BOOLEAN NOT NULL,
-  status TEXT,
-  max_pv_input_kwp REAL,
-  pv_voltage_min_v REAL,
-  pv_voltage_max_v REAL,
-  max_panel_count_by_power_only INTEGER,
-  requires_string_sizing BOOLEAN,
-  notes TEXT
 );

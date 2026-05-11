@@ -1026,25 +1026,19 @@ def get_inverter_panel_max_count(
     panel: Dict[str, Any],
     compatibility: Optional[Dict[str, Any]],
 ) -> Optional[int]:
-    if not inverter or not compatibility:
+    if not inverter:
         return None
-    inverter_id = inverter.get("id")
-    panel_id = panel.get("id")
-    rules = [
-        rule for rule in compatibility.get("inverter_solar_panel_rules", [])
-        if rule.get("inverter_id") == inverter_id
-        and rule.get("solar_panel_id") in (panel_id, None)
-        and bool(rule.get("compatible"))
-    ]
-    exact_rules = [rule for rule in rules if rule.get(
-        "solar_panel_id") == panel_id]
-    selected = exact_rules or rules
-    limits = [
-        int(rule.get("max_panel_count_by_power_only"))
-        for rule in selected
-        if rule.get("max_panel_count_by_power_only")
-    ]
-    return min(limits) if limits else None
+
+    max_pv_input_kwp = float(
+        (inverter.get("specs") or {}).get("max_pv_input_kwp") or 0)
+    panel_power_kwp = float(
+        (panel.get("specs") or {}).get("rated_power_kw")
+        or ((panel.get("specs") or {}).get("power_w") or 0) / 1000
+        or 0
+    )
+    if max_pv_input_kwp <= 0 or panel_power_kwp <= 0:
+        return None
+    return max(1, int(max_pv_input_kwp // panel_power_kwp))
 
 def is_component_set_compatible(
     battery: Dict[str, Any],
@@ -1057,47 +1051,13 @@ def is_component_set_compatible(
     if not compatibility:
         return True
 
-    if "group_members" in compatibility or "inverter_solar_panel_rules" in compatibility:
-        battery_inverter_ok = is_battery_inverter_compatible_from_sqlite(
-            battery, inverter, compatibility)
-        if not battery_inverter_ok:
-            return False
-        if solar_panel is None:
-            return True
-        return is_inverter_panel_compatible_from_sqlite(inverter, solar_panel, compatibility)
-
-    default = bool(compatibility.get("default_compatible", True))
-    battery_id = battery.get("id")
-    inverter_id = (inverter or {}).get("id")
-    solar_panel_id = (solar_panel or {}).get("id")
-    matched = None
-    matched_specificity = -1
-
-    for rule in compatibility.get("rules", []):
-        rule_battery = rule.get("battery_id")
-        rule_inverter = rule.get("inverter_id")
-        rule_panel = rule.get("solar_panel_id")
-        battery_matches = rule_battery in (battery_id, "*")
-        inverter_matches = rule_inverter in (inverter_id, "*")
-        panel_matches = rule_panel in (solar_panel_id, "*", None)
-        if solar_panel is None and rule_panel not in ("*", None):
-            panel_matches = False
-        if not battery_matches or not inverter_matches or not panel_matches:
-            continue
-
-        specificity = (
-            int(rule_battery == battery_id)
-            + int(rule_inverter == inverter_id)
-            + int(rule_panel == solar_panel_id)
-        )
-        if specificity >= matched_specificity:
-            matched = rule
-            matched_specificity = specificity
-
-    if matched is None:
-        return default
-
-    return bool(matched.get("compatible", default))
+    battery_inverter_ok = is_battery_inverter_compatible_from_sqlite(
+        battery, inverter, compatibility)
+    if not battery_inverter_ok:
+        return False
+    if solar_panel is None:
+        return True
+    return is_inverter_panel_compatible_from_specs(inverter, solar_panel)
 
 def is_battery_inverter_compatible_from_sqlite(
     battery: Dict[str, Any],
@@ -1124,30 +1084,18 @@ def is_battery_inverter_compatible_from_sqlite(
 
     return any(bool(rule.get("compatible")) for rule in matched_rules)
 
-def is_inverter_panel_compatible_from_sqlite(
+def is_inverter_panel_compatible_from_specs(
     inverter: Optional[Dict[str, Any]],
     solar_panel: Optional[Dict[str, Any]],
-    compatibility: Dict[str, Any],
 ) -> bool:
     if not inverter or not solar_panel:
         return False
     if inverter.get("existing") or solar_panel.get("existing"):
         return True
 
-    inverter_id = inverter.get("id")
-    panel_id = solar_panel.get("id")
-    matching_rules = [
-        rule for rule in compatibility.get("inverter_solar_panel_rules", [])
-        if rule.get("inverter_id") == inverter_id
-        and rule.get("solar_panel_id") in (panel_id, None)
-    ]
-    if not matching_rules:
-        return bool(compatibility.get("default_compatible", False))
-
-    exact_panel_rules = [rule for rule in matching_rules if rule.get(
-        "solar_panel_id") == panel_id]
-    selected_rules = exact_panel_rules or matching_rules
-    return any(bool(rule.get("compatible")) for rule in selected_rules)
+    specs = inverter.get("specs") or {}
+    return bool(specs.get("has_direct_pv_input")) and float(
+        specs.get("max_pv_input_kwp") or 0) > 0
 
 def rule_applies_to_components(
     rule: Dict[str, Any],

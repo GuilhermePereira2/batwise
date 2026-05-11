@@ -848,6 +848,8 @@ def sqlite_battery_to_catalog_item(row):
             "max_series_connection": row["max_series_connection"],
             "max_parallel_connection": row["max_parallel_connection"],
             "warranty_years": row["warranty_years"],
+            "compatibility_groups": parse_json_list(
+                row["compatibility_group_ids_json"]),
         },
         "pricing": {
             "unit_price": row["unit_price"],
@@ -897,6 +899,8 @@ def sqlite_inverter_to_catalog_item(row):
             },
             "environment": row["environment"],
             "has_direct_pv_input": bool(row["has_direct_pv_input"]),
+            "compatibility_groups": parse_json_list(
+                row["compatibility_group_ids_json"]),
         },
         "pricing": {
             "unit_price": row["unit_price"],
@@ -925,6 +929,8 @@ def sqlite_panel_to_catalog_item(row):
                 "height": row["height_mm"],
             },
             "weight_kg": row["weight_kg"],
+            "compatibility_groups": parse_json_list(
+                row["compatibility_group_ids_json"]),
         },
         "pricing": {
             "unit_price": row["unit_price"],
@@ -937,11 +943,38 @@ def sqlite_panel_to_catalog_item(row):
 
 
 def load_sqlite_compatibility(conn):
-    rules = {}
-    for row in conn.execute("SELECT * FROM compatibility_rules"):
-        rules[row["id"]] = {
+    rules, default_compatible = load_battery_inverter_rules(conn)
+
+    return {
+        "schema_version": "1.0.0",
+        "default_compatible": default_compatible,
+        "description": "Compatibility policy loaded from SQLite catalog.",
+        "rules": rules,
+        "group_members": load_sqlite_group_members(conn),
+    }
+
+
+def load_battery_inverter_rules(conn):
+    """Load one-row-per-rule battery/inverter compatibility from SQLite."""
+
+    rows = list(conn.execute(
+        """
+        SELECT *
+        FROM battery_inverter_compatibility_rules
+        WHERE is_active = 1
+        ORDER BY sort_order, id
+        """
+    ))
+    if not rows:
+        raise RuntimeError("Home catalog has no active battery/inverter compatibility rules")
+
+    rules = []
+    default_compatible = False
+
+    for row in rows:
+        rule = {
             "id": row["id"],
-            "relation_type": row["relation_type"],
+            "relation_type": "default_policy" if row["is_default_policy"] else "battery_inverter",
             "compatible": bool(row["compatible"]),
             "status": row["status"],
             "evidence_level": row["evidence_level"],
@@ -951,69 +984,74 @@ def load_sqlite_compatibility(conn):
             "conditions": [],
         }
 
-    for row in conn.execute("SELECT * FROM compatibility_rule_components"):
-        rule = rules.get(row["rule_id"])
-        if not rule:
+        if row["is_default_policy"]:
+            default_compatible = bool(row["compatible"])
             continue
-        rule["components"].setdefault(row["role"], []).append({
-            "component_type": row["component_type"],
-            "component_id": row["component_id"],
+
+        add_json_component_ids(
+            rule, "battery", "battery", row["battery_ids_json"])
+        add_json_component_ids(
+            rule, "inverter", "inverter", row["inverter_ids_json"])
+        add_json_group_ids(
+            rule, "battery", "battery", row["battery_group_ids_json"])
+        add_json_group_ids(
+            rule, "inverter", "inverter", row["inverter_group_ids_json"])
+
+        for condition in parse_json_list(row["conditions_json"]):
+            if not isinstance(condition, dict):
+                continue
+            rule["conditions"].append({
+                "key": condition.get("key"),
+                "value": condition.get("value"),
+            })
+
+        rules.append(rule)
+
+    return rules, default_compatible
+
+
+def add_json_component_ids(rule, role, component_type, value):
+    for component_id in parse_json_list(value):
+        rule["components"].setdefault(role, []).append({
+            "component_type": component_type,
+            "component_id": component_id,
         })
 
-    for row in conn.execute("SELECT * FROM compatibility_rule_groups"):
-        rule = rules.get(row["rule_id"])
-        if not rule:
-            continue
-        rule["groups"].setdefault(row["role"], []).append({
-            "component_type": row["component_type"],
-            "group_id": row["group_id"],
+
+def add_json_group_ids(rule, role, component_type, value):
+    for group_id in parse_json_list(value):
+        rule["groups"].setdefault(role, []).append({
+            "component_type": component_type,
+            "group_id": group_id,
         })
 
-    for row in conn.execute("SELECT * FROM compatibility_rule_conditions"):
-        rule = rules.get(row["rule_id"])
-        if not rule:
-            continue
-        condition_value = row["condition_value_json"]
-        try:
-            condition_value = json.loads(condition_value)
-        except (TypeError, json.JSONDecodeError):
-            pass
-        rule["conditions"].append({
-            "key": row["condition_key"],
-            "value": condition_value,
-        })
 
-    group_members = {"battery": {}, "inverter": {}, "solar_panel": {}}
-    for row in conn.execute("SELECT * FROM component_group_members"):
-        group_members.setdefault(row["component_type"], {}).setdefault(row["component_id"], []).append(row["group_id"])
+def parse_json_list(value):
+    if not value:
+        return []
+    try:
+        parsed = json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return []
+    return parsed if isinstance(parsed, list) else []
 
-    pv_rules = []
-    for row in conn.execute("SELECT * FROM inverter_solar_panel_rules"):
-        pv_rules.append({
-            "id": row["id"],
-            "inverter_id": row["inverter_id"],
-            "solar_panel_id": row["solar_panel_id"],
-            "compatible": bool(row["compatible"]),
-            "status": row["status"],
-            "max_pv_input_kwp": row["max_pv_input_kwp"],
-            "max_panel_count_by_power_only": row["max_panel_count_by_power_only"],
-            "requires_string_sizing": bool(row["requires_string_sizing"]),
-            "notes": row["notes"],
-        })
 
-    default_compatible = True
-    default_policy = rules.get("rule-00-default-deny")
-    if default_policy:
-        default_compatible = bool(default_policy["compatible"])
-
-    return {
-        "schema_version": "1.0.0",
-        "default_compatible": default_compatible,
-        "description": "Compatibility policy loaded from SQLite catalog.",
-        "rules": [rule for rule in rules.values() if rule["relation_type"] != "default_policy"],
-        "group_members": group_members,
-        "inverter_solar_panel_rules": pv_rules,
+def load_sqlite_group_members(conn):
+    group_members = {
+        "battery": load_component_groups_from_table(conn, "home_batteries"),
+        "inverter": load_component_groups_from_table(conn, "home_inverters"),
+        "solar_panel": load_component_groups_from_table(conn, "home_solar_panels"),
     }
+    return group_members
+
+
+def load_component_groups_from_table(conn, table_name):
+    groups = {}
+    rows = conn.execute(
+        f"SELECT id, compatibility_group_ids_json FROM {table_name}")
+    for row in rows:
+        groups[row["id"]] = parse_json_list(row["compatibility_group_ids_json"])
+    return groups
 
 
 @app.post("/api/simulator/size")
