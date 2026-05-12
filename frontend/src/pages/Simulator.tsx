@@ -59,13 +59,14 @@ const DEFAULT_STATE = {
         existing_inverter_brand: '',
         existing_inverter_model: '',
         existing_inverter_max_power_kw: 0,
-        battery_ready_inverter: false,
         has_battery: false,
         battery_capacity_kwh: 0,
         existing_battery_brand: '',
         existing_battery_model: '',
-        existing_battery_max_power_kw: 0
+        existing_battery_max_power_kw: 0,
+        expand_solar: true
     },
+    max_investment: '',
     electric_vehicles: {
         has_electric_vehicle: false,
         count: 0,
@@ -376,6 +377,7 @@ export default function Simulator() {
                     },
                     tariff: tariffPayload,
                     solar: formData.solar,
+                    max_investment: formData.max_investment ? Number(formData.max_investment) : null,
                     assumptions: { battery_dod: 0.9, system_losses: 0.1, component_margin: 0.1, installation_margin: 0.25 }
                 }),
             });
@@ -478,7 +480,9 @@ export default function Simulator() {
         const inverter = componentPrices.inverter ?? recommendation?.inverter?.pricing?.unit_price ?? 0;
         const solarPanels = componentPrices.solar_panels ?? recommendation?.solar_panels?.total_price_eur ?? 0;
         const hardwareTotal = componentPrices.hardware_total ?? recommendation?.hardware_total_eur ?? (battery + inverter + solarPanels);
-        const installation = componentPrices.installation_margin ?? recommendation?.installation_margin_eur ?? hardwareTotal * 0.25;
+
+        // Mantemos o cálculo mas a instalação será "0" para o frontend por agora
+        const installation = 0;
 
         return {
             hardwareTotal,
@@ -852,7 +856,6 @@ export default function Simulator() {
                                                         existing_inverter_brand: '',
                                                         existing_inverter_model: '',
                                                         existing_inverter_max_power_kw: 0,
-                                                        battery_ready_inverter: false,
                                                         has_battery: false,
                                                         battery_capacity_kwh: 0,
                                                         existing_battery_brand: '',
@@ -935,97 +938,92 @@ export default function Simulator() {
                                                 />
                                             </div>
                                             <div className="space-y-2 md:col-span-2">
-                                                <Label>O inversor dos painéis atuais suporta bateria?</Label>
+                                                <Label>Deseja adicionar mais painéis solares?</Label>
                                                 <div className="grid grid-cols-2 gap-2 max-w-sm">
                                                     <Button
-                                                        className={`h-12 ${formData.solar.battery_ready_inverter ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
-                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, battery_ready_inverter: false, has_battery: false, battery_capacity_kwh: 0, existing_battery_brand: '', existing_battery_model: '', existing_battery_max_power_kw: 0 } })}
+                                                        className={`h-12 ${formData.solar.expand_solar ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
+                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, expand_solar: false } })}
                                                     >
                                                         Não
                                                     </Button>
                                                     <Button
-                                                        className={`h-12 ${formData.solar.battery_ready_inverter ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, battery_ready_inverter: true } })}
+                                                        className={`h-12 ${formData.solar.expand_solar ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, expand_solar: true } })}
                                                     >
                                                         Sim
                                                     </Button>
                                                 </div>
-                                                {!formData.solar.battery_ready_inverter && (
-                                                    <p className="mt-2 text-sm font-medium text-red-700">
-                                                        Atenção: ao escolher "Não", o inversor atual não será reaproveitado. Vai ficar fora do sistema de bateria e o orçamento passa a incluir um inversor novo compatível.
+                                                {!formData.solar.expand_solar && (
+                                                    <p className="mt-2 text-sm text-gray-500">
+                                                        As sugestões focar-se-ão apenas em baterias para o sistema existente.
                                                     </p>
                                                 )}
-                                                {formData.solar.battery_ready_inverter && (
-                                                    <div className="mt-3 space-y-3">
-                                                        <p className="text-sm text-gray-500">
-                                                            Vamos assumir que o inversor atual fica instalado e não será cobrado um inversor novo.
-                                                        </p>
+                                            </div>
+
+                                            <div className="space-y-2 md:col-span-2">
+                                                <Label>Já tem bateria?</Label>
+                                                <div className="grid grid-cols-2 gap-2 max-w-sm">
+                                                    <Button
+                                                        className={`h-12 ${formData.solar.has_battery ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
+                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_battery: false, battery_capacity_kwh: 0, existing_battery_brand: '', existing_battery_model: '', existing_battery_max_power_kw: 0 } })}
+                                                    >
+                                                        Não
+                                                    </Button>
+                                                    <Button
+                                                        className={`h-12 ${formData.solar.has_battery ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_battery: true, battery_capacity_kwh: formData.solar.battery_capacity_kwh || 5 } })}
+                                                    >
+                                                        Sim
+                                                    </Button>
+                                                </div>
+
+                                                {formData.solar.has_battery && (
+                                                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                                                         <div className="space-y-2">
-                                                            <Label>Já tem bateria ligada a esse inversor?</Label>
-                                                            <div className="grid grid-cols-2 gap-2 max-w-sm">
-                                                                <Button
-                                                                    className={`h-12 ${formData.solar.has_battery ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
-                                                                    onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_battery: false, battery_capacity_kwh: 0, existing_battery_brand: '', existing_battery_model: '', existing_battery_max_power_kw: 0 } })}
-                                                                >
-                                                                    Não
-                                                                </Button>
-                                                                <Button
-                                                                    className={`h-12 ${formData.solar.has_battery ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                                    onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_battery: true, battery_capacity_kwh: formData.solar.battery_capacity_kwh || 5 } })}
-                                                                >
-                                                                    Sim
-                                                                </Button>
-                                                            </div>
+                                                            <Label>Capacidade da bateria atual (kWh)</Label>
+                                                            <Input
+                                                                type="number"
+                                                                min="0"
+                                                                step="0.1"
+                                                                className="border-gray-300 focus-visible:ring-orange-600"
+                                                                value={formData.solar.battery_capacity_kwh}
+                                                                onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, battery_capacity_kwh: Number(e.target.value) } })}
+                                                            />
                                                         </div>
-                                                        {formData.solar.has_battery && (
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                <div className="space-y-2">
-                                                                    <Label>Capacidade da bateria atual (kWh)</Label>
-                                                                    <Input
-                                                                        type="number"
-                                                                        min="0"
-                                                                        step="0.1"
-                                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                                        value={formData.solar.battery_capacity_kwh}
-                                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, battery_capacity_kwh: Number(e.target.value) } })}
-                                                                    />
-                                                                </div>
-                                                                <div className="space-y-2">
-                                                                    <Label>Potência máxima da bateria atual (kW)</Label>
-                                                                    <Input
-                                                                        type="number"
-                                                                        min="0"
-                                                                        step="0.1"
-                                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                                        value={formData.solar.existing_battery_max_power_kw}
-                                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_max_power_kw: Number(e.target.value) } })}
-                                                                    />
-                                                                </div>
-                                                                <div className="space-y-2">
-                                                                    <Label>Marca da bateria atual</Label>
-                                                                    <Input
-                                                                        type="text"
-                                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                                        value={formData.solar.existing_battery_brand}
-                                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_brand: e.target.value } })}
-                                                                        placeholder="Ex: Huawei"
-                                                                    />
-                                                                </div>
-                                                                <div className="space-y-2">
-                                                                    <Label>Modelo da bateria atual</Label>
-                                                                    <Input
-                                                                        type="text"
-                                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                                        value={formData.solar.existing_battery_model}
-                                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_model: e.target.value } })}
-                                                                        placeholder="Ex: Luna2000"
-                                                                    />
-                                                                </div>
-                                                                <p className="text-xs text-gray-500 md:col-span-2">
-                                                                    Estes dados serão considerados como equipamento já instalado no dimensionamento.
-                                                                </p>
-                                                            </div>
-                                                        )}
+                                                        <div className="space-y-2">
+                                                            <Label>Potência máxima da bateria atual (kW)</Label>
+                                                            <Input
+                                                                type="number"
+                                                                min="0"
+                                                                step="0.1"
+                                                                className="border-gray-300 focus-visible:ring-orange-600"
+                                                                value={formData.solar.existing_battery_max_power_kw}
+                                                                onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_max_power_kw: Number(e.target.value) } })}
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label>Marca da bateria atual</Label>
+                                                            <Input
+                                                                type="text"
+                                                                className="border-gray-300 focus-visible:ring-orange-600"
+                                                                value={formData.solar.existing_battery_brand}
+                                                                onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_brand: e.target.value } })}
+                                                                placeholder="Ex: Huawei"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label>Modelo da bateria atual</Label>
+                                                            <Input
+                                                                type="text"
+                                                                className="border-gray-300 focus-visible:ring-orange-600"
+                                                                value={formData.solar.existing_battery_model}
+                                                                onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_model: e.target.value } })}
+                                                                placeholder="Ex: Luna2000"
+                                                            />
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 md:col-span-2">
+                                                            Estes dados serão considerados como equipamento já instalado no dimensionamento.
+                                                        </p>
                                                     </div>
                                                 )}
                                             </div>
@@ -1274,6 +1272,22 @@ export default function Simulator() {
                                     </div>
                                 )}
 
+                                <div className="pt-4 border-t border-gray-200">
+                                    <Label>Qual o valor máximo de investimento que pretende? (Opcional)</Label>
+                                    <div className="mt-2 relative max-w-sm">
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            placeholder="Ex: 5000"
+                                            className="border-gray-300 focus-visible:ring-orange-600 pr-8"
+                                            value={formData.max_investment}
+                                            onChange={(e) => setFormData({ ...formData, max_investment: e.target.value })}
+                                        />
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
+                                    </div>
+                                    <p className="mt-1 text-xs text-gray-500">Se deixar em branco, mostraremos todas as opções disponíveis.</p>
+                                </div>
+
                                 <div className="flex gap-3 pt-4">
                                     <Button variant="outline" className="border-gray-300 text-black hover:bg-gray-100" onClick={() => goToStep(1, null)}>
                                         <ChevronLeft className="mr-2 w-4 h-4" /> Voltar
@@ -1395,16 +1409,18 @@ export default function Simulator() {
                                                                     </div>
                                                                 </div>
 
-                                                                <Button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleRequestQuote(rec);
-                                                                    }}
-                                                                    className={`w-full mt-auto ${idx === 0 ? 'bg-black text-white hover:bg-gray-800' : 'bg-white border border-gray-300 text-black hover:bg-gray-50'}`}
-                                                                    size="sm"
-                                                                >
-                                                                    Solicitar Orçamento
-                                                                </Button>
+                                                                <div className="flex flex-col gap-2 mt-auto">
+                                                                    <Button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleRequestQuote(rec);
+                                                                        }}
+                                                                        className={`w-full ${idx === 0 ? 'bg-black text-white hover:bg-gray-800' : 'bg-white border border-gray-300 text-black hover:bg-gray-50'}`}
+                                                                        size="sm"
+                                                                    >
+                                                                        Solicitar Orçamento
+                                                                    </Button>
+                                                                </div>
                                                             </CardContent>
                                                         </Card>
                                                     );

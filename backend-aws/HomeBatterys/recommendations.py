@@ -36,6 +36,7 @@ def rank_catalog(
     solar: Optional[Dict[str, Any]] = None,
     roof_area_m2: Optional[float] = None,
     project_years: int = 12,
+    max_investment: Optional[float] = None,
 ) -> List[Dict[str, Any]]:
     """Build catalogue recommendations from the simulated target capacity.
 
@@ -51,14 +52,24 @@ def rank_catalog(
     recommendations = []
     target = max(0.5, float(selected["capacity_kwh"]))
     has_existing_solar = bool((solar or {}).get("has_solar"))
-    existing_inverter_supports_battery = bool(
-        (solar or {}).get("battery_ready_inverter"))
     existing_battery_capacity = get_existing_battery_capacity_kwh(solar)
     existing_solar_peak_kwp = get_existing_solar_peak_kwp(solar)
-    total_solar_peak_kwp = max(solar_peak_kwp, existing_solar_peak_kwp)
-    expand_existing_solar = False
+    expand_existing_solar = bool((solar or {}).get("expand_solar", True))
+
+    if has_existing_solar and not expand_existing_solar:
+        total_solar_peak_kwp = existing_solar_peak_kwp
+        inverter_sizing_pv_peak = 0.0  # Dimensionar apenas pela bateria
+    else:
+        total_solar_peak_kwp = max(solar_peak_kwp, existing_solar_peak_kwp)
+        inverter_sizing_pv_peak = total_solar_peak_kwp
+
     auto_expansion_target_kwp = estimate_auto_solar_expansion_target_kwp(
         profile, solar)
+
+    # O inversor só PRECISA obrigatoriamente de entrada PV se:
+    # 1. É um sistema novo com painéis
+    # 2. É um sistema existente e o utilizador quer expandir os painéis
+    requires_pv_input = expand_existing_solar or (not has_existing_solar and bool(panels))
 
     def append_recommendation(
         battery: Dict[str, Any],
@@ -71,8 +82,12 @@ def rank_catalog(
             return
         if panels and not panel_set:
             return
-        if not is_solar_array_sized_for_inverter(inverter, panel_set):
-            return
+
+        # Se não estamos a expandir, ignoramos a validação de rácio painel/inversor
+        # (visto que o utilizador quer dimensionar apenas pela bateria)
+        if expand_existing_solar or (not has_existing_solar and bool(panels)):
+            if not is_solar_array_sized_for_inverter(inverter, panel_set):
+                return
 
         # Re-simulate with this exact catalogue combination. Expanded solar
         # arrays change the PV profile and can turn a bad battery-only case into
@@ -98,6 +113,11 @@ def rank_catalog(
         inverter_price = apply_margin(inverter_base_price, component_margin)
         panels_price = apply_margin(panels_base_price, component_margin)
         hardware_total = battery_price + inverter_price + panels_price
+
+        # Filtro de investimento máximo (Hardware total, já que a instalação está oculta)
+        if max_investment is not None and hardware_total > max_investment:
+            return
+
         installation_margin_eur = hardware_total * installation_margin
         capex = hardware_total + installation_margin_eur
 
@@ -141,7 +161,7 @@ def rank_catalog(
                     "installation_margin": round(installation_margin_eur, 2),
                     "installation_margin_rate": round(installation_margin, 2),
                 },
-                "capex_total_eur": round(capex, 2),
+                "capex_total_eur": round(hardware_total, 2), # Alterado para hardware_total apenas
                 "hardware_total_eur": round(hardware_total, 2),
                 "installation_margin_eur": round(installation_margin_eur, 2),
                 "annual_bill_before_eur": round(current_bill, 2),
@@ -170,16 +190,12 @@ def rank_catalog(
             if capacity <= 0:
                 continue
             simulated_capacity = capacity + existing_battery_capacity
-            inverter = (
-                build_existing_battery_ready_inverter(solar)
-                if has_existing_solar and existing_inverter_supports_battery
-                else select_inverter_for_battery(
-                    battery,
-                    inverters,
-                    catalog.get("compatibility"),
-                    total_solar_peak_kwp,
-                    requires_pv_input=bool(panels or has_existing_solar),
-                )
+            inverter = select_inverter_for_battery(
+                battery,
+                inverters,
+                catalog.get("compatibility"),
+                inverter_sizing_pv_peak,
+                requires_pv_input=requires_pv_input,
             )
             if has_existing_solar:
                 panel_set = build_existing_solar_panel_set(solar, roof_area_m2)
@@ -213,7 +229,7 @@ def rank_catalog(
             append_recommendation(
                 battery, capacity, simulated_capacity, inverter, panel_set)
 
-            if has_existing_solar and not expand_existing_solar:
+            if has_existing_solar and expand_existing_solar:
                 expansion_targets = build_existing_solar_expansion_targets(
                     solar, auto_expansion_target_kwp)
                 existing_panel_set = build_existing_solar_panel_set(
@@ -224,16 +240,12 @@ def rank_catalog(
                 expansion_targets = []
 
             for expansion_strategy, expansion_target_kwp in expansion_targets:
-                expanded_inverter = (
-                    build_existing_battery_ready_inverter(solar)
-                    if existing_inverter_supports_battery
-                    else select_inverter_for_battery(
-                        battery,
-                        inverters,
-                        catalog.get("compatibility"),
-                        expansion_target_kwp,
-                        requires_pv_input=bool(panels or has_existing_solar),
-                    )
+                expanded_inverter = select_inverter_for_battery(
+                    battery,
+                    inverters,
+                    catalog.get("compatibility"),
+                    expansion_target_kwp,
+                    requires_pv_input=True,  # Expansão obriga sempre a PV input
                 )
                 additional_target_kwp = expansion_target_kwp - existing_solar_peak_kwp
                 additional_panel_set = select_solar_panel_set(
@@ -262,6 +274,7 @@ def rank_catalog(
 
     return select_budgeted_recommendations(recommendations)
 
+
 def build_battery_quantity_variants(
     battery: Dict[str, Any],
     target_capacity_kwh: float,
@@ -286,6 +299,7 @@ def build_battery_quantity_variants(
         build_battery_quantity_variant(battery, quantity)
         for quantity in range(1, max_quantity + 1)
     ]
+
 
 def build_battery_quantity_variant(
     battery: Dict[str, Any],
@@ -328,10 +342,9 @@ def build_battery_quantity_variant(
         "pricing": pricing,
     }
 
+
 def estimate_auto_solar_expansion_target_kwp(profile: Dict[str, List[float]], solar: Optional[Dict[str, Any]]) -> float:
     if not (solar or {}).get("has_solar"):
-        return 0.0
-    if (solar or {}).get("battery_ready_inverter"):
         return 0.0
     existing_peak = get_existing_solar_peak_kwp(solar)
     if existing_peak <= 0:
@@ -348,6 +361,7 @@ def estimate_auto_solar_expansion_target_kwp(profile: Dict[str, List[float]], so
         yield_kwh_per_kwp if yield_kwh_per_kwp > 0 else existing_peak
     target_peak = max(existing_peak + 2.0, load_matched_peak * 1.15)
     return round(min(10.0, target_peak), 2)
+
 
 def build_existing_solar_expansion_targets(
     solar: Optional[Dict[str, Any]],
@@ -370,6 +384,7 @@ def build_existing_solar_expansion_targets(
 
     return targets
 
+
 def profile_for_panel_set(
     profile: Dict[str, List[float]],
     solar: Optional[Dict[str, Any]],
@@ -388,6 +403,7 @@ def profile_for_panel_set(
         "load_kwh": profile["load_kwh"],
         "pv_kwh": [value * scale for value in profile["pv_kwh"]],
     }
+
 
 def build_system_name(
     battery: Dict[str, Any],
@@ -425,24 +441,23 @@ def build_system_name(
 
     return " + ".join(part for part in parts if part)
 
+
 def build_replacement_notes(
     solar: Optional[Dict[str, Any]],
     inverter: Optional[Dict[str, Any]],
 ) -> List[str]:
     if not (solar or {}).get("has_solar"):
         return []
-    notes: List[str] = []
-    if (solar or {}).get("battery_ready_inverter"):
-        notes.append(
-            "O inversor atual foi assumido como compatível com bateria e não foi incluído um inversor novo no preço.")
-    elif inverter:
-        notes.append(
-            "O inversor atual não suporta bateria: não será reaproveitado e terá de ser retirado/substituído por este inversor novo.")
-    if notes:
-        return notes
-    if inverter:
-        return ["O inversor atual não suporta bateria: não será reaproveitado e terá de ser retirado/substituído por este inversor novo."]
-    return []
+
+    specs = (inverter or {}).get("specs", {})
+    has_pv = bool(specs.get("has_direct_pv_input") or float(
+        specs.get("max_pv_input_kwp") or 0) > 0)
+
+    if has_pv:
+        return ["O inversor atual será substituído por um modelo híbrido para garantir compatibilidade total com o sistema de baterias proposto."]
+    else:
+        return ["Será adicionado um inversor dedicado para as baterias (AC-coupled), mantendo o seu inversor solar atual para a produção fotovoltaica."]
+
 
 def build_existing_inverter_action(
     solar: Optional[Dict[str, Any]],
@@ -450,16 +465,19 @@ def build_existing_inverter_action(
 ) -> Optional[str]:
     if not (solar or {}).get("has_solar"):
         return None
-    if (solar or {}).get("battery_ready_inverter"):
-        return "reuse"
-    if inverter:
+
+    specs = (inverter or {}).get("specs", {})
+    has_pv = bool(specs.get("has_direct_pv_input") or float(
+        specs.get("max_pv_input_kwp") or 0) > 0)
+
+    if has_pv:
         return "replace"
-    return None
+    else:
+        return "keep"
+
 
 def get_existing_battery_capacity_kwh(solar: Optional[Dict[str, Any]]) -> float:
     if not (solar or {}).get("has_solar"):
-        return 0.0
-    if not (solar or {}).get("battery_ready_inverter"):
         return 0.0
     if not (solar or {}).get("has_battery"):
         return 0.0
@@ -473,6 +491,7 @@ def get_existing_battery_capacity_kwh(solar: Optional[Dict[str, Any]]) -> float:
     except (TypeError, ValueError):
         return 0.0
     return max(0.0, capacity)
+
 
 def build_existing_battery_info(solar: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     capacity = get_existing_battery_capacity_kwh(solar)
@@ -488,6 +507,7 @@ def build_existing_battery_info(solar: Optional[Dict[str, Any]]) -> Optional[Dic
         "max_power_kw": round(max_power_kw, 2) if max_power_kw > 0 else None,
     }
 
+
 def calculate_solar_to_inverter_ratio(
     inverter: Optional[Dict[str, Any]],
     panel_set: Optional[Dict[str, Any]],
@@ -501,6 +521,7 @@ def calculate_solar_to_inverter_ratio(
         return 0.0
 
     return solar_peak_kwp / inverter_power
+
 
 def is_solar_array_sized_for_inverter(
     inverter: Optional[Dict[str, Any]],
@@ -517,9 +538,11 @@ def is_solar_array_sized_for_inverter(
         return True
     return ratio >= MIN_SOLAR_TO_INVERTER_RATIO
 
+
 def max_reasonable_payback_years(project_years: int) -> float:
     project_limit = max(1, project_years) * 1.5
     return min(MAX_RECOMMENDATION_PAYBACK_YEARS, max(10.0, project_limit))
+
 
 def is_recommendation_economically_viable(
     annual_savings: float,
@@ -531,6 +554,7 @@ def is_recommendation_economically_viable(
     if payback_years is None:
         return False
     return payback_years <= max_reasonable_payback_years(project_years)
+
 
 def build_existing_battery_ready_inverter(solar: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     peak_kw = max(0.0, float((solar or {}).get("peak_kw", 0) or 0))
@@ -558,6 +582,7 @@ def build_existing_battery_ready_inverter(solar: Optional[Dict[str, Any]]) -> Di
         },
         "existing": True,
     }
+
 
 def build_existing_solar_panel_set(solar: Optional[Dict[str, Any]], roof_area_m2: Optional[float] = None) -> Dict[str, Any]:
     peak_kw = max(0.0, float((solar or {}).get("peak_kw", 0) or 0))
@@ -590,6 +615,7 @@ def build_existing_solar_panel_set(solar: Optional[Dict[str, Any]], roof_area_m2
         "roof_coverage_pct": round(roof_coverage_pct, 1) if roof_coverage_pct is not None else None,
     }
 
+
 def build_expanded_solar_panel_set(
     solar: Optional[Dict[str, Any]],
     additional_set: Dict[str, Any],
@@ -618,161 +644,84 @@ def build_expanded_solar_panel_set(
         "roof_coverage_pct": round(roof_coverage_pct, 1) if roof_coverage_pct is not None else additional_set.get("roof_coverage_pct"),
     }
 
+
 def select_budgeted_recommendations(recommendations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Split recommendations into Budget, Balanced and Premium cards."""
+    """Split recommendations into Budget, Balanced and Premium cards based on 
+    specific financial and technical criteria.
+    """
 
     if not recommendations:
         return []
 
-    tier_labels = {
-        "budget": "Budget",
-        "balanced": "Balanced",
-        "premium": "Premium",
-    }
-    sorted_by_price = sorted(
-        recommendations, key=lambda item: item["capex_total_eur"])
-    total = len(sorted_by_price)
+    # Filtrar recomendações únicas para evitar duplicados exatos em diferentes tiers
+    # (Identidade baseada em bateria, quantidade e inversor)
+    unique_map = {}
+    for rec in recommendations:
+        key = recommendation_identity(rec)
+        if key not in unique_map:
+            unique_map[key] = rec
+    
+    candidates = list(unique_map.values())
+    selected_ids = set()
+    result = []
 
-    for index, item in enumerate(sorted_by_price):
-        if index < total / 3:
-            tier = "budget"
-        elif index < (total * 2) / 3:
-            tier = "balanced"
-        else:
-            tier = "premium"
-        if get_expansion_strategy(item) == "load_matched" and tier == "budget":
-            tier = "balanced"
-        if int(item.get("battery", {}).get("quantity", 1) or 1) > 1 and tier == "budget":
-            tier = "balanced"
-        item["budget_tier"] = tier
-        item["budget_label"] = tier_labels[tier]
-
-    budget_count = sum(
-        1 for item in sorted_by_price if item["budget_tier"] == "budget")
-    for item in sorted_by_price:
-        if budget_count >= MAX_RECOMMENDATIONS_PER_TIER:
+    # 1. Budget: As 3 opções mais baratas de hardware
+    budget_candidates = sorted(candidates, key=lambda x: x["capex_total_eur"])
+    budget_count = 0
+    for rec in budget_candidates:
+        if budget_count >= 3:
             break
-        if item["budget_tier"] == "budget":
-            continue
-        if get_expansion_strategy(item) == "load_matched":
-            continue
-        if int(item.get("battery", {}).get("quantity", 1) or 1) > 1:
-            continue
-        item["budget_tier"] = "budget"
-        item["budget_label"] = tier_labels["budget"]
+        rec_copy = dict(rec)
+        rec_copy["budget_tier"] = "budget"
+        rec_copy["budget_label"] = "Budget"
+        result.append(rec_copy)
+        selected_ids.add(recommendation_identity(rec))
         budget_count += 1
 
-    def quality_score(item: Dict[str, Any]) -> tuple:
-        return (
-            -item["fit_to_ideal"],
-            item["payback_years"] if item["payback_years"] is not None else 999,
-            item["capex_total_eur"],
-        )
+    # 2. Balanced: As 3 opções com retorno (payback) mais rápido (excluindo as já selecionadas)
+    remaining_for_balanced = [r for r in candidates if recommendation_identity(r) not in selected_ids]
+    balanced_candidates = sorted(
+        remaining_for_balanced, 
+        key=lambda x: (x["payback_years"] if x["payback_years"] is not None else 999)
+    )
+    balanced_count = 0
+    for rec in balanced_candidates:
+        if balanced_count >= 3:
+            break
+        rec_copy = dict(rec)
+        rec_copy["budget_tier"] = "balanced"
+        rec_copy["budget_label"] = "Balanced"
+        result.append(rec_copy)
+        selected_ids.add(recommendation_identity(rec))
+        balanced_count += 1
 
-    def capacity_score(item: Dict[str, Any]) -> tuple:
-        return (
-            -float(item.get("simulated_capacity_kwh", 0) or 0),
-            item["payback_years"] if item["payback_years"] is not None else 999,
-            item["capex_total_eur"],
-        )
-
-    def budget_score(item: Dict[str, Any]) -> tuple:
-        return (
-            item["capex_total_eur"],
-            item["payback_years"] if item["payback_years"] is not None else 999,
-            -item["fit_to_ideal"],
-        )
-
-    def tier_score(item: Dict[str, Any]) -> tuple:
-        if item.get("budget_tier") == "budget":
-            return budget_score(item)
-        if item.get("budget_tier") == "balanced":
-            return budget_score(item)
-        return budget_score(item)
-
-    selected_by_tier: Dict[str, List[Dict[str, Any]]] = {
-        "budget": [],
-        "balanced": [],
-        "premium": [],
-    }
-    selected_keys: set[str] = set()
-    for tier in ("budget", "balanced", "premium"):
-        tier_items = [
-            item for item in sorted_by_price if item["budget_tier"] == tier]
-        if tier == "budget":
-            non_auto_items = [
-                item for item in tier_items
-                if not (item.get("solar_panels") or {}).get("auto_expanded")
-            ]
-            if non_auto_items:
-                tier_items = non_auto_items
-        elif tier == "balanced":
-            budget_ceiling = max(
-                (item["capex_total_eur"]
-                 for item in selected_by_tier["budget"]),
-                default=0,
-            )
-            tier_items = [
-                item for item in tier_items
-                if item["capex_total_eur"] >= budget_ceiling
-            ]
-        elif tier == "premium":
-            balanced_ceiling = max(
-                (item["capex_total_eur"]
-                 for item in selected_by_tier["balanced"]),
-                default=0,
-            )
-            tier_items = [
-                item for item in tier_items
-                if item["capex_total_eur"] >= balanced_ceiling
-            ]
-        candidates = sorted(tier_items, key=tier_score)
-        for item in candidates:
-            key = recommendation_identity(item)
-            if key in selected_keys:
-                continue
-            selected_by_tier[tier].append(item)
-            selected_keys.add(key)
-            if len(selected_by_tier[tier]) == MAX_RECOMMENDATIONS_PER_TIER:
-                break
-
-        if tier == "balanced":
-            ensure_preferred_stacked_battery_option(
-                selected_by_tier[tier],
-                tier_items,
-                selected_keys,
-            )
-
-        if tier == "premium" and tier_items:
-            largest = sorted(tier_items, key=capacity_score)[0]
-            largest_key = recommendation_identity(largest)
-            already_selected = any(
-                recommendation_identity(item) == largest_key
-                for item in selected_by_tier[tier]
-            )
-            if not already_selected and largest_key not in selected_keys:
-                if len(selected_by_tier[tier]) >= MAX_RECOMMENDATIONS_PER_TIER:
-                    removed = selected_by_tier[tier].pop()
-                    selected_keys.discard(recommendation_identity(removed))
-                selected_by_tier[tier].append(largest)
-                selected_keys.add(largest_key)
+    # 3. Premium: As 3 opções mais caras de hardware (excluindo as já selecionadas)
+    remaining_for_premium = [r for r in candidates if recommendation_identity(r) not in selected_ids]
+    premium_candidates = sorted(remaining_for_premium, key=lambda x: x["capex_total_eur"], reverse=True)
+    premium_count = 0
+    for rec in premium_candidates:
+        if premium_count >= 3:
+            break
+        rec_copy = dict(rec)
+        rec_copy["budget_tier"] = "premium"
+        rec_copy["budget_label"] = "Premium"
+        result.append(rec_copy)
+        selected_ids.add(recommendation_identity(rec))
+        premium_count += 1
 
     tier_order = {"budget": 0, "balanced": 1, "premium": 2}
-    selected = [
-        item
-        for tier in ("budget", "balanced", "premium")
-        for item in selected_by_tier[tier]
-    ]
     return sorted(
-        selected,
+        result,
         key=lambda item: (
             tier_order.get(item.get("budget_tier", ""), 99),
-            tier_score(item),
+            item["capex_total_eur"] if item.get("budget_tier") != "balanced" else (item["payback_years"] or 999)
         ),
     )
 
+
 def get_expansion_strategy(item: Dict[str, Any]) -> str:
     return str((item.get("solar_panels") or {}).get("expansion_strategy") or "")
+
 
 def ensure_preferred_stacked_battery_option(
     selected_items: List[Dict[str, Any]],
@@ -802,11 +751,13 @@ def ensure_preferred_stacked_battery_option(
     selected_keys.add(candidate_key)
     selected_items.sort(key=lambda item: item["capex_total_eur"])
 
+
 def is_preferred_stacked_battery(item: Dict[str, Any]) -> bool:
     battery = item.get("battery", {})
     quantity = int(battery.get("quantity", 1) or 1)
     brand = str(battery.get("brand", "")).lower()
     return quantity > 1 and "pylontech" in brand
+
 
 def recommendation_identity(item: Dict[str, Any]) -> str:
     panel_set = item.get("solar_panels") or {}
@@ -818,6 +769,7 @@ def recommendation_identity(item: Dict[str, Any]) -> str:
             str(panel_set.get("array_power_kwp", "")),
         ]
     )
+
 
 def select_solar_panel_set(
     panels: List[Dict[str, Any]],
@@ -921,6 +873,7 @@ def select_solar_panel_set(
         "max_panels_by_roof": int(max(0.0, roof_area_m2 * DEFAULT_USABLE_ROOF_RATIO - reserved_roof_area_m2) // panel_area_m2) if roof_area_m2 and roof_area_m2 > 0 else None,
     }
 
+
 def select_inverter_for_battery(
     battery: Dict[str, Any],
     inverters: List[Dict[str, Any]],
@@ -984,6 +937,7 @@ def select_inverter_for_battery(
 
     return min(compatible_inverters, key=score)
 
+
 def is_inverter_sized_for_battery(battery: Dict[str, Any], inverter: Dict[str, Any]) -> bool:
     specs = battery.get("specs", {})
     unit_specs = battery.get("unit_specs") or specs
@@ -1004,6 +958,7 @@ def is_inverter_sized_for_battery(battery: Dict[str, Any], inverter: Dict[str, A
     minimum_by_capacity = sizing_capacity * 0.35 if sizing_capacity > 0 else 0.0
     return inverter_power >= max(minimum_by_power, minimum_by_capacity)
 
+
 def get_inverter_power_kw(inverter: Optional[Dict[str, Any]]) -> float:
     specs = (inverter or {}).get("specs", {})
     return float(
@@ -1013,6 +968,7 @@ def get_inverter_power_kw(inverter: Optional[Dict[str, Any]]) -> float:
         or 0
     )
 
+
 def get_panel_area_m2(panel: Dict[str, Any]) -> float:
     dimensions = panel.get("specs", {}).get("dimensions_mm", {})
     length = float(dimensions.get("length") or 0)
@@ -1020,6 +976,7 @@ def get_panel_area_m2(panel: Dict[str, Any]) -> float:
     if length > 0 and width > 0:
         return (length * width) / 1_000_000
     return DEFAULT_PANEL_AREA_M2
+
 
 def get_inverter_panel_max_count(
     inverter: Optional[Dict[str, Any]],
@@ -1040,6 +997,7 @@ def get_inverter_panel_max_count(
         return None
     return max(1, int(max_pv_input_kwp // panel_power_kwp))
 
+
 def is_component_set_compatible(
     battery: Dict[str, Any],
     inverter: Optional[Dict[str, Any]],
@@ -1055,6 +1013,7 @@ def is_component_set_compatible(
         return True
     return is_inverter_panel_compatible_from_specs(inverter, solar_panel)
 
+
 def is_battery_inverter_compatible(
     battery: Dict[str, Any],
     inverter: Optional[Dict[str, Any]],
@@ -1067,6 +1026,7 @@ def is_battery_inverter_compatible(
     compatible_ids = set(
         battery.get("specs", {}).get("compatible_inverter_ids") or [])
     return inverter.get("id") in compatible_ids
+
 
 def is_inverter_panel_compatible_from_specs(
     inverter: Optional[Dict[str, Any]],

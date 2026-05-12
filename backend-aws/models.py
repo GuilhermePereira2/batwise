@@ -295,3 +295,4 @@ class SimulatorRequest(BaseModel):
     tariff: dict
     assumptions: dict
     solar: Optional[dict] = None
+    max_investment: Optional[float] = None

@@ -93,7 +93,7 @@ case $CHOICE in
     echo "✅ .env criado para Cenário 2"
     echo ""
     echo "Confirma no .env:"
-    echo "  AWS_PROFILE=duarte"
+    echo "  AWS_PROFILE=GUI-Watt-Builder"
     echo "  AWS_REGION=eu-west-3"
     echo "  SECRET_KEY=<chave_gerada_com_openssl>"
     echo ""

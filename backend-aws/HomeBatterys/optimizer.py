@@ -26,6 +26,7 @@ def optimize_home_battery(
     solar: Optional[Dict[str, Any]] = None,
     assumptions: Optional[Dict[str, Any]] = None,
     catalog: Optional[Dict[str, Any]] = None,
+    max_investment: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Estimate the best home battery size from simulator data.
 
@@ -161,6 +162,7 @@ def optimize_home_battery(
         solar,
         estimate_roof_area_m2(input_data),
         project_years=project_years,
+        max_investment=max_investment,
     )
 
     return {
@@ -200,6 +202,7 @@ def optimize_home_battery(
             f"As recomendações de catálogo filtram sistemas com menos de {int(MIN_SOLAR_TO_INVERTER_RATIO * 100)}% da potência do inversor em painéis e retornos fora de um horizonte razoável.",
         ],
     }
+
 
 def build_notes(mode: str, profile_summary: Dict[str, float], selected: Dict[str, Any], reason: str) -> List[str]:
     """Build human-readable caveats shown next to the simulator results."""

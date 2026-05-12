@@ -45,6 +45,7 @@ app = FastAPI(title="BatteryApp Calculator API")
 def check_home_catalog_on_startup():
     validate_sqlite_home_catalog()
 
+
 # Configurar CORS (Para o teu frontend no Vercel conseguir falar com este backend)
 origins = [
     "http://localhost:8080",  # Localhost
@@ -512,7 +513,8 @@ def login(creds: UserLogin):
 def google_login(creds: GoogleLogin):
     google_client_id = os.getenv("GOOGLE_CLIENT_ID")
     if not google_client_id:
-        raise HTTPException(status_code=500, detail="Google login is not configured")
+        raise HTTPException(
+            status_code=500, detail="Google login is not configured")
 
     try:
         from google.auth.transport import requests as google_requests
@@ -524,20 +526,25 @@ def google_login(creds: GoogleLogin):
             google_client_id,
         )
     except ImportError:
-        raise HTTPException(status_code=500, detail="Google auth dependency is not installed")
+        raise HTTPException(
+            status_code=500, detail="Google auth dependency is not installed")
     except ValueError:
-        raise HTTPException(status_code=401, detail="Invalid Google credential")
+        raise HTTPException(
+            status_code=401, detail="Invalid Google credential")
 
     if not idinfo.get("email_verified"):
-        raise HTTPException(status_code=403, detail="Google email is not verified")
+        raise HTTPException(
+            status_code=403, detail="Google email is not verified")
 
     email = idinfo.get("email")
     if not email:
-        raise HTTPException(status_code=401, detail="Google account has no email")
+        raise HTTPException(
+            status_code=401, detail="Google account has no email")
 
     full_name = idinfo.get("name") or email
     try:
-        user = db_users.create_or_update_google_user(email=email, full_name=full_name, credits=5)
+        user = db_users.create_or_update_google_user(
+            email=email, full_name=full_name, credits=5)
     except NoCredentialsError:
         raise HTTPException(
             status_code=500,
@@ -806,7 +813,8 @@ def validate_sqlite_home_catalog():
         if not catalog[key]:
             missing.append(key)
     if missing:
-        raise RuntimeError(f"SQLite home catalog validation failed. Empty tables: {', '.join(missing)}")
+        raise RuntimeError(
+            f"SQLite home catalog validation failed. Empty tables: {', '.join(missing)}")
     print(
         "Home SQLite catalog OK "
         f"({len(catalog['batteries'])} batteries, "
@@ -957,6 +965,7 @@ async def size_battery(req: SimulatorRequest, current_user: dict = Depends(get_c
         solar=req.solar or {},
         assumptions=req.assumptions,
         catalog=catalog,
+        max_investment=req.max_investment,
     )
     try:
         db_users.save_simulation_input(
