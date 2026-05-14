@@ -454,7 +454,7 @@ def build_replacement_notes(
         specs.get("max_pv_input_kwp") or 0) > 0)
 
     if has_pv:
-        return ["O inversor atual será substituído por um modelo híbrido para garantir compatibilidade total com o sistema de baterias proposto."]
+        return []
     else:
         return ["Será adicionado um inversor dedicado para as baterias (AC-coupled), mantendo o seu inversor solar atual para a produção fotovoltaica."]
 

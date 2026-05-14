@@ -456,7 +456,7 @@ export default function Simulator() {
         {
             tier: 'balanced',
             title: 'Balanced',
-            description: 'Equilíbrio entre custo, capacidade e retorno.',
+            description: 'A solução mais equilibrada: maximiza o seu autoconsumo e poupança mantendo um investimento controlado.',
             badgeClass: 'bg-orange-50 text-orange-700 border-orange-200',
         },
         {
@@ -519,93 +519,242 @@ export default function Simulator() {
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 14;
+        const margin = 20;
         const maxWidth = pageWidth - margin * 2;
-        let y = 18;
+        let y = 0;
 
-        const addPageIfNeeded = (height = 18) => {
+        // Brand Colors
+        const orange = [234, 88, 12]; // #ea580c
+        const black = [0, 0, 0];
+        const grayText = [75, 85, 99]; // gray-600
+        const lightGray = [249, 250, 251]; // gray-50
+        const borderGray = [229, 231, 235]; // gray-200
+
+        const roundedRect = (x: number, y: number, w: number, h: number, r: number, style: string) => {
+            doc.roundedRect(x, y, w, h, r, r, style);
+        };
+
+        const addPageIfNeeded = (height = 20) => {
             if (y + height <= pageHeight - margin) return;
             doc.addPage();
-            y = 18;
+            y = margin;
         };
 
-        const addText = (text: string, x = margin, fontSize = 10, style: 'normal' | 'bold' = 'normal', lineGap = 5) => {
-            doc.setFont('helvetica', style);
-            doc.setFontSize(fontSize);
-            const lines = doc.splitTextToSize(text, maxWidth - (x - margin));
-            addPageIfNeeded(lines.length * lineGap + 2);
-            doc.text(lines, x, y);
-            y += lines.length * lineGap;
+        // --- COVER PAGE ---
+        const drawCover = () => {
+            // Background Elements
+            doc.setFillColor(...black);
+            doc.rect(0, 0, pageWidth, pageHeight * 0.4, 'F');
+            
+            // Logo Area
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(40);
+            doc.text('WattBuilder', pageWidth / 2, pageHeight * 0.15, { align: 'center' });
+            
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'normal');
+            doc.text('OTIMIZADOR DE PRODUÇÃO E CONSUMO RESIDENCIAL', pageWidth / 2, pageHeight * 0.22, { align: 'center' });
+            
+            // Decorative line
+            doc.setDrawColor(...orange);
+            doc.setLineWidth(1.5);
+            doc.line(pageWidth * 0.4, pageHeight * 0.25, pageWidth * 0.6, pageHeight * 0.25);
+
+            // Title of Document
+            y = pageHeight * 0.5;
+            doc.setTextColor(...black);
+            doc.setFontSize(28);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Estudo de Viabilidade', margin, y);
+            
+            y += 10;
+            doc.setFontSize(14);
+            doc.setTextColor(...orange);
+            const location = [formData.solar.city, formData.solar.country].filter(Boolean).join(', ') || 'Desconhecido';
+            doc.text(`PARA: ${location.toUpperCase()}`, margin, y);
+            
+            // Param Cards on Cover
+            y += 20;
+            doc.setTextColor(...black);
+            doc.setFontSize(12);
+            doc.text('Parâmetros de Entrada:', margin, y);
+            y += 8;
+
+            const boxW = (maxWidth - 10) / 3;
+            const drawCoverBox = (x: number, label: string, val: string) => {
+                doc.setFillColor(...lightGray);
+                roundedRect(x, y, boxW, 25, 4, 'F');
+                doc.setTextColor(...grayText);
+                doc.setFontSize(8);
+                doc.text(label.toUpperCase(), x + 5, y + 8);
+                doc.setTextColor(...black);
+                doc.setFontSize(11);
+                doc.setFont('helvetica', 'bold');
+                doc.text(val, x + 5, y + 18);
+            };
+
+            drawCoverBox(margin, 'Consumo Anual Estimado', `${Math.round(results.summary?.annual_consumption_estimated ?? 0).toLocaleString()} kWh`);
+            drawCoverBox(margin + boxW + 5, 'Potência Solar Atual', `${formData.solar.peak_kw} kWp`);
+            drawCoverBox(margin + (boxW + 5) * 2, 'Data do Estudo', new Date().toLocaleDateString('pt-PT'));
+
+            // Footer of Cover
+            doc.setTextColor(...grayText);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.text('www.wattbuilder.pt', pageWidth / 2, pageHeight - 15, { align: 'center' });
         };
 
-        doc.setTextColor(0, 0, 0);
-        addText('WattBuilder - Propostas da Simulação', margin, 18, 'bold', 8);
-        addText(`Data: ${new Date().toLocaleDateString('pt-PT')}`, margin, 10);
-        addText(`Consumo anual estimado: ${Math.round(results.summary?.annual_consumption_estimated ?? 0).toLocaleString()} kWh`, margin, 10);
-        addText(`Produção solar estimada: ${Math.round(results.summary?.annual_solar_estimated ?? 0).toLocaleString()} kWh/ano`, margin, 10);
-        if ((results.summary?.annual_ev_consumption_estimated ?? 0) > 0) {
-            addText(`Consumo de carros elétricos: ${Math.round(results.summary.annual_ev_consumption_estimated).toLocaleString()} kWh/ano`, margin, 10);
-        }
-        y += 4;
+        drawCover();
 
+        // --- RECOMMENDATION PAGES (One per tier) ---
         budgetSections.forEach((section) => {
             const items = (results.recommendations || []).filter((rec: any) => rec.budget_tier === section.tier);
             if (!items.length) return;
 
-            addPageIfNeeded(20);
-            addText(section.title, margin, 14, 'bold', 7);
-            addText(section.description, margin, 9);
-            y += 2;
+            doc.addPage();
+            y = 20;
+
+            // Tier Page Header
+            doc.setFillColor(...orange);
+            roundedRect(margin, y, 50, 10, 2, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text(section.title.toUpperCase(), margin + 5, y + 7);
+            
+            y += 18;
+            doc.setTextColor(...black);
+            doc.setFontSize(10);
+            const descLines = doc.splitTextToSize(section.description, maxWidth);
+            doc.text(descLines, margin, y);
+            y += (descLines.length * 5) + 8;
 
             items.forEach((rec: any, index: number) => {
-                const prices = getPriceBreakdown(rec);
-                addPageIfNeeded(58);
-                doc.setDrawColor(220, 220, 220);
-                doc.line(margin, y, pageWidth - margin, y);
-                y += 6;
+                // Calculate dynamic height for equipment cards
+                const equipW = (maxWidth - 30) / 3;
+                const batteryLines = doc.splitTextToSize(getBatteryDescription(rec), equipW - 8);
+                const inverterLines = rec.inverter ? doc.splitTextToSize(`${rec.inverter.brand} ${rec.inverter.model}`, equipW - 8) : [];
+                const solarLines = doc.splitTextToSize(getSolarDescription(rec.solar_panels), equipW - 8);
+                
+                const maxEquipLines = Math.max(batteryLines.length, inverterLines.length, solarLines.length);
+                const equipCardHeight = 12 + (maxEquipLines * 4);
+                const solutionCardHeight = 55 + equipCardHeight;
 
-                addText(`Solução ${index + 1}: ${getSystemName(rec)}`, margin, 11, 'bold', 5);
-                addText(`Investimento estimado: ${formatPrice(rec.capex_total_eur)} | Hardware: ${formatPrice(prices.hardwareTotal)} | Instalação: ${formatPrice(prices.installation)}`, margin, 9);
-                addText(`Fatura atual: ${formatPrice(rec.annual_bill_before_eur)}/ano | Após sistema: ${formatPrice(rec.annual_bill_after_eur)}/ano | Poupança: ${formatPrice(rec.savings_annual_eur)}/ano | Payback: ${rec.payback_years ? `${rec.payback_years} anos` : 'não aplicável'}`, margin, 9);
-                addText(`Bateria: ${getBatteryDescription(rec)} (${rec.new_battery_capacity_kwh || rec.simulated_capacity_kwh} kWh)`, margin, 9);
-                if (rec.existing_battery?.has_battery) {
-                    addText(`Bateria existente: ${getExistingBatteryDescription(rec.existing_battery)}`, margin, 9);
-                }
+                addPageIfNeeded(solutionCardHeight + 5);
+                
+                // Solution Container
+                doc.setDrawColor(...borderGray);
+                roundedRect(margin, y, maxWidth, solutionCardHeight, 5, 'D');
+                
+                // Header Bar
+                doc.setFillColor(...lightGray);
+                roundedRect(margin + 0.2, y + 0.2, maxWidth - 0.4, 10, 5, 'F');
+                doc.setTextColor(...black);
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`Solução ${index + 1}`, margin + 8, y + 7);
+
+                let contentY = y + 20;
+                
+                // --- FINANCIAL METRICS (All Large & Orange) ---
+                const metW = maxWidth / 3;
+                
+                const drawFinancial = (x: number, label: string, val: string) => {
+                    doc.setTextColor(...grayText);
+                    doc.setFontSize(8);
+                    doc.setFont('helvetica', 'bold'); // Bold label
+                    doc.text(label.toUpperCase(), x, contentY);
+                    doc.setTextColor(...orange);
+                    doc.setFontSize(14);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(val, x, contentY + 8);
+                };
+
+                drawFinancial(margin + 10, 'Investimento', formatPrice(rec.capex_total_eur));
+                drawFinancial(margin + metW + 5, 'Poupança Anual', formatPrice(rec.savings_annual_eur));
+                drawFinancial(margin + metW * 2 + 5, 'Retorno', rec.payback_years ? `${rec.payback_years} Anos` : 'N/A');
+
+                contentY += 15;
+                doc.setDrawColor(...borderGray);
+                doc.line(margin + 10, contentY, margin + maxWidth - 10, contentY);
+                contentY += 8;
+
+                // --- EQUIPMENT CARDS (Side-by-side) ---
+                doc.setTextColor(...black);
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'bold');
+                doc.text('EQUIPAMENTO INCLUÍDO:', margin + 10, contentY);
+                contentY += 4;
+
+                const drawEquipCard = (x: number, title: string, descLines: string[]) => {
+                    doc.setFillColor(...lightGray);
+                    roundedRect(x, contentY, equipW, equipCardHeight, 3, 'F');
+                    doc.setTextColor(...orange);
+                    doc.setFontSize(7);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(title.toUpperCase(), x + 4, contentY + 5);
+                    doc.setTextColor(...black);
+                    doc.setFontSize(8);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(descLines, x + 4, contentY + 9);
+                };
+
+                drawEquipCard(margin + 10, 'Bateria', batteryLines);
                 if (rec.inverter) {
-                    addText(`Inversor: ${rec.inverter.brand} ${rec.inverter.model} (${rec.inverter.specs?.power_kw || 'N/A'} kW)`, margin, 9);
+                    drawEquipCard(margin + equipW + 15, 'Inversor', inverterLines);
+                    drawEquipCard(margin + equipW * 2 + 20, 'Painéis', solarLines);
+                } else {
+                    drawEquipCard(margin + equipW + 15, 'Painéis', solarLines);
                 }
-                addText(`Painéis solares: ${getSolarDescription(rec.solar_panels)}`, margin, 9);
-                if (rec.replacement_notes?.length) {
-                    rec.replacement_notes.forEach((note: string) => addText(`Nota: ${note}`, margin, 8));
-                }
-                y += 4;
+
+                y += solutionCardHeight + 5;
             });
         });
 
-        addPageIfNeeded(28);
-        doc.setDrawColor(220, 220, 220);
-        doc.line(margin, y, pageWidth - margin, y);
-        y += 6;
-        addText('Notas', margin, 12, 'bold');
-        (results.notes || []).forEach((note: string) => addText(`- ${note}`, margin, 8));
+        // --- FINAL NOTES PAGE ---
+        doc.addPage();
+        y = 20;
+        doc.setTextColor(...black);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.text('Considerações Técnicas', margin, y);
+        y += 10;
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...grayText);
+        (results.notes || []).forEach((note: string) => {
+            const lines = doc.splitTextToSize(`• ${note}`, maxWidth);
+            addPageIfNeeded(lines.length * 5 + 5);
+            doc.text(lines, margin, y);
+            y += lines.length * 5 + 2;
+        });
 
+        // --- GLOBAL WATERMARK & PAGE NUMBERS ---
         const totalPages = doc.internal.getNumberOfPages();
         for (let i = 1; i <= totalPages; i++) {
             doc.setPage(i);
-            doc.saveGraphicsState();
-            doc.setGState(new (doc as any).GState({ opacity: 0.22 }));
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(100);
-            doc.setTextColor(150, 150, 150);
-
-            const centerX = pageWidth / 2;
-            const centerY = pageHeight / 2;
-
-            doc.text("Watt Builder", centerX + 50, centerY + 70, { align: "center", angle: 45 });
-            doc.restoreGraphicsState();
+            
+            // Watermark (Skip Cover)
+            if (i > 1) {
+                doc.saveGraphicsState();
+                doc.setGState(new (doc as any).GState({ opacity: 0.12 }));
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(100);
+                doc.setTextColor(150, 150, 150);
+                const centerX = pageWidth / 2;
+                const centerY = pageHeight / 2;
+                doc.text("Watt Builder", centerX + 50, centerY + 70, { align: "center", angle: 45 });
+                doc.restoreGraphicsState();
+            }
+            
+            // Page Number
+            doc.setFontSize(8);
+            doc.setTextColor(...grayText);
+            doc.text(`Estudo de Independência Energética - Página ${i} de ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
         }
 
-        doc.save(`propostas-wattbuilder-${new Date().toISOString().slice(0, 10)}.pdf`);
+        doc.save(`Estudo-WattBuilder-${formData.solar.city || 'Portugal'}-${new Date().toISOString().slice(0, 10)}.pdf`);
     };
 
     return (
@@ -895,8 +1044,8 @@ export default function Simulator() {
                                                     step="0.1"
                                                     min="0"
                                                     className="border-gray-300 focus-visible:ring-orange-600"
-                                                    value={formData.solar.existing_inverter_max_power_kw}
-                                                    onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_max_power_kw: Number(e.target.value) } })}
+                                                    value={formData.solar.peak_kw}
+                                                    onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, peak_kw: Number(e.target.value) } })}
                                                 />
                                             </div>
                                             <div className="space-y-2">
@@ -1012,7 +1161,7 @@ export default function Simulator() {
                                                             />
                                                         </div>
                                                         <div className="space-y-2">
-                                                            <Label>Modelo da bateria atual</Label>
+                                                            <Label>Modelo do bateria atual</Label>
                                                             <Input
                                                                 type="text"
                                                                 className="border-gray-300 focus-visible:ring-orange-600"
@@ -1308,49 +1457,31 @@ export default function Simulator() {
                                     <h2 className="text-2xl font-bold">Propostas recomendadas</h2>
                                     <p className="text-sm text-gray-500">Abaixo as opções otimizadas para as tuas necessidades de consumo.</p>
                                 </div>
-                                <Button onClick={downloadProposalsPdf} className="bg-black text-white hover:bg-gray-800">
+                                <Button onClick={downloadProposalsPdf} className="bg-black text-white hover:bg-gray-800" disabled={!results?.recommendations?.length}>
                                     <FileText className="mr-2 h-4 w-4" />
                                     Descarregar PDF
                                 </Button>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <div className="mb-6 md:mb-0 text-center md:text-left flex flex-col justify-center">
-                                    <h2 className="text-xl md:text-2xl font-semibold text-gray-800">
-                                        Parâmetros ideais para a sua casa:
-                                    </h2>
-                                    <div className="mt-2 w-12 h-1 bg-black rounded-full mx-auto md:mx-0" />
+                            {results?.recommendations?.length === 0 && (
+                                <div className="bg-orange-50 border-l-4 border-orange-500 p-6 rounded-r-xl">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-2xl animate-bounce">😟</span>
+                                        <h3 className="text-lg font-bold text-orange-900">Nenhuma solução encontrada</h3>
+                                    </div>
+                                    <p className="mt-2 text-orange-800">
+                                        Com os parâmetros atuais, não conseguimos encontrar um sistema de baterias que cumpra os requisitos técnicos e económicos.
+                                        Experimente ajustar o seu consumo, orçamento ou potência solar e tente novamente.
+                                    </p>
+                                    <Button
+                                        variant="outline"
+                                        className="mt-4 border-orange-500 text-orange-900 hover:bg-orange-100"
+                                        onClick={() => goToStep(2)}
+                                    >
+                                        Ajustar Parâmetros
+                                    </Button>
                                 </div>
-                                <Card className="border-gray-200 bg-white">
-                                    <CardContent className="p-5">
-                                        <p className="text-sm text-gray-500">Capacidade ideal</p>
-                                        <div className="mt-2 flex items-baseline gap-2">
-                                            <span className="text-3xl font-extrabold text-black">{results.summary?.ideal_capacity_kwh ?? 0}</span>
-                                            <span className="text-sm text-gray-500">kWh</span>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <Card className="border-gray-200 bg-white">
-                                    <CardContent className="p-5">
-                                        <p className="text-sm text-gray-500">Poupança estimada</p>
-                                        <div className="mt-2 flex items-baseline gap-2">
-                                            <span className="text-3xl font-extrabold text-black">{Math.round(results.summary?.savings_annual_eur ?? 0)}</span>
-                                            <span className="text-sm text-gray-500">€/ano</span>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <Card className="border-gray-200 bg-white">
-                                    <CardContent className="p-5">
-                                        <p className="text-sm text-gray-500">Consumo anual</p>
-                                        <div className="mt-2 flex items-baseline gap-2">
-                                            <span className="text-3xl font-extrabold text-black">{Math.round(results.summary?.annual_consumption_estimated ?? 0)}</span>
-                                            <span className="text-sm text-gray-500">kWh</span>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
+                            )}
 
                             <div className="space-y-10">
                                 {recommendationGroups.map((group) => (
@@ -1375,14 +1506,8 @@ export default function Simulator() {
                                                         <Card
                                                             key={`${group.tier}-${rec.system_name || rec.battery?.id || idx}`}
                                                             onClick={() => setSelectedRecommendation(rec)}
-                                                            className={`cursor-pointer relative overflow-hidden transition-all hover:scale-[1.02] bg-white flex flex-col h-full ${idx === 0 ? 'border-orange-600 border-2 shadow-md' : 'border-gray-200 shadow-sm'}`}
+                                                            className="cursor-pointer relative overflow-hidden transition-all hover:scale-[1.02] bg-white flex flex-col h-full border-gray-200 shadow-sm"
                                                         >
-                                                            {idx === 0 && (
-                                                                <div className="absolute top-0 right-0 bg-orange-600 text-white px-2 py-0.5 text-[10px] font-bold rounded-bl-lg">
-                                                                    TOP {group.title.toUpperCase()}
-                                                                </div>
-                                                            )}
-
                                                             <CardHeader className="p-4 pb-2">
                                                                 <CardTitle className="text-lg leading-tight">Solução {idx + 1}</CardTitle>
                                                                 <CardDescription className="text-xs mt-1 line-clamp-2">
@@ -1415,7 +1540,7 @@ export default function Simulator() {
                                                                             e.stopPropagation();
                                                                             handleRequestQuote(rec);
                                                                         }}
-                                                                        className={`w-full ${idx === 0 ? 'bg-black text-white hover:bg-gray-800' : 'bg-white border border-gray-300 text-black hover:bg-gray-50'}`}
+                                                                        className="w-full bg-white border border-gray-300 text-black hover:bg-gray-50"
                                                                         size="sm"
                                                                     >
                                                                         Solicitar Orçamento
@@ -1475,9 +1600,9 @@ export default function Simulator() {
                     </section>
 
                 </div>
-            </main>
+            </main >
 
             <Footer />
-        </div>
+        </div >
     );
 }

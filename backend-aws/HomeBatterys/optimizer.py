@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from .constants import MIN_SOLAR_TO_INVERTER_RATIO
+from .constants import (MIN_SOLAR_TO_INVERTER_RATIO,
+                        MAX_RECOMMENDATION_PAYBACK_YEARS)
 from .profile import (
     build_hourly_profile,
     estimate_recommended_solar_peak_kw,
@@ -198,8 +199,7 @@ def optimize_home_battery(
         },
         "notes": build_notes(mode, profile_summary, selected, selection_reason)
         + [
-            "O preço instalado estimado soma bateria, inversor, painéis e uma margem de instalação configurável.",
-            f"As recomendações de catálogo filtram sistemas com menos de {int(MIN_SOLAR_TO_INVERTER_RATIO * 100)}% da potência do inversor em painéis e retornos fora de um horizonte razoável.",
+            "O preço instalado estimado soma bateria, inversor e painéis.",
         ],
     }
 
