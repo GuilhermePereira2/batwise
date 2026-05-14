@@ -17,6 +17,11 @@ import solaredgeLogo from "@/assets/solaredge-logo.svg";
 import sonnenLogo from "@/assets/sonnen-inc-logo-vector.svg";
 import victronLogo from "@/assets/victron-energy-b-v-seeklogo.svg";
 import teslaLogo from "@/assets/Tesla_Logo.svg";
+import smaLogo from "@/assets/Logo_SMA.svg";
+import froniusLogo from "@/assets/fronius-international-gmbh-logo-vector.svg";
+import dynessLogo from "@/assets/Dyness_id0SRNm0BY_1.svg";
+import sungrowLogo from "@/assets/Sungrow_Power_Supply.svg";
+import goodweLogo from "@/assets/goodwe-seeklogo.svg";
 
 const topBrands = [
   { id: "tesla", src: teslaLogo, alt: "Tesla", className: "h-30 md:h-10 max-w-[220px]" },
@@ -26,6 +31,11 @@ const topBrands = [
   { id: "byd", src: bydLogo, alt: "BYD" },
   { id: "enphase", src: enphaseLogo, alt: "Enphase" },
   { id: "victron", src: victronLogo, alt: "Victron" },
+  { id: "sma", src: smaLogo, alt: "SMA" },
+  { id: "fronius", src: froniusLogo, alt: "Fronius" },
+  { id: "dyness", src: dynessLogo, alt: "Dyness" },
+  { id: "sungrow", src: sungrowLogo, alt: "Sungrow" },
+  { id: "goodwe", src: goodweLogo, alt: "GoodWe" },
 ];
 
 const Home = () => {
