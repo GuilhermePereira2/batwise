@@ -12,8 +12,8 @@
         "cellExplorer": "Cell Explorer",
         "cellExplorerDesc": "Database de células e testes",
         "tryForFree": "Testar Grátis",
-        "logIn": "Entrar",
-        "logOut": "Sair",
+        "logIn": "Login",
+        "logOut": "Logout",
         "profile": "Perfil",
         "adminMode": "Modo admin",
         "clientMode": "Modo cliente",
@@ -318,7 +318,7 @@
         },
         "account": {
             "title": "Conta",
-            "login": "Entrar",
+            "login": "Login",
             "signUp": "Registar",
             "terms": "Termos e Condições",
             "privacy": "Política de Privacidade"
@@ -326,7 +326,7 @@
     },
     "login": {
         "backToHome": "Voltar ao Início",
-        "title": "Entrar",
+        "title": "Login",
         "description": "Insira o seu email e password para aceder à sua conta.",
         "emailLabel": "Email",
         "emailPlaceholder": "nome@exemplo.com",
@@ -335,7 +335,7 @@
         "passwordPlaceholder": "••••••••",
         "capsLock": "O Caps Lock está ativado",
         "buttonLoading": "A iniciar sessão...",
-        "buttonSubmit": "Entrar",
+        "buttonSubmit": "Login",
         "or": "ou",
         "googleDisabled": "O login com o Google não está configurado",
         "resendLoading": "A reenviar...",

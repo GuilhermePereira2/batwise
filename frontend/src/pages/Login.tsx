@@ -35,7 +35,7 @@ const Login = () => {
     const location = useLocation();
     const { login } = useAuth();
     const googleButtonRef = useRef<HTMLDivElement | null>(null);
-    const redirectTo = new URLSearchParams(location.search).get("redirect") || "/diy";
+    const redirectTo = new URLSearchParams(location.search).get("redirect") || localStorage.getItem("last_visited_page") || "/diy";
 
     useEffect(() => {
         const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;

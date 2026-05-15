@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import { AppModeProvider } from "./context/AppModeContext";
 import { useAuth } from "./context/AuthContext";
 import Home from "./pages/Home";
@@ -86,12 +87,24 @@ const renderRoutes = (prefix = "") => routes.map((route) => (
   />
 ));
 
+const LocationTracker = () => {
+  const location = useLocation();
+  useEffect(() => {
+    const authPaths = ["/login", "/signup", "/forgot-password", "/reset-password", "/verify-email", "/auth"];
+    if (!authPaths.some(path => location.pathname.startsWith(path))) {
+      localStorage.setItem("last_visited_page", location.pathname + location.search);
+    }
+  }, [location]);
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <LocationTracker />
         <AppModeProvider>
           <Routes>
             {renderRoutes()}

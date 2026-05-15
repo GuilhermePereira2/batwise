@@ -189,7 +189,7 @@ const Navigation = () => {
               </DropdownMenu>
             ) : (
               <Button variant="ghost" asChild>
-                <Link to="/login">{t("nav.logIn")}</Link>
+                <Link to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`}>{t("nav.logIn")}</Link>
               </Button>
             )}
           </div>
@@ -303,7 +303,7 @@ const Navigation = () => {
                 ) : (
                   <>
                     <Button variant="ghost" asChild className="w-full justify-start">
-                      <Link to="/login" onClick={() => setIsOpen(false)}>
+                      <Link to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`} onClick={() => setIsOpen(false)}>
                         <LogIn className="w-4 h-4 mr-2" /> {t("nav.logIn")}
                       </Link>
                     </Button>

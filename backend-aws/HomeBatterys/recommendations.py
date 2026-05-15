@@ -534,9 +534,28 @@ def is_solar_array_sized_for_inverter(
     is what caused 1 kWp of existing panels to be paired with a 3 kW inverter.
     """
     ratio = calculate_solar_to_inverter_ratio(inverter, panel_set)
-    if ratio is None:
-        return True
-    return ratio >= MIN_SOLAR_TO_INVERTER_RATIO
+    if ratio is not None and ratio < MIN_SOLAR_TO_INVERTER_RATIO:
+        return False
+
+    # Check if the panel voltage meets the inverter's minimum requirement
+    # (Assuming 40V per panel as per requirements)
+    inverter_specs = (inverter or {}).get("specs", {})
+    min_pv_voltage = float(inverter_specs.get("pv_voltage_range_v", {}).get("min") or 0)
+    
+    if min_pv_voltage > 0:
+        # For new/expanded sets, we have an explicit quantity
+        quantity = int((panel_set or {}).get("quantity", 0) or 0)
+        
+        # If it's an existing system without explicit quantity, we estimate it
+        if quantity <= 0 and (panel_set or {}).get("existing"):
+            peak_kw = float((panel_set or {}).get("array_power_kwp", 0) or 0)
+            # Use the same estimation logic as build_existing_solar_panel_set (440W panels)
+            quantity = ceil((peak_kw * 1000) / 440) if peak_kw > 0 else 0
+            
+        if quantity > 0 and (quantity * 40) < min_pv_voltage:
+            return False
+
+    return True
 
 
 def max_reasonable_payback_years(project_years: int) -> float:
@@ -835,6 +854,13 @@ def select_solar_panel_set(
 
     panel_area_m2 = get_panel_area_m2(panel)
     quantity = max(1, ceil((target_kwp * 1000) / power_w))
+
+    # Ensure panels meet the inverter's minimum PV voltage (assuming 40V per panel)
+    min_pv_voltage = float(inverter_specs.get("pv_voltage_range_v", {}).get("min") or 0)
+    if min_pv_voltage > 0:
+        min_panels_by_voltage = ceil(min_pv_voltage / 40)
+        quantity = max(quantity, min_panels_by_voltage)
+
     max_quantities = []
     if max_pv_input_kwp > 0:
         max_quantities.append(

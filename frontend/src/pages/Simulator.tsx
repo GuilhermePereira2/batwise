@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
+import { PDFDocument } from 'pdf-lib';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
@@ -14,6 +15,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useAppMode } from '@/context/AppModeContext';
 import { useToast } from '@/hooks/use-toast';
 import RecommendationModal from '@/components/RecommendationModal';
+// @ts-ignore
+import coverPdfAsset from '@/assets/Watt Builder_Cover.pdf';
 import {
     Battery, Home, FileText, Zap, Sun, Car,
     ChevronRight, ChevronLeft, Loader2,
@@ -699,7 +702,7 @@ export default function Simulator() {
         return `${name ? `${name} - ` : ''}${existingBattery.capacity_kwh} kWh${power}`;
     };
 
-    const downloadProposalsPdf = () => {
+    const downloadProposalsPdf = async () => {
         if (!results?.recommendations?.length) return;
 
         const doc = new jsPDF();
@@ -726,72 +729,64 @@ export default function Simulator() {
             y = margin;
         };
 
-        // --- COVER PAGE ---
-        const drawCover = () => {
-            // Background Elements
-            doc.setFillColor(...black);
-            doc.rect(0, 0, pageWidth, pageHeight * 0.4, 'F');
-            
-            // Logo Area
-            doc.setTextColor(255, 255, 255);
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(40);
-            doc.text('WattBuilder', pageWidth / 2, pageHeight * 0.15, { align: 'center' });
-            
-            doc.setFontSize(14);
-            doc.setFont('helvetica', 'normal');
-            doc.text('OTIMIZADOR DE PRODUÇÃO E CONSUMO RESIDENCIAL', pageWidth / 2, pageHeight * 0.22, { align: 'center' });
-            
-            // Decorative line
-            doc.setDrawColor(...orange);
-            doc.setLineWidth(1.5);
-            doc.line(pageWidth * 0.4, pageHeight * 0.25, pageWidth * 0.6, pageHeight * 0.25);
-
-            // Title of Document
-            y = pageHeight * 0.5;
+        // --- PAGE 1: DATA PAGE ---
+        const drawDataPage = () => {
+            y = 30;
             doc.setTextColor(...black);
-            doc.setFontSize(28);
             doc.setFont('helvetica', 'bold');
-            doc.text('Estudo de Viabilidade', margin, y);
-            
-            y += 10;
-            doc.setFontSize(14);
+            doc.setFontSize(22);
+            doc.text('Otimizador de produção e consumo residencial', margin, y);
+
+            y += 15;
+            doc.setFontSize(12);
             doc.setTextColor(...orange);
             const location = [formData.solar.city, formData.solar.country].filter(Boolean).join(', ') || 'Desconhecido';
-            doc.text(`PARA: ${location.toUpperCase()}`, margin, y);
-            
-            // Param Cards on Cover
-            y += 20;
-            doc.setTextColor(...black);
-            doc.setFontSize(12);
-            doc.text('Parâmetros de Entrada:', margin, y);
-            y += 8;
+            doc.text(`LOCALIZAÇÃO: ${location.toUpperCase()}`, margin, y);
 
-            const boxW = (maxWidth - 10) / 3;
-            const drawCoverBox = (x: number, label: string, val: string) => {
+            y += 15;
+            doc.setTextColor(...black);
+            doc.setFontSize(14);
+            doc.text('Parâmetros de Entrada:', margin, y);
+            y += 10;
+
+            const boxW = (maxWidth - 10) / 2;
+            const drawParamBox = (x: number, currentY: number, label: string, val: string) => {
                 doc.setFillColor(...lightGray);
-                roundedRect(x, y, boxW, 25, 4, 'F');
+                roundedRect(x, currentY, boxW, 20, 3, 'F');
                 doc.setTextColor(...grayText);
                 doc.setFontSize(8);
-                doc.text(label.toUpperCase(), x + 5, y + 8);
+                doc.text(label.toUpperCase(), x + 5, currentY + 7);
                 doc.setTextColor(...black);
-                doc.setFontSize(11);
+                doc.setFontSize(10);
                 doc.setFont('helvetica', 'bold');
-                doc.text(val, x + 5, y + 18);
+                doc.text(val, x + 5, currentY + 15);
             };
 
-            drawCoverBox(margin, 'Consumo Anual Estimado', `${Math.round(results.summary?.annual_consumption_estimated ?? 0).toLocaleString()} kWh`);
-            drawCoverBox(margin + boxW + 5, 'Potência Solar Atual', `${formData.solar.peak_kw} kWp`);
-            drawCoverBox(margin + (boxW + 5) * 2, 'Data do Estudo', new Date().toLocaleDateString('pt-PT'));
+            drawParamBox(margin, y, 'Consumo Anual Estimado', `${Math.round(results.summary?.annual_consumption_estimated ?? 0).toLocaleString()} kWh`);
+            drawParamBox(margin + boxW + 10, y, 'Potência Solar Atual', `${formData.solar.peak_kw} kWp`);
 
-            // Footer of Cover
-            doc.setTextColor(...grayText);
+            y += 25;
+            drawParamBox(margin, y, 'Área da Habitação', `${formData.house.area_m2} m²`);
+            drawParamBox(margin + boxW + 10, y, 'Ocupantes', `${formData.house.occupants} pessoas`);
+
+            y += 35;
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Considerações Técnicas:', margin, y);
+            y += 8;
             doc.setFontSize(9);
             doc.setFont('helvetica', 'normal');
-            doc.text('www.wattbuilder.pt', pageWidth / 2, pageHeight - 15, { align: 'center' });
+            doc.setTextColor(...grayText);
+
+            (results.notes || []).forEach((note: string) => {
+                const lines = doc.splitTextToSize(`• ${note}`, maxWidth);
+                if (y + lines.length * 5 > pageHeight - margin) return; // Simple check for this page
+                doc.text(lines, margin, y);
+                y += lines.length * 5 + 2;
+            });
         };
 
-        drawCover();
+        drawDataPage();
 
         // --- RECOMMENDATION PAGES (One per tier) ---
         budgetSections.forEach((section) => {
@@ -808,7 +803,7 @@ export default function Simulator() {
             doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
             doc.text(section.title.toUpperCase(), margin + 5, y + 7);
-            
+
             y += 18;
             doc.setTextColor(...black);
             doc.setFontSize(10);
@@ -822,107 +817,100 @@ export default function Simulator() {
                 const batteryLines = doc.splitTextToSize(getBatteryDescription(rec), equipW - 8);
                 const inverterLines = rec.inverter ? doc.splitTextToSize(`${rec.inverter.brand} ${rec.inverter.model}`, equipW - 8) : [];
                 const solarLines = doc.splitTextToSize(getSolarDescription(rec.solar_panels), equipW - 8);
-                
+
                 const maxEquipLines = Math.max(batteryLines.length, inverterLines.length, solarLines.length);
-                const equipCardHeight = 12 + (maxEquipLines * 4);
-                const solutionCardHeight = 55 + equipCardHeight;
+                const equipCardHeight = 10 + (maxEquipLines * 3.5);
+                const solutionCardHeight = 42 + equipCardHeight;
 
                 addPageIfNeeded(solutionCardHeight + 5);
-                
-                // Solution Container
-                doc.setDrawColor(...borderGray);
-                roundedRect(margin, y, maxWidth, solutionCardHeight, 5, 'D');
-                
-                // Header Bar
-                doc.setFillColor(...lightGray);
-                roundedRect(margin + 0.2, y + 0.2, maxWidth - 0.4, 10, 5, 'F');
-                doc.setTextColor(...black);
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text(`Solução ${index + 1}`, margin + 8, y + 7);
 
-                let contentY = y + 20;
-                
-                // --- FINANCIAL METRICS (All Large & Orange) ---
+                // Solution Container - Gray Background
+                doc.setFillColor(...lightGray); // Light gray background
+                roundedRect(margin, y, maxWidth, solutionCardHeight, 4, 'F');
+
+                // Header Bar
+                doc.setFillColor(230, 230, 235);
+                roundedRect(margin + 0.1, y + 0.1, maxWidth - 0.2, 8, 4, 'F');
+                doc.setTextColor(...black);
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`Solução ${index + 1}`, margin + 6, y + 5.5);
+
+                let contentY = y + 14;
+
+                // --- FINANCIAL METRICS ---
                 const metW = maxWidth / 3;
-                
+
                 const drawFinancial = (x: number, label: string, val: string) => {
                     doc.setTextColor(...grayText);
-                    doc.setFontSize(8);
-                    doc.setFont('helvetica', 'bold'); // Bold label
-                    doc.text(label.toUpperCase(), x, contentY);
-                    doc.setTextColor(...orange);
-                    doc.setFontSize(14);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text(val, x, contentY + 8);
-                };
-
-                drawFinancial(margin + 10, 'Investimento', formatPrice(rec.capex_total_eur));
-                drawFinancial(margin + metW + 5, 'Poupança Anual', formatPrice(rec.savings_annual_eur));
-                drawFinancial(margin + metW * 2 + 5, 'Retorno', rec.payback_years ? `${rec.payback_years} Anos` : 'N/A');
-
-                contentY += 15;
-                doc.setDrawColor(...borderGray);
-                doc.line(margin + 10, contentY, margin + maxWidth - 10, contentY);
-                contentY += 8;
-
-                // --- EQUIPMENT CARDS (Side-by-side) ---
-                doc.setTextColor(...black);
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'bold');
-                doc.text('EQUIPAMENTO INCLUÍDO:', margin + 10, contentY);
-                contentY += 4;
-
-                const drawEquipCard = (x: number, title: string, descLines: string[]) => {
-                    doc.setFillColor(...lightGray);
-                    roundedRect(x, contentY, equipW, equipCardHeight, 3, 'F');
-                    doc.setTextColor(...orange);
                     doc.setFontSize(7);
                     doc.setFont('helvetica', 'bold');
-                    doc.text(title.toUpperCase(), x + 4, contentY + 5);
-                    doc.setTextColor(...black);
-                    doc.setFontSize(8);
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(descLines, x + 4, contentY + 9);
+                    doc.text(label.toUpperCase(), x, contentY);
+                    doc.setTextColor(...orange);
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(val, x, contentY + 6);
                 };
 
-                drawEquipCard(margin + 10, 'Bateria', batteryLines);
+                drawFinancial(margin + 8, 'Investimento', formatPrice(rec.capex_total_eur));
+                drawFinancial(margin + metW + 2, 'Poupança Anual', formatPrice(rec.savings_annual_eur));
+                drawFinancial(margin + metW * 2 + 2, 'Retorno', rec.payback_years ? `${rec.payback_years} Anos` : 'N/A');
+
+                contentY += 10;
+                doc.setDrawColor(...borderGray);
+                doc.line(margin + 8, contentY, margin + maxWidth - 8, contentY);
+                contentY += 6;
+
+                // --- EQUIPMENT CARDS ---
+                doc.setTextColor(...black);
+                doc.setFontSize(7);
+                doc.setFont('helvetica', 'bold');
+                doc.text('EQUIPAMENTO INCLUÍDO:', margin + 8, contentY);
+                contentY += 3;
+
+                const drawEquipCard = (x: number, title: string, descLines: string[]) => {
+                    doc.setFillColor(255, 255, 255); // White background for inner cards for contrast
+                    roundedRect(x, contentY, equipW, equipCardHeight, 2, 'F');
+                    doc.setTextColor(...orange);
+                    doc.setFontSize(6);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(title.toUpperCase(), x + 3, contentY + 4);
+                    doc.setTextColor(...black);
+                    doc.setFontSize(7);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(descLines, x + 3, contentY + 7);
+                };
+
+                drawEquipCard(margin + 8, 'Bateria', batteryLines);
                 if (rec.inverter) {
-                    drawEquipCard(margin + equipW + 15, 'Inversor', inverterLines);
-                    drawEquipCard(margin + equipW * 2 + 20, 'Painéis', solarLines);
+                    drawEquipCard(margin + equipW + 13, 'Inversor', inverterLines);
+                    drawEquipCard(margin + equipW * 2 + 18, 'Painéis', solarLines);
                 } else {
-                    drawEquipCard(margin + equipW + 15, 'Painéis', solarLines);
+                    drawEquipCard(margin + equipW + 13, 'Painéis', solarLines);
                 }
 
                 y += solutionCardHeight + 5;
             });
         });
 
-        // --- FINAL NOTES PAGE ---
-        doc.addPage();
-        y = 20;
-        doc.setTextColor(...black);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(16);
-        doc.text('Considerações Técnicas', margin, y);
-        y += 10;
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...grayText);
-        (results.notes || []).forEach((note: string) => {
-            const lines = doc.splitTextToSize(`• ${note}`, maxWidth);
-            addPageIfNeeded(lines.length * 5 + 5);
-            doc.text(lines, margin, y);
-            y += lines.length * 5 + 2;
-        });
-
         // --- GLOBAL WATERMARK & PAGE NUMBERS ---
         const totalPages = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= totalPages; i++) {
-            doc.setPage(i);
-            
-            // Watermark (Skip Cover)
-            if (i > 1) {
+
+        // Assemble final PDF first to know the total page count
+        try {
+            const pdfBytes = doc.output('arraybuffer');
+            const mainPdfDoc = await PDFDocument.load(pdfBytes);
+
+            const coverResponse = await fetch(coverPdfAsset);
+            const coverBytes = await coverResponse.arrayBuffer();
+            const coverPdfDoc = await PDFDocument.load(coverBytes);
+            const coverPageCount = coverPdfDoc.getPageCount();
+            const totalFinalPages = coverPageCount + totalPages;
+
+            // Apply page numbers and watermark to the main doc before final assembly
+            for (let i = 1; i <= totalPages; i++) {
+                doc.setPage(i);
+
                 doc.saveGraphicsState();
                 doc.setGState(new (doc as any).GState({ opacity: 0.12 }));
                 doc.setFont("helvetica", "bold");
@@ -932,17 +920,39 @@ export default function Simulator() {
                 const centerY = pageHeight / 2;
                 doc.text("Watt Builder", centerX + 50, centerY + 70, { align: "center", angle: 45 });
                 doc.restoreGraphicsState();
+
+                // Page Number
+                doc.setFontSize(8);
+                doc.setTextColor(...grayText);
+                doc.text(`Estudo de Independência Energética - Página ${i + coverPageCount} de ${totalFinalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
             }
-            
-            // Page Number
-            doc.setFontSize(8);
-            doc.setTextColor(...grayText);
-            doc.text(`Estudo de Independência Energética - Página ${i} de ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+
+            // Re-generate main PDF bytes after adding page numbers
+            const mainPdfBytesWithNumbers = doc.output('arraybuffer');
+            const mainPdfDocWithNumbers = await PDFDocument.load(mainPdfBytesWithNumbers);
+
+            const finalPdfDoc = await PDFDocument.create();
+
+            // Add cover pages
+            const coverPages = await finalPdfDoc.copyPages(coverPdfDoc, coverPdfDoc.getPageIndices());
+            coverPages.forEach(page => finalPdfDoc.addPage(page));
+
+            // Add content pages
+            const contentPages = await finalPdfDoc.copyPages(mainPdfDocWithNumbers, mainPdfDocWithNumbers.getPageIndices());
+            contentPages.forEach(page => finalPdfDoc.addPage(page));
+
+            const finalPdfBytes = await finalPdfDoc.save();
+            const blob = new Blob([finalPdfBytes], { type: 'application/pdf' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `Estudo-WattBuilder-${formData.solar.city || 'Portugal'}-${new Date().toISOString().slice(0, 10)}.pdf`;
+            link.click();
+        } catch (error) {
+            console.error('Error assembling PDF with cover:', error);
+            // Fallback to saving without custom cover if something fails
+            doc.save(`Estudo-WattBuilder-${formData.solar.city || 'Portugal'}-${new Date().toISOString().slice(0, 10)}.pdf`);
         }
-
-        doc.save(`Estudo-WattBuilder-${formData.solar.city || 'Portugal'}-${new Date().toISOString().slice(0, 10)}.pdf`);
-    };
-
+        };
     const activeTariffPeriods = getTariffPeriods(formData.tariff.type);
     const estimatedHouseTariffPrices = getHouseTariffPrices(formData.tariff.type, formData.house);
 
