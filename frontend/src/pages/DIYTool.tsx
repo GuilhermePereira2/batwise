@@ -16,6 +16,7 @@ import { WiringDiagram } from "@/components/WiringDiagram";
 import { getApiUrl } from "@/lib/config";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/context/AuthContext";
+import { useAppMode } from "@/context/AppModeContext";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { useToast } from "@/hooks/use-toast";
 import { USE_CASES } from "@/lib/presets";
@@ -67,6 +68,7 @@ const DIYTool = () => {
   const [activeTab, setActiveTab] = useState("best-solutions");
 
   const { isAuthenticated, user, token, updateCredits } = useAuth();
+  const { isAdminMode } = useAppMode();
   const { toast } = useToast();
 
   // Debug: Monitor customFiles state
@@ -186,17 +188,6 @@ const DIYTool = () => {
       return;
     }
 
-    // 2. Verificação de créditos (agora para todos os utilizadores logados)
-    // Admin users têm créditos ilimitados e não precisam desta verificação
-    if (!user.admin && user.credits <= 0) {
-      toast({
-        title: "Insufficient Credits",
-        description: "You have 0 credits. Please contact support to get more.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setIsLoading(true);
     setShowResults(false);
     setResults([]);
@@ -282,7 +273,7 @@ const DIYTool = () => {
 
       const data = await response.json();
 
-      if (data.remaining_credits !== undefined && data.remaining_credits !== null) {
+      if (isAdminMode && data.remaining_credits !== undefined && data.remaining_credits !== null) {
         updateCredits(data.remaining_credits);
         toast({
           title: "Credits Updated",

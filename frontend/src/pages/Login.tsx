@@ -136,7 +136,8 @@ const Login = () => {
                 id: email,
                 email: email,
                 name: data.user_name,
-                credits: data.credits
+                credits: data.credits,
+                admin: data.admin,
             });
 
             toast({

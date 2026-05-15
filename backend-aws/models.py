@@ -17,6 +17,7 @@ class Fuse(BaseModel):
 class ContactRequest(BaseModel):
     name: str
     email: EmailStr
+    subject: Optional[str] = None
     message: str
 
 

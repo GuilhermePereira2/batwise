@@ -5,6 +5,7 @@ Suporta tanto AWS DynamoDB como DynamoDB Local
 import os
 import boto3
 import json
+import botocore.session
 from botocore.exceptions import ClientError
 from typing import Optional, Dict
 from datetime import datetime, timedelta
@@ -16,6 +17,9 @@ import uuid
 def load_database_env() -> None:
     """
     Carrega variáveis de ambiente do .env na raiz.
+    Ignora AWS_PROFILE/AWS_DEFAULT_PROFILE definidos na .env para o boto3 usar
+    a conta default configurada no computador, a menos que o perfil já venha
+    exportado no ambiente da shell.
     """
     backend_dir = Path(__file__).resolve().parent
     root_dir = backend_dir.parent
@@ -23,7 +27,18 @@ def load_database_env() -> None:
     # Procura na raiz do projeto
     root_env = root_dir / ".env"
     if root_env.exists():
+        before_profile = os.environ.get("AWS_PROFILE")
+        before_default_profile = os.environ.get("AWS_DEFAULT_PROFILE")
         load_dotenv(dotenv_path=root_env, override=True)
+        if before_profile is None:
+            os.environ.pop("AWS_PROFILE", None)
+        else:
+            os.environ["AWS_PROFILE"] = before_profile
+
+        if before_default_profile is None:
+            os.environ.pop("AWS_DEFAULT_PROFILE", None)
+        else:
+            os.environ["AWS_DEFAULT_PROFILE"] = before_default_profile
         return
 
 
@@ -46,6 +61,31 @@ print(f"🔍 Debug - DYNAMODB_ENDPOINT: {DYNAMODB_ENDPOINT}")
 # Forçar a variável de ambiente para o boto3
 os.environ['AWS_REGION'] = AWS_REGION
 os.environ['AWS_DEFAULT_REGION'] = AWS_REGION
+
+
+def _clear_invalid_aws_profile() -> None:
+    """
+    Remove AWS_PROFILE quando o profile configurado não existe localmente.
+
+    Evita que o import falhe em máquinas onde a .env aponta para um profile
+    que ainda não foi criado no ~/.aws/config.
+    """
+    configured_profile = os.getenv("AWS_PROFILE") or os.getenv("AWS_DEFAULT_PROFILE")
+    if not configured_profile:
+        return
+
+    available_profiles = set(botocore.session.Session().available_profiles)
+    if configured_profile in available_profiles:
+        return
+
+    print(
+        f"⚠️  AWS profile '{configured_profile}' not found. Falling back to default credential chain."
+    )
+    os.environ.pop("AWS_PROFILE", None)
+    os.environ.pop("AWS_DEFAULT_PROFILE", None)
+
+
+_clear_invalid_aws_profile()
 
 # Cliente DynamoDB
 if DYNAMODB_ENDPOINT:

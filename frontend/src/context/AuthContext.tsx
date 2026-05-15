@@ -26,10 +26,25 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const getStoredToken = () => localStorage.getItem("token");
+
+const getStoredUser = (): User | null => {
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) return null;
+
+    try {
+        return JSON.parse(storedUser);
+    } catch (e) {
+        console.error("Failed to parse stored user", e);
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+        return null;
+    }
+};
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [token, setToken] = useState<string | null>(null);
+    const [user, setUser] = useState<User | null>(() => getStoredUser());
+    const [token, setToken] = useState<string | null>(() => getStoredToken());
 
     // Ao iniciar a App, verifica se já existe login guardado
     useEffect(() => {

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/context/AuthContext";
+import { useAppMode } from "@/context/AppModeContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { getApiUrl } from "@/lib/config";
 const Profile = () => {
     const { t, i18n } = useTranslation();
     const { user, token, updateUser } = useAuth();
+    const { isAdminMode } = useAppMode();
     const { toast } = useToast();
     const [isLoadingTrial, setIsLoadingTrial] = useState(false);
 
@@ -116,22 +118,24 @@ const Profile = () => {
                             <CardTitle className="text-xl">{user.name}</CardTitle>
                             <CardDescription>{user.email}</CardDescription>
                         </CardHeader>
-                        <CardContent className="text-center space-y-4 pt-4 border-t mt-4">
-                            <div className="flex flex-col items-center justify-center p-4 bg-muted/30 rounded-xl">
-                                <span className="text-sm text-muted-foreground uppercase font-semibold tracking-wider mb-1">
-                                    {t('profile.availableCredits')}
-                                </span>
-                                <div className="flex items-center gap-2 text-3xl font-bold text-foreground">
-                                    <Coins className="w-6 h-6 text-yellow-500 fill-yellow-500" />
-                                    {user.credits}
+                        {isAdminMode && (
+                            <CardContent className="text-center space-y-4 pt-4 border-t mt-4">
+                                <div className="flex flex-col items-center justify-center p-4 bg-muted/30 rounded-xl">
+                                    <span className="text-sm text-muted-foreground uppercase font-semibold tracking-wider mb-1">
+                                        {t('profile.availableCredits')}
+                                    </span>
+                                    <div className="flex items-center gap-2 text-3xl font-bold text-foreground">
+                                        <Coins className="w-6 h-6 text-yellow-500 fill-yellow-500" />
+                                        {user.credits}
+                                    </div>
                                 </div>
-                            </div>
-                        </CardContent>
+                            </CardContent>
+                        )}
                     </Card>
 
                     {/* --- COLUNA DIREITA: AÇÕES E DETALHES --- */}
                     <div className="md:col-span-2 space-y-6">
-                        {!hasActivatedTrial && (
+                        {isAdminMode && !hasActivatedTrial && (
                             <Card className="bg-gradient-to-br from-orange-500 to-amber-600 text-white border-none shadow-md overflow-hidden relative">
                                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full blur-3xl pointer-events-none"></div>
 

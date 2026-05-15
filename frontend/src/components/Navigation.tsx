@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogIn, LogOut, Coins, UserCircle, ChevronDown } from "lucide-react";
+import { Menu, X, LogIn, LogOut, Coins, UserCircle, ChevronDown, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useAppMode } from "@/context/AppModeContext";
 import logo from "@/assets/wattbuilder-logo-orange.svg";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,18 +24,23 @@ const Navigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
+  const { mode, canUseAdminMode, clientPath, adminPath } = useAppMode();
   const { t } = useTranslation();
+  const modePath = (path: string) => mode === "admin"
+    ? path === "/" ? "/admin" : `/admin${path}`
+    : path;
+  const modeSwitchPath = mode === "admin" ? clientPath : adminPath;
 
   const menuItems = [
-    { label: t("nav.home"), path: "/" },
-    { label: t("nav.services"), path: "/business" },
-    { label: t("nav.contact"), path: "/contact" },
+    { label: t("nav.home"), path: modePath("/") },
+    { label: t("nav.services"), path: modePath("/business") },
+    { label: t("nav.contact"), path: modePath("/contact") },
   ];
 
   const isActive = (path: string) => location.pathname === path;
 
   const handleLogout = async () => {
-    const protectedRoutes = ["/profile"];
+    const protectedRoutes = ["/profile", "/admin/profile"];
     await logout();
     if (protectedRoutes.includes(location.pathname)) {
       navigate("/");
@@ -51,7 +58,7 @@ const Navigation = () => {
     <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border">
       <div className="container px-4 mx-auto max-w-7xl">
         <div className="flex items-center justify-between h-16">
-          <Link to="/" className="inline-flex items-center" aria-label="Watt Builder Home">
+          <Link to={modePath("/")} className="inline-flex items-center" aria-label="Watt Builder Home">
             <img src={logo} alt="Watt Builder" className="h-7 w-auto" />
           </Link>
 
@@ -75,17 +82,17 @@ const Navigation = () => {
               </button>
 
               <div className="absolute top-[calc(100%-0.5rem)] left-0 mt-1 w-56 p-2 bg-background border border-border rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                <Link to="/simulator" className="flex flex-col p-3 rounded-lg hover:bg-muted transition-colors">
+                <Link to={modePath("/simulator")} className="flex flex-col p-3 rounded-lg hover:bg-muted transition-colors">
                   <span className="font-medium text-foreground">{t("nav.smartHomeSizer")}</span>
                   <span className="text-xs text-muted-foreground mt-0.5">{t("nav.smartHomeSizerDesc")}</span>
                 </Link>
                 <div className="h-px bg-border/50 my-1 mx-2" />
-                <Link to="/cell-explorer" className="flex flex-col p-3 rounded-lg hover:bg-muted transition-colors">
+                <Link to={modePath("/cell-explorer")} className="flex flex-col p-3 rounded-lg hover:bg-muted transition-colors">
                   <span className="font-medium text-foreground">{t("nav.cellExplorer")}</span>
                   <span className="text-xs text-muted-foreground mt-0.5">{t("nav.cellExplorerDesc")}</span>
                 </Link>
                 <div className="h-px bg-border/50 my-1 mx-2" />
-                <Link to="/diy" className="flex flex-col p-3 rounded-lg hover:bg-muted transition-colors">
+                <Link to={modePath("/diy")} className="flex flex-col p-3 rounded-lg hover:bg-muted transition-colors">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-foreground">{t("nav.batteryBuilder")}</span>
                     <span className="px-1.5 py-0.5 rounded-md bg-orange-100 text-orange-600 text-[10px] font-bold tracking-wider uppercase">Beta</span>
@@ -110,13 +117,19 @@ const Navigation = () => {
                 {item.label}
               </Link>
             ))}
+
+            {mode === "admin" && canUseAdminMode && (
+              <Badge variant="outline" className="border-orange-200 bg-orange-50 text-orange-700">
+                {t("nav.adminMode")}
+              </Badge>
+            )}
           </nav>
 
           {/* Desktop Auth Area */}
           <div className="hidden lg:flex items-center gap-3">
             <LanguageSwitcher />
             <Button asChild>
-              <Link to="/simulator">{t("nav.tryForFree")}</Link>
+              <Link to={modePath("/simulator")}>{t("nav.tryForFree")}</Link>
             </Button>
 
             {isAuthenticated && user ? (
@@ -141,18 +154,33 @@ const Navigation = () => {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="cursor-default bg-muted/50">
-                    <Coins className="mr-2 h-4 w-4 text-yellow-500" />
-                    <span>{t("nav.credits")}: <strong>{user.credits}</strong></span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  {mode === "admin" && (
+                    <>
+                      <DropdownMenuItem className="cursor-default bg-muted/50">
+                        <Coins className="mr-2 h-4 w-4 text-yellow-500" />
+                        <span>{t("nav.credits")}: <strong>{user.credits}</strong></span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem asChild>
-                    <Link to="/profile" className="cursor-pointer flex items-center w-full">
+                    <Link to={modePath("/profile")} className="cursor-pointer flex items-center w-full">
                       <UserCircle className="mr-2 h-4 w-4" />
                       <span>{t("nav.profile")}</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  {canUseAdminMode && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link to={modeSwitchPath} className="cursor-pointer flex items-center w-full">
+                          <ShieldCheck className="mr-2 h-4 w-4" />
+                          <span>{mode === "admin" ? t("nav.clientMode") : t("nav.adminMode")}</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer focus:text-red-600">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>{t("nav.logOut")}</span>
@@ -168,6 +196,11 @@ const Navigation = () => {
 
           {/* Mobile Menu Button */}
           <div className="flex items-center gap-2 lg:hidden">
+            {mode === "admin" && canUseAdminMode && (
+              <Badge variant="outline" className="border-orange-200 bg-orange-50 text-orange-700">
+                {t("nav.adminMode")}
+              </Badge>
+            )}
             <LanguageSwitcher />
             <button
               onClick={() => setIsOpen(!isOpen)}
@@ -204,14 +237,14 @@ const Navigation = () => {
                 </button>
                 {isToolsOpen && (
                   <div className="flex flex-col gap-2 pl-4 mt-1 border-l-2 border-border/50 ml-2">
-                    <Link to="/simulator" onClick={() => setIsOpen(false)} className="py-2 text-[#FF6600] font-medium text-sm">
+                    <Link to={modePath("/simulator")} onClick={() => setIsOpen(false)} className="py-2 text-[#FF6600] font-medium text-sm">
                       {t("nav.smartHomeSizer")}
                     </Link>
-                    <Link to="/diy" onClick={() => setIsOpen(false)} className="py-2 text-muted-foreground hover:text-foreground text-sm flex items-center gap-2">
+                    <Link to={modePath("/diy")} onClick={() => setIsOpen(false)} className="py-2 text-muted-foreground hover:text-foreground text-sm flex items-center gap-2">
                       {t("nav.batteryBuilder")}
                       <span className="px-1.5 py-0.5 rounded-md bg-orange-100 text-orange-600 text-[10px] font-bold tracking-wider uppercase">Beta</span>
                     </Link>
-                    <Link to="/cell-explorer" onClick={() => setIsOpen(false)} className="py-2 text-muted-foreground hover:text-foreground text-sm">
+                    <Link to={modePath("/cell-explorer")} onClick={() => setIsOpen(false)} className="py-2 text-muted-foreground hover:text-foreground text-sm">
                       {t("nav.cellExplorer")}
                     </Link>
                   </div>
@@ -244,16 +277,25 @@ const Navigation = () => {
                       </Avatar>
                       <div>
                         <p className="text-sm font-medium">{user.name}</p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Coins className="w-3 h-3 text-yellow-500" /> {user.credits} {t("nav.credits")}
-                        </p>
+                        {mode === "admin" && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Coins className="w-3 h-3 text-yellow-500" /> {user.credits} {t("nav.credits")}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <Button variant="ghost" asChild className="justify-start">
-                      <Link to="/profile" onClick={() => setIsOpen(false)}>
+                      <Link to={modePath("/profile")} onClick={() => setIsOpen(false)}>
                         <UserCircle className="w-4 h-4 mr-2" /> {t("nav.profile")}
                       </Link>
                     </Button>
+                    {canUseAdminMode && (
+                      <Button variant="ghost" asChild className="justify-start">
+                        <Link to={modeSwitchPath} onClick={() => setIsOpen(false)}>
+                          <ShieldCheck className="w-4 h-4 mr-2" /> {mode === "admin" ? t("nav.clientMode") : t("nav.adminMode")}
+                        </Link>
+                      </Button>
+                    )}
                     <Button variant="ghost" onClick={() => { handleLogout(); setIsOpen(false); }} className="justify-start text-red-600 hover:text-red-600">
                       <LogOut className="w-4 h-4 mr-2" /> {t("nav.logOut")}
                     </Button>
@@ -268,7 +310,7 @@ const Navigation = () => {
                   </>
                 )}
                 <Button asChild className="w-full">
-                  <Link to="/simulator" onClick={() => setIsOpen(false)}>
+                  <Link to={modePath("/simulator")} onClick={() => setIsOpen(false)}>
                     {t("nav.tryForFree")}
                   </Link>
                 </Button>

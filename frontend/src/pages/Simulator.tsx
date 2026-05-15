@@ -7,9 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { getApiUrl } from '@/lib/config';
 import { useAuth } from '@/context/AuthContext';
+import { useAppMode } from '@/context/AppModeContext';
+import { useToast } from '@/hooks/use-toast';
 import RecommendationModal from '@/components/RecommendationModal';
 import {
     Battery, Home, FileText, Zap, Sun, Car,
@@ -18,6 +21,121 @@ import {
 } from 'lucide-react';
 
 type InputMode = 'house' | 'bill';
+type TariffType = 'simple' | 'bi' | 'tri';
+type TariffPeriod = 'simple' | 'offPeak' | 'peak' | 'ponta';
+
+const DEFAULT_TARIFF_PRICES: Record<TariffPeriod, number> = {
+    simple: 0.22,
+    offPeak: 0.14,
+    peak: 0.24,
+    ponta: 0.30,
+};
+
+const TARIFF_PERIODS: Record<TariffType, Array<{ key: TariffPeriod; label: string }>> = {
+    simple: [{ key: 'simple', label: 'Consumo' }],
+    bi: [
+        { key: 'offPeak', label: 'Vazio' },
+        { key: 'peak', label: 'Cheia' },
+    ],
+    tri: [
+        { key: 'offPeak', label: 'Vazio' },
+        { key: 'peak', label: 'Cheia' },
+        { key: 'ponta', label: 'Ponta' },
+    ],
+};
+
+const getTariffPeriods = (tariffType: string) => TARIFF_PERIODS[(tariffType as TariffType) || 'simple'] || TARIFF_PERIODS.simple;
+
+const roundTariffPrice = (value: number) => Number(value.toFixed(4));
+
+const getDefaultTariffPrices = (tariffType: string) => {
+    return getTariffPeriods(tariffType).reduce((prices, period) => {
+        prices[period.key] = DEFAULT_TARIFF_PRICES[period.key];
+        return prices;
+    }, {} as Record<string, number>);
+};
+
+const estimateTariffPricesFromLastBill = (tariffType: string, lastBill: any) => {
+    const periods = getTariffPeriods(tariffType);
+    const defaults = getDefaultTariffPrices(tariffType);
+    const total = Number(lastBill?.total ?? 0);
+    const consumption = lastBill?.consumption || {};
+    const kwhByPeriod = periods.reduce((values, period) => {
+        values[period.key] = Math.max(0, Number(consumption[period.key] ?? 0));
+        return values;
+    }, {} as Record<string, number>);
+    const totalKwh = Object.values(kwhByPeriod).reduce((sum, value) => sum + value, 0);
+
+    if (total <= 0 || totalKwh <= 0) return defaults;
+
+    if (tariffType === 'simple') {
+        return { simple: roundTariffPrice(total / totalKwh) };
+    }
+
+    const defaultBillTotal = periods.reduce((sum, period) => {
+        return sum + kwhByPeriod[period.key] * (defaults[period.key] ?? 0);
+    }, 0);
+
+    if (defaultBillTotal <= 0) {
+        const averagePrice = roundTariffPrice(total / totalKwh);
+        return periods.reduce((prices, period) => {
+            prices[period.key] = averagePrice;
+            return prices;
+        }, {} as Record<string, number>);
+    }
+
+    const scale = total / defaultBillTotal;
+    return periods.reduce((prices, period) => {
+        prices[period.key] = roundTariffPrice((defaults[period.key] ?? 0) * scale);
+        return prices;
+    }, {} as Record<string, number>);
+};
+
+const getHouseTariffPrices = (tariffType: string, house: any) => {
+    if (house?.use_last_bill) {
+        return estimateTariffPricesFromLastBill(tariffType, house.last_bill);
+    }
+
+    return getDefaultTariffPrices(tariffType);
+};
+
+const getBillTariffPrices = (tariffType: string, bill: any) => {
+    const periods = getTariffPeriods(tariffType);
+    const months = Math.max(1, Number(bill?.historyMonths ?? 1));
+    const history = (bill?.history || []).slice(0, months);
+    const aggregateBill = {
+        total: 0,
+        consumption: periods.reduce((values, period) => {
+            values[period.key] = 0;
+            return values;
+        }, {} as Record<string, number>),
+    };
+
+    history.forEach((entry: any) => {
+        if (!entry || typeof entry !== 'object') return;
+        aggregateBill.total += Math.max(0, Number(entry.bill_total ?? entry.total ?? 0));
+        periods.forEach((period) => {
+            aggregateBill.consumption[period.key] += Math.max(0, Number(entry[period.key] ?? 0));
+        });
+    });
+
+    return estimateTariffPricesFromLastBill(tariffType, aggregateBill);
+};
+
+const getBillMonthTariffPrices = (tariffType: string, entry: any) => {
+    const periods = getTariffPeriods(tariffType);
+    const monthBill = {
+        total: Math.max(0, Number(entry?.bill_total ?? entry?.total ?? 0)),
+        consumption: periods.reduce((values, period) => {
+            values[period.key] = Math.max(0, Number(entry?.[period.key] ?? 0));
+            return values;
+        }, {} as Record<string, number>),
+    };
+
+    return estimateTariffPricesFromLastBill(tariffType, monthBill);
+};
+
+const formatTariffPrice = (value: number) => `${Number(value || 0).toFixed(3)} €/kWh`;
 
 const parseStepParam = (value: string | null) => {
     if (value === 'input') return 2;
@@ -30,7 +148,21 @@ const parseModeParam = (value: string | null): InputMode | null => {
 };
 
 const DEFAULT_STATE = {
-    house: { occupants: 3, area_m2: 120, floors: 1 },
+    house: {
+        occupants: 3,
+        area_m2: 120,
+        floors: 1,
+        use_last_bill: false,
+        last_bill: {
+            total: 0,
+            consumption: {
+                simple: 350,
+                offPeak: 220,
+                peak: 120,
+                ponta: 80,
+            },
+        },
+    },
     bill: {
         monthly_avg: 350,
         consumption: {
@@ -40,15 +172,12 @@ const DEFAULT_STATE = {
             ponta: 80,
         },
         historyMonths: 1,
-        history: [{ simple: 350, production: 0 }],
+        history: [{ simple: 350, bill_total: 0, production: 0 }],
     },
     tariff: {
         type: 'simple',
         prices: {
-            simple: 0.22,
-            offPeak: 0.14,
-            peak: 0.24,
-            ponta: 0.10,
+            ...DEFAULT_TARIFF_PRICES,
         }
     },
     solar: {
@@ -77,7 +206,9 @@ const DEFAULT_STATE = {
 export default function Simulator() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { isAuthenticated, token } = useAuth();
+    const { isAuthenticated, token, user } = useAuth();
+    const { isAdminMode } = useAppMode();
+    const { toast } = useToast();
     const [step, setStep] = useState(() => parseStepParam(searchParams.get('step')));
     const [loading, setLoading] = useState(false);
     const [mode, setMode] = useState<InputMode | null>(() => parseModeParam(searchParams.get('mode')));
@@ -85,6 +216,8 @@ export default function Simulator() {
     const [selectedRecommendation, setSelectedRecommendation] = useState<any>(null);
     const [reportEmail, setReportEmail] = useState('');
     const [isSendingReportEmail, setIsSendingReportEmail] = useState(false);
+    const [feedbackMessage, setFeedbackMessage] = useState('');
+    const [isSendingFeedback, setIsSendingFeedback] = useState(false);
 
     const handleSendReportEmail = async () => {
         if (!reportEmail.trim()) {
@@ -119,6 +252,60 @@ export default function Simulator() {
         }
     };
 
+    const handleSendFeedback = async () => {
+        const trimmedFeedback = feedbackMessage.trim();
+        if (!trimmedFeedback) {
+            toast({
+                title: 'Feedback vazio',
+                description: 'Por favor, escreva o seu feedback antes de enviar.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        setIsSendingFeedback(true);
+        try {
+            const response = await fetch(getApiUrl('send-contact-email'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: 'Feedback Simulador',
+                    email: user?.email || reportEmail.trim() || 'general@watt-builder.com',
+                    subject: 'Feedback Simulador WattBuilder',
+                    message: [
+                        'Feedback recebido no simulador',
+                        '',
+                        'Mensagem:',
+                        trimmedFeedback,
+                        '',
+                        'Contexto:',
+                        `- Modo de input: ${mode || 'não selecionado'}`,
+                        `- Email do utilizador: ${user?.email || reportEmail.trim() || 'não indicado'}`,
+                    ].join('\n'),
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Erro no envio do feedback');
+            }
+
+            toast({
+                title: 'Feedback enviado',
+                description: 'Obrigado pela ajuda. A sua mensagem foi recebida pela equipa WattBuilder.',
+            });
+            setFeedbackMessage('');
+        } catch (error) {
+            console.error('Erro ao enviar feedback:', error);
+            toast({
+                title: 'Erro ao enviar feedback',
+                description: 'Tente novamente mais tarde.',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsSendingFeedback(false);
+        }
+    };
+
     const [formData, setFormData] = useState(() => {
         try {
             const saved = localStorage.getItem('simulator_v2');
@@ -127,13 +314,26 @@ export default function Simulator() {
             const parsedHistory = parsed.bill?.history || DEFAULT_STATE.bill.history;
             const history = parsedHistory.map((entry: any) => {
                 if (typeof entry === 'number') {
-                    return { simple: entry, production: 0 };
+                    return { simple: entry, bill_total: 0, production: 0 };
                 }
-                return { ...entry, production: entry.production ?? 0 };
+                return { ...entry, bill_total: entry.bill_total ?? entry.total ?? 0, production: entry.production ?? 0 };
             });
+            const parsedHouse = parsed.house || {};
+            const parsedLastBill = parsedHouse.last_bill || {};
 
             return {
-                house: { ...DEFAULT_STATE.house, ...(parsed.house || {}) },
+                house: {
+                    ...DEFAULT_STATE.house,
+                    ...parsedHouse,
+                    last_bill: {
+                        ...DEFAULT_STATE.house.last_bill,
+                        ...parsedLastBill,
+                        consumption: {
+                            ...DEFAULT_STATE.house.last_bill.consumption,
+                            ...(parsedLastBill.consumption || {}),
+                        },
+                    },
+                },
                 bill: { ...DEFAULT_STATE.bill, ...(parsed.bill || {}), history },
                 tariff: {
                     ...DEFAULT_STATE.tariff,
@@ -217,20 +417,22 @@ export default function Simulator() {
     }, [isAuthenticated]);
 
     const normalizeHistoryEntry = (entry: any, type: string) => {
+        const billTotal = entry?.bill_total ?? entry?.total ?? 0;
         if (!entry || typeof entry !== 'object') {
-            if (type === 'tri') return { offPeak: 0, peak: 0, ponta: 0, production: 0 };
-            if (type === 'bi') return { offPeak: 0, peak: 0, production: 0 };
-            return { simple: 0, production: 0 };
+            if (type === 'tri') return { offPeak: 0, peak: 0, ponta: 0, bill_total: 0, production: 0 };
+            if (type === 'bi') return { offPeak: 0, peak: 0, bill_total: 0, production: 0 };
+            return { simple: 0, bill_total: 0, production: 0 };
         }
 
         if (type === 'simple') {
-            return { simple: entry.simple ?? entry.offPeak ?? entry.peak ?? entry.ponta ?? 0, production: entry.production ?? 0 };
+            return { simple: entry.simple ?? entry.offPeak ?? entry.peak ?? entry.ponta ?? 0, bill_total: billTotal, production: entry.production ?? 0 };
         }
 
         if (type === 'bi') {
             return {
                 offPeak: entry.offPeak ?? entry.simple ?? 0,
                 peak: entry.peak ?? entry.simple ?? 0,
+                bill_total: billTotal,
                 production: entry.production ?? 0,
             };
         }
@@ -239,14 +441,15 @@ export default function Simulator() {
             offPeak: entry.offPeak ?? entry.simple ?? 0,
             peak: entry.peak ?? 0,
             ponta: entry.ponta ?? entry.superOffPeak ?? 0,
+            bill_total: billTotal,
             production: entry.production ?? 0,
         };
     };
 
     const createHistoryEntry = (type: string, value = 0) => {
-        if (type === 'tri') return { offPeak: value, peak: value, ponta: value, production: 0 };
-        if (type === 'bi') return { offPeak: value, peak: value, production: 0 };
-        return { simple: value, production: 0 };
+        if (type === 'tri') return { offPeak: value, peak: value, ponta: value, bill_total: 0, production: 0 };
+        if (type === 'bi') return { offPeak: value, peak: value, bill_total: 0, production: 0 };
+        return { simple: value, bill_total: 0, production: 0 };
     };
 
     function normalizeElectricVehicles(evData: any) {
@@ -326,26 +529,6 @@ export default function Simulator() {
         });
     };
 
-    const getActiveTariffPrices = (tariff: any) => {
-        const prices = tariff?.prices || {};
-        if (tariff?.type === 'bi') {
-            return {
-                offPeak: Number(prices.offPeak ?? 0),
-                peak: Number(prices.peak ?? 0),
-            };
-        }
-        if (tariff?.type === 'tri') {
-            return {
-                offPeak: Number(prices.offPeak ?? 0),
-                peak: Number(prices.peak ?? 0),
-                ponta: Number(prices.ponta ?? 0),
-            };
-        }
-        return {
-            simple: Number(prices.simple ?? 0),
-        };
-    };
-
     const runSimulation = async () => {
         if (!isAuthenticated || !token) {
             localStorage.setItem('simulator_pending_auth', JSON.stringify({ step, mode, formData }));
@@ -355,9 +538,12 @@ export default function Simulator() {
 
         setLoading(true);
         try {
+            const tariffPrices = mode === 'house'
+                ? getHouseTariffPrices(formData.tariff.type, formData.house)
+                : getBillTariffPrices(formData.tariff.type, formData.bill);
             const tariffPayload = {
                 type: formData.tariff.type,
-                prices: getActiveTariffPrices(formData.tariff),
+                prices: tariffPrices,
             };
             const response = await fetch(getApiUrl('api/simulator/size'), {
                 method: 'POST',
@@ -757,6 +943,9 @@ export default function Simulator() {
         doc.save(`Estudo-WattBuilder-${formData.solar.city || 'Portugal'}-${new Date().toISOString().slice(0, 10)}.pdf`);
     };
 
+    const activeTariffPeriods = getTariffPeriods(formData.tariff.type);
+    const estimatedHouseTariffPrices = getHouseTariffPrices(formData.tariff.type, formData.house);
+
     return (
         <div className="flex flex-col min-h-screen bg-white text-black">
             <Navigation />
@@ -804,7 +993,7 @@ export default function Simulator() {
                                         <Home className="text-white w-8 h-8" />
                                     </div>
                                     <h3 className="text-xl font-bold mb-2">Pelas características da casa</h3>
-                                    <p className="text-gray-500 text-sm">Não tenho a fatura comigo, quero estimar pelo número de pessoas e características da casa.</p>
+                                    <p className="text-gray-500 text-sm">Quero estimar pelo número de pessoas e características da casa, com fatura opcional.</p>
                                 </CardContent>
                             </Card>
 
@@ -817,7 +1006,7 @@ export default function Simulator() {
                                         <FileText className="text-white w-8 h-8" />
                                     </div>
                                     <h3 className="text-xl font-bold mb-2">Pelo valor da fatura</h3>
-                                    <p className="text-gray-500 text-sm">Tenho o meu consumo mensal em kWh e quero usar o tarifário correto.</p>
+                                    <p className="text-gray-500 text-sm">Tenho consumos mensais em kWh e quero usar histórico por tarifário.</p>
                                 </CardContent>
                             </Card>
 
@@ -842,38 +1031,63 @@ export default function Simulator() {
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 {mode === 'house' ? (
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                        <div className="space-y-2">
-                                            <Label>Nº de pessoas na habitação</Label>
-                                            <Input
-                                                type="number"
-                                                min="1"
-                                                className="border-gray-300 focus-visible:ring-orange-600"
-                                                value={formData.house.occupants}
-                                                onChange={(e) => setFormData({ ...formData, house: { ...formData.house, occupants: Number(e.target.value) } })}
-                                            />
+                                    <>
+                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                            <div className="space-y-2">
+                                                <Label>Nº de pessoas na habitação</Label>
+                                                <Input
+                                                    type="number"
+                                                    min="1"
+                                                    className="border-gray-300 focus-visible:ring-orange-600"
+                                                    value={formData.house.occupants}
+                                                    onChange={(e) => setFormData({ ...formData, house: { ...formData.house, occupants: Number(e.target.value) } })}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Área aproximada (m²)</Label>
+                                                <Input
+                                                    type="number"
+                                                    min="10"
+                                                    className="border-gray-300 focus-visible:ring-orange-600"
+                                                    value={formData.house.area_m2}
+                                                    onChange={(e) => setFormData({ ...formData, house: { ...formData.house, area_m2: Number(e.target.value) } })}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Nº de pisos</Label>
+                                                <Input
+                                                    type="number"
+                                                    min="1"
+                                                    className="border-gray-300 focus-visible:ring-orange-600"
+                                                    value={formData.house.floors}
+                                                    onChange={(e) => setFormData({ ...formData, house: { ...formData.house, floors: Number(e.target.value) } })}
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <Label>Área aproximada (m²)</Label>
-                                            <Input
-                                                type="number"
-                                                min="10"
-                                                className="border-gray-300 focus-visible:ring-orange-600"
-                                                value={formData.house.area_m2}
-                                                onChange={(e) => setFormData({ ...formData, house: { ...formData.house, area_m2: Number(e.target.value) } })}
-                                            />
+
+                                        <div className="pt-4 border-t border-gray-200">
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                                <div>
+                                                    <Label className="mb-1">Pretende inserir os dados da última fatura?</Label>
+                                                    <p className="text-sm text-gray-500">Usamos esses dados apenas para estimar o preço por kWh.</p>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2 sm:w-auto">
+                                                    <Button
+                                                        className={`h-12 ${formData.house.use_last_bill ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
+                                                        onClick={() => setFormData({ ...formData, house: { ...formData.house, use_last_bill: false } })}
+                                                    >
+                                                        Não
+                                                    </Button>
+                                                    <Button
+                                                        className={`h-12 ${formData.house.use_last_bill ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                        onClick={() => setFormData({ ...formData, house: { ...formData.house, use_last_bill: true } })}
+                                                    >
+                                                        Sim
+                                                    </Button>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <Label>Nº de pisos</Label>
-                                            <Input
-                                                type="number"
-                                                min="1"
-                                                className="border-gray-300 focus-visible:ring-orange-600"
-                                                value={formData.house.floors}
-                                                onChange={(e) => setFormData({ ...formData, house: { ...formData.house, floors: Number(e.target.value) } })}
-                                            />
-                                        </div>
-                                    </div>
+                                    </>
                                 ) : (
                                     <div className="space-y-0">
                                     </div>
@@ -905,88 +1119,84 @@ export default function Simulator() {
                                 </div>
 
 
-                                <div className="pt-4 border-t border-gray-200">
-                                    <div className="grid gap-4 md:grid-cols-3">
-                                        {formData.tariff.type === 'simple' && (
-                                            <div className="space-y-2 md:col-span-1">
-                                                <Label>Preço simples (€/kWh)</Label>
-                                                <Input
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
-                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                    value={formData.tariff.prices.simple}
-                                                    onChange={(e) => setFormData({ ...formData, tariff: { ...formData.tariff, prices: { ...formData.tariff.prices, simple: Number(e.target.value) } } })}
-                                                />
+                                {mode === 'house' && (formData.house.use_last_bill || isAdminMode) ? (
+                                    <div className="pt-4 border-t border-gray-200 space-y-4">
+                                        {formData.house.use_last_bill && (
+                                            <div className="grid gap-4 md:grid-cols-4">
+                                                {activeTariffPeriods.map((period) => (
+                                                    <div key={period.key} className="space-y-2">
+                                                        <Label>{period.label} (kWh)</Label>
+                                                        <Input
+                                                            type="number"
+                                                            min="0"
+                                                            className="border-gray-300 focus-visible:ring-orange-600"
+                                                            value={formData.house.last_bill.consumption[period.key] ?? ''}
+                                                            onChange={(e) => setFormData({
+                                                                ...formData,
+                                                                house: {
+                                                                    ...formData.house,
+                                                                    last_bill: {
+                                                                        ...formData.house.last_bill,
+                                                                        consumption: {
+                                                                            ...formData.house.last_bill.consumption,
+                                                                            [period.key]: Number(e.target.value),
+                                                                        },
+                                                                    },
+                                                                },
+                                                            })}
+                                                        />
+                                                    </div>
+                                                ))}
+                                                <div className="space-y-2">
+                                                    <Label>Valor total da fatura</Label>
+                                                    <div className="relative">
+                                                        <Input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            className="border-gray-300 focus-visible:ring-orange-600 pr-8"
+                                                            value={formData.house.last_bill.total}
+                                                            onChange={(e) => setFormData({
+                                                                ...formData,
+                                                                house: {
+                                                                    ...formData.house,
+                                                                    last_bill: {
+                                                                        ...formData.house.last_bill,
+                                                                        total: Number(e.target.value),
+                                                                    },
+                                                                },
+                                                            })}
+                                                        />
+                                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         )}
 
-                                        {formData.tariff.type === 'bi' && (
-                                            <>
-                                                <div className="space-y-2">
-                                                    <Label>Preço vazio (€/kWh)</Label>
-                                                    <Input
-                                                        type="number"
-                                                        step="0.01"
-                                                        min="0"
-                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                        value={formData.tariff.prices.offPeak}
-                                                        onChange={(e) => setFormData({ ...formData, tariff: { ...formData.tariff, prices: { ...formData.tariff.prices, offPeak: Number(e.target.value) } } })}
-                                                    />
+                                        {isAdminMode && (
+                                            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                                                <div className="mb-3 flex items-center justify-between gap-3">
+                                                    <p className="text-sm font-semibold">
+                                                        {formData.house.use_last_bill ? 'Preço estimado' : 'Preços padrão'}
+                                                    </p>
+                                                    <Badge variant="outline" className="border-gray-300 text-gray-600">
+                                                        {formData.tariff.type === 'simple' ? 'Simples' : formData.tariff.type === 'bi' ? 'Bi-horário' : 'Tri-horário'}
+                                                    </Badge>
                                                 </div>
-                                                <div className="space-y-2">
-                                                    <Label>Preço cheia (€/kWh)</Label>
-                                                    <Input
-                                                        type="number"
-                                                        step="0.01"
-                                                        min="0"
-                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                        value={formData.tariff.prices.peak}
-                                                        onChange={(e) => setFormData({ ...formData, tariff: { ...formData.tariff, prices: { ...formData.tariff.prices, peak: Number(e.target.value) } } })}
-                                                    />
+                                                <div className="grid gap-3 sm:grid-cols-3">
+                                                    {activeTariffPeriods.map((period) => (
+                                                        <div key={period.key} className="rounded-md bg-white border border-gray-200 px-3 py-2">
+                                                            <p className="text-xs uppercase tracking-widest text-gray-400">{period.label}</p>
+                                                            <p className="mt-1 font-semibold text-gray-900">
+                                                                {formatTariffPrice(estimatedHouseTariffPrices[period.key])}
+                                                            </p>
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            </>
-                                        )}
-
-                                        {formData.tariff.type === 'tri' && (
-                                            <>
-                                                <div className="space-y-2">
-                                                    <Label>Preço vazio (€/kWh)</Label>
-                                                    <Input
-                                                        type="number"
-                                                        step="0.01"
-                                                        min="0"
-                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                        value={formData.tariff.prices.offPeak}
-                                                        onChange={(e) => setFormData({ ...formData, tariff: { ...formData.tariff, prices: { ...formData.tariff.prices, offPeak: Number(e.target.value) } } })}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label>Preço cheia (€/kWh)</Label>
-                                                    <Input
-                                                        type="number"
-                                                        step="0.01"
-                                                        min="0"
-                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                        value={formData.tariff.prices.peak}
-                                                        onChange={(e) => setFormData({ ...formData, tariff: { ...formData.tariff, prices: { ...formData.tariff.prices, peak: Number(e.target.value) } } })}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label>Preço de ponta (€/kWh)</Label>
-                                                    <Input
-                                                        type="number"
-                                                        step="0.01"
-                                                        min="0"
-                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                        value={formData.tariff.prices.ponta}
-                                                        onChange={(e) => setFormData({ ...formData, tariff: { ...formData.tariff, prices: { ...formData.tariff.prices, ponta: Number(e.target.value) } } })}
-                                                    />
-                                                </div>
-                                            </>
+                                            </div>
                                         )}
                                     </div>
-                                </div>
+                                ) : null}
 
                                 <div className="pt-4 border-t border-gray-200 space-y-4">
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -1333,7 +1543,7 @@ export default function Simulator() {
                                             {formData.bill.history.slice(0, formData.bill.historyMonths).map((entry: any, index: number) => (
                                                 <div key={index} className="rounded-xl border border-gray-200 p-4 bg-gray-50">
                                                     <div className="font-semibold mb-3">Mês {index + 1}</div>
-                                                    <div className={`grid gap-4 ${formData.tariff.type === 'tri' ? (formData.solar.has_solar ? 'md:grid-cols-4' : 'md:grid-cols-3') : formData.tariff.type === 'bi' ? (formData.solar.has_solar ? 'md:grid-cols-3' : 'md:grid-cols-2') : (formData.solar.has_solar ? 'md:grid-cols-2' : 'md:grid-cols-1')}`}>
+                                                    <div className={`grid gap-4 ${formData.tariff.type === 'tri' ? (formData.solar.has_solar ? 'md:grid-cols-5' : 'md:grid-cols-4') : formData.tariff.type === 'bi' ? (formData.solar.has_solar ? 'md:grid-cols-4' : 'md:grid-cols-3') : (formData.solar.has_solar ? 'md:grid-cols-3' : 'md:grid-cols-2')}`}>
                                                         {formData.tariff.type === 'simple' && (
                                                             <div className="space-y-2">
                                                                 <Label>Consumo (kWh)</Label>
@@ -1398,6 +1608,24 @@ export default function Simulator() {
                                                                 )}
                                                             </>
                                                         )}
+                                                        <div className="space-y-2">
+                                                            <Label>Valor da fatura</Label>
+                                                            <div className="relative">
+                                                                <Input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="0.01"
+                                                                    className="border-gray-300 focus-visible:ring-orange-600 pr-8"
+                                                                    value={entry.bill_total ?? ''}
+                                                                    onChange={(e) => {
+                                                                        const history = [...formData.bill.history];
+                                                                        history[index] = { ...history[index], bill_total: Number(e.target.value) };
+                                                                        setFormData({ ...formData, bill: { ...formData.bill, history } });
+                                                                    }}
+                                                                />
+                                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
+                                                            </div>
+                                                        </div>
                                                         {formData.solar.has_solar && (
                                                             <div className="space-y-2">
                                                                 <Label>Produção solar (kWh)</Label>
@@ -1415,6 +1643,29 @@ export default function Simulator() {
                                                             </div>
                                                         )}
                                                     </div>
+                                                    {isAdminMode && (
+                                                        <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+                                                            <div className="mb-3 flex items-center justify-between gap-3">
+                                                                <p className="text-sm font-semibold">Estimativa deste mês</p>
+                                                                <Badge variant="outline" className="border-gray-300 text-gray-600">
+                                                                    {formData.tariff.type === 'simple' ? 'Simples' : formData.tariff.type === 'bi' ? 'Bi-horário' : 'Tri-horário'}
+                                                                </Badge>
+                                                            </div>
+                                                            <div className="grid gap-3 sm:grid-cols-3">
+                                                                {activeTariffPeriods.map((period) => {
+                                                                    const monthPrices = getBillMonthTariffPrices(formData.tariff.type, entry);
+                                                                    return (
+                                                                        <div key={period.key} className="rounded-md bg-gray-50 border border-gray-200 px-3 py-2">
+                                                                            <p className="text-xs uppercase tracking-widest text-gray-400">{period.label}</p>
+                                                                            <p className="mt-1 font-semibold text-gray-900">
+                                                                                {formatTariffPrice(monthPrices[period.key])}
+                                                                            </p>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
@@ -1594,6 +1845,23 @@ export default function Simulator() {
                                 <Button onClick={handleSendReportEmail} disabled={isSendingReportEmail} className="bg-orange-600 hover:bg-orange-700 px-8 text-white">
                                     {isSendingReportEmail ? <Loader2 className="animate-spin w-4 h-4" /> : 'Receber Informação'}
                                 </Button>
+                            </div>
+
+                            <div className="mt-8 border-t border-orange-200 pt-6">
+                                <h3 className="text-lg font-bold mb-2">Ajude-nos a melhorar</h3>
+                                <p className="text-gray-700 mb-4">Partilhe feedback sobre a simulação, resultados ou experiência de utilização.</p>
+                                <Textarea
+                                    value={feedbackMessage}
+                                    onChange={(e) => setFeedbackMessage(e.target.value)}
+                                    placeholder="Escreva aqui o seu feedback"
+                                    rows={4}
+                                    className="bg-white border-gray-200 text-black placeholder:text-gray-400 focus-visible:ring-orange-600"
+                                />
+                                <div className="mt-3 flex justify-end">
+                                    <Button onClick={handleSendFeedback} disabled={isSendingFeedback} className="bg-black hover:bg-gray-800 text-white">
+                                        {isSendingFeedback ? <Loader2 className="animate-spin w-4 h-4" /> : 'Enviar Feedback'}
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                         <Battery className="absolute -right-10 -bottom-10 w-64 h-64 text-orange-200/20 rotate-12" />

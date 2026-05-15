@@ -16,6 +16,7 @@ import json
 import csv
 import io
 import sqlite3
+from html import escape
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from mangum import Mangum
@@ -249,7 +250,7 @@ async def calculate_endpoint(
         if res_dict["total"] >= 2:
             if not authorization:
                 raise HTTPException(
-                    status_code=401, detail="Authentication required for Custom DB")
+                    status_code=401, detail="Authentication required")
 
             try:
                 # Extrair o Token (Remove "Bearer ")
@@ -258,24 +259,15 @@ async def calculate_endpoint(
                                      security.ALGORITHM])
                 email: str = payload.get("sub")
 
-                # Buscar User e Deduzir
+                # Buscar utilizador para validar que o token pertence a uma conta ativa.
                 user = db_users.get_user_by_email(email)
 
-                if user:
-                    # Admin users não pagam créditos
-                    if user.get('admin'):
-                        print(
-                            f"👑 Admin user detectado: {email}. Sem dedução de créditos.")
-                        remaining = user['credits']
-                    elif user['credits'] > 0:
-                        remaining = db_users.deduct_credit(email)
-                        print(f"💰 Crédito deduzido. Restantes: {remaining}")
-                    else:
-                        print(
-                            f"⚠️  Sem créditos restantes para {email}. Acesso negado.")
-                        # Se chegou aqui com 0 créditos (backend check final)
-                        raise HTTPException(
-                            status_code=403, detail="Insufficient credits")
+                if not user:
+                    raise HTTPException(
+                        status_code=401, detail="User not found")
+
+                print(
+                    f"Creditos ilimitados para {email}. Sem deducao de creditos.")
 
             except (JWTError, IndexError):
                 raise HTTPException(status_code=401, detail="Invalid token")
@@ -333,22 +325,32 @@ conf = ConnectionConfig(
 @app.post("/send-contact-email")
 async def send_contact_email(contact: ContactRequest):
     try:
+        safe_name = escape(contact.name)
+        safe_email = escape(str(contact.email))
+        safe_subject = escape((contact.subject or f"WattBuilder Contacto: {contact.name}").strip())
+        message_html = escape(contact.message).replace("\n", "<br>")
+
         # Corpo do email que Vais receber
         email_body = f"""
-        <h1>Nova Mensagem do Site</h1>
-        <p><strong>Nome:</strong> {contact.name}</p>
-        <p><strong>Email:</strong> {contact.email}</p>
+        <div style="font-family: Arial, Helvetica, sans-serif; max-width: 720px; color: #111827;">
+        <h1 style="margin: 0 0 16px;">Nova Mensagem do Site</h1>
+        <p><strong>Assunto:</strong> {safe_subject}</p>
+        <p><strong>Nome:</strong> {safe_name}</p>
+        <p><strong>Email:</strong> {safe_email}</p>
         <hr>
         <p><strong>Mensagem:</strong></p>
-        <p>{contact.message}</p>
+        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; line-height: 1.5;">
+        {message_html}
+        </div>
+        </div>
         """
 
         message = MessageSchema(
-            subject=f"WattBuilder Contacto: {contact.name}",
+            subject=safe_subject,
             recipients=["general@watt-builder.com"],  # O TEU EMAIL AQUI
             body=email_body,
             subtype=MessageType.html,
-            reply_to=[contact.email]  # ✅ Reply-To com o email do utilizador
+            reply_to=[str(contact.email)]  # ✅ Reply-To com o email do utilizador
         )
 
         fm = FastMail(conf)
@@ -571,20 +573,7 @@ def google_login(creds: GoogleLogin):
 
 @app.post("/auth/deduct-credit")
 def deduct_credit(current_user: dict = Depends(get_current_user)):
-    # Admin users não têm créditos deduzidos
-    if current_user.get('admin'):
-        return {"remaining_credits": current_user['credits'], "admin": True}
-
-    if current_user['credits'] <= 0:
-        print(
-            f"⚠️  Sem créditos restantes para {current_user['email']}. Acesso negado.")
-        raise HTTPException(status_code=403, detail="Insufficient credits")
-
-    try:
-        remaining = db_users.deduct_credit(current_user['email'])
-        return {"remaining_credits": remaining}
-    except ValueError:
-        raise HTTPException(status_code=403, detail="Insufficient credits")
+    return {"remaining_credits": None, "credits_unlimited": True}
 
 
 # No endpoint activate_trial
