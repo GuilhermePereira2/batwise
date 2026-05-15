@@ -561,6 +561,7 @@ export default function Simulator() {
                         site: {
                             area_m2: formData.house.area_m2,
                             floors: formData.house.floors,
+                            occupants: formData.house.occupants,
                         },
                         electric_vehicles: formData.electric_vehicles,
                     },
@@ -1040,41 +1041,41 @@ export default function Simulator() {
                                 <CardDescription className="text-gray-500">Ajuste os valores para uma simulação precisa.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                    <div className="space-y-2">
+                                        <Label>Nº de pessoas na habitação</Label>
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            className="border-gray-300 focus-visible:ring-orange-600"
+                                            value={formData.house.occupants}
+                                            onChange={(e) => setFormData({ ...formData, house: { ...formData.house, occupants: Number(e.target.value) } })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Área aproximada (m²)</Label>
+                                        <Input
+                                            type="number"
+                                            min="10"
+                                            className="border-gray-300 focus-visible:ring-orange-600"
+                                            value={formData.house.area_m2}
+                                            onChange={(e) => setFormData({ ...formData, house: { ...formData.house, area_m2: Number(e.target.value) } })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Nº de pisos</Label>
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            className="border-gray-300 focus-visible:ring-orange-600"
+                                            value={formData.house.floors}
+                                            onChange={(e) => setFormData({ ...formData, house: { ...formData.house, floors: Number(e.target.value) } })}
+                                        />
+                                    </div>
+                                </div>
+
                                 {mode === 'house' ? (
                                     <>
-                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                            <div className="space-y-2">
-                                                <Label>Nº de pessoas na habitação</Label>
-                                                <Input
-                                                    type="number"
-                                                    min="1"
-                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                    value={formData.house.occupants}
-                                                    onChange={(e) => setFormData({ ...formData, house: { ...formData.house, occupants: Number(e.target.value) } })}
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Área aproximada (m²)</Label>
-                                                <Input
-                                                    type="number"
-                                                    min="10"
-                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                    value={formData.house.area_m2}
-                                                    onChange={(e) => setFormData({ ...formData, house: { ...formData.house, area_m2: Number(e.target.value) } })}
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Nº de pisos</Label>
-                                                <Input
-                                                    type="number"
-                                                    min="1"
-                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                    value={formData.house.floors}
-                                                    onChange={(e) => setFormData({ ...formData, house: { ...formData.house, floors: Number(e.target.value) } })}
-                                                />
-                                            </div>
-                                        </div>
-
                                         <div className="pt-4 border-t border-gray-200">
                                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                                                 <div>

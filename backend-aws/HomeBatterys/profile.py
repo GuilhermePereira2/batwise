@@ -91,41 +91,60 @@ def estimate_monthly_consumption(
     tariff: Dict[str, Any],
     include_ev: bool = True,
 ) -> Dict[str, float]:
-    """Estimate monthly kWh by tariff period from house details or bill history."""
+    """Estimate monthly kWh by tariff period from house details or bill history.
+    
+    If mode is 'bill' but no history is provided, it falls back to house characteristics.
+    """
 
     tariff_type = tariff.get("type", "simple")
     monthly_ev_by_period = estimate_monthly_ev_consumption_by_period(
         input_data, tariff_type) if include_ev else {}
 
-    if mode == "house":
-        occupants = max(1, int(float(input_data.get("occupants", 1))))
-        area_m2 = max(20.0, float(input_data.get("area_m2", 80)))
-        floors = max(1, int(float(input_data.get("floors", 1))))
-        annual = 1200 + occupants * 850 + \
-            max(0.0, area_m2 - 60) * 6 + (floors - 1) * 250
-        monthly = annual / 12
-        return add_ev_to_monthly_consumption(split_monthly_total(monthly, tariff_type), monthly_ev_by_period)
+    # Calculate house-based estimate as a fallback or primary
+    site = input_data.get("site") or {}
+    occupants = max(1, int(float(input_data.get("occupants", site.get("occupants", 1)))))
+    area_m2 = max(20.0, float(input_data.get("area_m2", site.get("area_m2", 80))))
+    floors = max(1, int(float(input_data.get("floors", site.get("floors", 1)))))
+    
+    annual_house = 1200 + occupants * 850 + \
+        max(0.0, area_m2 - 60) * 6 + (floors - 1) * 250
+    monthly_house = annual_house / 12
 
+    if mode == "house":
+        return add_ev_to_monthly_consumption(split_monthly_total(monthly_house, tariff_type), monthly_ev_by_period)
+
+    # Bill mode: prioritize history, then monthly_avg, then house estimate
     history = input_data.get("history") or []
     months = max(
         1, int(float(input_data.get("historyMonths", len(history) or 1))))
     period_totals = {"simple": 0.0, "offPeak": 0.0, "peak": 0.0, "ponta": 0.0}
 
+    has_history_data = False
     for entry in history[:months]:
         if not isinstance(entry, dict):
-            period_totals["simple"] += float(entry or 0)
+            val = float(entry or 0)
+            if val > 0:
+                period_totals["simple"] += val
+                has_history_data = True
             continue
-        period_totals["simple"] += float(entry.get("simple", 0) or 0)
-        period_totals["offPeak"] += float(entry.get("offPeak", 0) or 0)
-        period_totals["peak"] += float(entry.get("peak", 0) or 0)
-        period_totals["ponta"] += float(entry.get("ponta", 0) or 0)
+        
+        for key in ["simple", "offPeak", "peak", "ponta"]:
+            val = float(entry.get(key, 0) or 0)
+            if val > 0:
+                period_totals[key] += val
+                has_history_data = True
 
-    if sum(period_totals.values()) <= 0:
+    if not has_history_data:
         monthly_avg = float(input_data.get("monthly_avg", 0) or 0)
         if monthly_avg <= 0:
             consumption = input_data.get("consumption") or {}
             monthly_avg = sum(float(value or 0)
                               for value in consumption.values())
+        
+        # If still no data from bill fields, fallback to house estimate
+        if monthly_avg <= 0:
+            monthly_avg = monthly_house
+            
         return add_ev_to_monthly_consumption(split_monthly_total(monthly_avg, tariff_type), monthly_ev_by_period)
 
     return add_ev_to_monthly_consumption({key: value / months for key, value in period_totals.items()}, monthly_ev_by_period)
@@ -221,11 +240,10 @@ def estimate_roof_area_m2(input_data: Dict[str, Any]) -> Optional[float]:
 
     site = input_data.get("site") or {}
     area_m2 = input_data.get("area_m2", site.get("area_m2"))
-    floors = input_data.get("floors", site.get("floors", 1))
     if area_m2 is None:
         return None
 
-    return max(0.0, float(area_m2 or 0) / max(1, int(float(floors or 1))))
+    return max(0.0, float(area_m2 or 0))
 
 def split_monthly_total(monthly_total: float, tariff_type: str) -> Dict[str, float]:
     if tariff_type == "bi":
