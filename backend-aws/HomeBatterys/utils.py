@@ -1,17 +1,19 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 
 def apply_margin(price: float, margin: float) -> float:
     return price * (1 + margin) if price > 0 else 0.0
 
-def format_component_name(component: Dict[str, Any]) -> str:
-    return " ".join(
-        str(value).strip()
-        for value in [component.get("brand"), component.get("model")]
-        if str(value or "").strip()
-    )
+def format_component_name(component: Optional[Dict[str, Any]]) -> str:
+    if component is None:
+        return ""
+    
+    brand = component.get("brand") or ""
+    model = component.get("model") or ""
+    
+    return f"{brand} {model}".strip()
 
 def clean_text(value: Any) -> str:
     return str(value or "").strip()

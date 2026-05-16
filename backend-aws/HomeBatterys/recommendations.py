@@ -72,20 +72,31 @@ def rank_catalog(
     requires_pv_input = expand_existing_solar or (not has_existing_solar and bool(panels))
 
     def append_recommendation(
-        battery: Dict[str, Any],
+        battery: Optional[Dict[str, Any]],
         capacity: float,
         simulated_capacity: float,
         inverter: Optional[Dict[str, Any]],
         panel_set: Optional[Dict[str, Any]],
     ) -> None:
-        if inverters and not inverter:
+        if not battery and not panel_set:
             return
-        if panels and not panel_set:
+        
+        # Ensure at least one NEW component is being added
+        new_battery_added = (capacity > 0)
+        new_panels_added = bool(panel_set) and not panel_set.get("existing")
+        # Expanded sets are considered new because they add panels to existing ones
+        if panel_set and panel_set.get("expanded"):
+            new_panels_added = (int(panel_set.get("quantity", 0) or 0) > 0)
+
+        if not new_battery_added and not new_panels_added:
+            return
+
+        if inverters and not inverter:
             return
 
         # Se não estamos a expandir, ignoramos a validação de rácio painel/inversor
         # (visto que o utilizador quer dimensionar apenas pela bateria)
-        if expand_existing_solar or (not has_existing_solar and bool(panels)):
+        if panel_set and (expand_existing_solar or (not has_existing_solar and bool(panels))):
             if not is_solar_array_sized_for_inverter(inverter, panel_set):
                 return
 
@@ -103,7 +114,7 @@ def rank_catalog(
             sell_price_eur_kwh=sell_price,
             allow_grid_arbitrage=allow_grid_arbitrage,
         )
-        battery_base_price = float(battery.get(
+        battery_base_price = float((battery or {}).get(
             "pricing", {}).get("unit_price", 0) or 0)
         inverter_base_price = float((inverter or {}).get(
             "pricing", {}).get("unit_price", 0) or 0)
@@ -198,7 +209,8 @@ def rank_catalog(
                 requires_pv_input=requires_pv_input,
             )
             if has_existing_solar:
-                panel_set = build_existing_solar_panel_set(solar, roof_area_m2)
+                existing_only_panel_set = build_existing_solar_panel_set(solar, roof_area_m2)
+                panel_set = existing_only_panel_set
                 if expand_existing_solar:
                     additional_target_kwp = max(
                         0.0, total_solar_peak_kwp - existing_solar_peak_kwp)
@@ -218,6 +230,7 @@ def rank_catalog(
                         panel_set = build_expanded_solar_panel_set(
                             solar, additional_panel_set, roof_area_m2)
             else:
+                existing_only_panel_set = None
                 panel_set = select_solar_panel_set(
                     panels,
                     battery,
@@ -228,6 +241,31 @@ def rank_catalog(
                 )
             append_recommendation(
                 battery, capacity, simulated_capacity, inverter, panel_set)
+
+            # --- STANDALONE OPTIONS ---
+            # 1. Battery Only (No new panels)
+            if panel_set != existing_only_panel_set:
+                inverter_no_new_pv = select_inverter_for_battery(
+                    battery,
+                    inverters,
+                    catalog.get("compatibility"),
+                    existing_solar_peak_kwp,
+                    requires_pv_input=False,
+                )
+                append_recommendation(
+                    battery, capacity, simulated_capacity, inverter_no_new_pv, existing_only_panel_set)
+            
+            # 2. Solar Only (No new battery capacity added)
+            if panel_set != existing_only_panel_set and capacity > 0:
+                inverter_no_new_bat = select_inverter_for_battery(
+                    None,
+                    inverters,
+                    catalog.get("compatibility"),
+                    total_solar_peak_kwp,
+                    requires_pv_input=True,
+                )
+                append_recommendation(
+                    None, 0, existing_battery_capacity, inverter_no_new_bat, panel_set)
 
             if has_existing_solar and expand_existing_solar:
                 expansion_targets = build_existing_solar_expansion_targets(
@@ -360,7 +398,7 @@ def estimate_auto_solar_expansion_target_kwp(profile: Dict[str, List[float]], so
     load_matched_peak = annual_load / \
         yield_kwh_per_kwp if yield_kwh_per_kwp > 0 else existing_peak
     target_peak = max(existing_peak + 2.0, load_matched_peak * 1.15)
-    return round(min(10.0, target_peak), 2)
+    return round(min(25.0, target_peak), 2)
 
 
 def build_existing_solar_expansion_targets(
@@ -406,15 +444,15 @@ def profile_for_panel_set(
 
 
 def build_system_name(
-    battery: Dict[str, Any],
+    battery: Optional[Dict[str, Any]],
     inverter: Optional[Dict[str, Any]],
     panel_set: Optional[Dict[str, Any]],
 ) -> str:
     battery_name = format_component_name(battery)
-    battery_quantity = int(battery.get("quantity", 1) or 1)
+    battery_quantity = int((battery or {}).get("quantity", 1) or 1)
     if battery_quantity > 1 and battery_name:
         battery_name = f"{battery_quantity}x {battery_name}"
-    parts = [battery_name]
+    parts = [battery_name] if battery_name else []
     if inverter:
         parts.append(format_component_name(inverter))
     if panel_set:
@@ -780,12 +818,15 @@ def is_preferred_stacked_battery(item: Dict[str, Any]) -> bool:
 
 def recommendation_identity(item: Dict[str, Any]) -> str:
     panel_set = item.get("solar_panels") or {}
+    battery = item.get("battery")
+    inverter = item.get("inverter")
+    
     return "|".join(
         [
-            str(item.get("battery", {}).get("id", "")),
-            str(item.get("battery", {}).get("quantity", 1)),
-            str(item.get("inverter", {}).get("id", "")),
-            str(panel_set.get("array_power_kwp", "")),
+            str((battery or {}).get("id", "no-battery")),
+            str((battery or {}).get("quantity", 0)),
+            str((inverter or {}).get("id", "no-inverter")),
+            str(panel_set.get("array_power_kwp", "0")),
         ]
     )
 
@@ -901,7 +942,7 @@ def select_solar_panel_set(
 
 
 def select_inverter_for_battery(
-    battery: Dict[str, Any],
+    battery: Optional[Dict[str, Any]],
     inverters: List[Dict[str, Any]],
     compatibility: Optional[Dict[str, Any]] = None,
     pv_peak_kwp: float = 0.0,
@@ -912,8 +953,9 @@ def select_inverter_for_battery(
     if not inverters:
         return None
 
-    battery_power = float(battery.get("specs", {}).get("power_kw", 0) or 0)
-    battery_brand = str(battery.get("brand", "")).lower()
+    battery_specs = (battery or {}).get("specs", {})
+    battery_power = float(battery_specs.get("power_kw", 0) or 0)
+    battery_brand = str((battery or {}).get("brand", "")).lower()
     compatible_inverters = [
         inverter for inverter in inverters
         if is_component_set_compatible(battery, inverter, None, compatibility)
@@ -964,7 +1006,9 @@ def select_inverter_for_battery(
     return min(compatible_inverters, key=score)
 
 
-def is_inverter_sized_for_battery(battery: Dict[str, Any], inverter: Dict[str, Any]) -> bool:
+def is_inverter_sized_for_battery(battery: Optional[Dict[str, Any]], inverter: Dict[str, Any]) -> bool:
+    if battery is None:
+        return True
     specs = battery.get("specs", {})
     unit_specs = battery.get("unit_specs") or specs
     battery_capacity = float(
@@ -1025,7 +1069,7 @@ def get_inverter_panel_max_count(
 
 
 def is_component_set_compatible(
-    battery: Dict[str, Any],
+    battery: Optional[Dict[str, Any]],
     inverter: Optional[Dict[str, Any]],
     solar_panel: Optional[Dict[str, Any]],
     compatibility: Optional[Dict[str, Any]],
@@ -1041,12 +1085,17 @@ def is_component_set_compatible(
 
 
 def is_battery_inverter_compatible(
-    battery: Dict[str, Any],
+    battery: Optional[Dict[str, Any]],
     inverter: Optional[Dict[str, Any]],
 ) -> bool:
     if not inverter:
         return False
     if inverter.get("existing"):
+        return True
+    
+    # If no battery is being added, we only care about the inverter's standalone properties
+    # (which are checked by is_component_set_compatible and others)
+    if battery is None:
         return True
 
     compatible_ids = set(

@@ -287,7 +287,7 @@ def estimate_recommended_solar_peak_kw(profile_summary: Dict[str, float], solar:
     target_peak = annual_consumption / \
         solar_yield_kwh_per_kwp(
             solar or {"country": "Portugal", "city": "Lisboa"})
-    return round(max(2.0, min(10.0, target_peak)), 2)
+    return round(max(2.0, min(25.0, target_peak)), 2)
 
 def get_existing_solar_peak_kwp(solar: Optional[Dict[str, Any]]) -> float:
     if not (solar or {}).get("has_solar"):
