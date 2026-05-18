@@ -347,6 +347,7 @@ export default function Simulator() {
                     }
                 },
                 solar: { ...DEFAULT_STATE.solar, ...(parsed.solar || {}) },
+                max_investment: parsed.max_investment ?? DEFAULT_STATE.max_investment,
                 electric_vehicles: normalizeElectricVehicles(parsed.electric_vehicles || DEFAULT_STATE.electric_vehicles)
             };
         } catch {
@@ -541,6 +542,7 @@ export default function Simulator() {
 
         setLoading(true);
         try {
+            const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
             const tariffPrices = mode === 'house'
                 ? getHouseTariffPrices(formData.tariff.type, formData.house)
                 : getBillTariffPrices(formData.tariff.type, formData.bill);
@@ -568,7 +570,9 @@ export default function Simulator() {
                     tariff: tariffPayload,
                     solar: formData.solar,
                     max_investment: formData.max_investment ? Number(formData.max_investment) : null,
-                    assumptions: { battery_dod: 0.9, system_losses: 0.1, component_margin: 0.1, installation_margin: 0.25 }
+                    assumptions: { battery_dod: 0.9, system_losses: 0.1, component_margin: 0.1, installation_margin: 0.25 },
+                    form_data: formData,
+                    client_timezone: clientTimezone,
                 }),
             });
 
