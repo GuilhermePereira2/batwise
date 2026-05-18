@@ -91,6 +91,10 @@ def rank_catalog(
         if not new_battery_added and not new_panels_added:
             return
 
+        # Se o cliente não tem painéis solares, a solução TEM de incluir painéis
+        if not has_existing_solar and not new_panels_added:
+            return
+
         if inverters and not inverter:
             return
 
