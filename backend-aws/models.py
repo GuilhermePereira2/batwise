@@ -297,3 +297,5 @@ class SimulatorRequest(BaseModel):
     assumptions: dict
     solar: Optional[dict] = None
     max_investment: Optional[float] = None
+    form_data: Optional[dict] = None
+    client_timezone: Optional[str] = None

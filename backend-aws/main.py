@@ -946,6 +946,15 @@ def parse_json_list(value):
 
 @app.post("/api/simulator/size")
 async def size_battery(req: SimulatorRequest, current_user: dict = Depends(get_current_user)):
+    payload = req.model_dump(mode="json")
+    try:
+        db_users.save_simulation_input(
+            current_user,
+            payload,
+        )
+    except Exception as e:
+        print(f"❌ Erro ao guardar input da simulação: {e}")
+
     catalog = load_catalog()
     result = optimize_home_battery(
         mode=req.mode,
@@ -956,13 +965,6 @@ async def size_battery(req: SimulatorRequest, current_user: dict = Depends(get_c
         catalog=catalog,
         max_investment=req.max_investment,
     )
-    try:
-        db_users.save_simulation_input(
-            current_user,
-            req.model_dump(mode="json"),
-        )
-    except Exception as e:
-        print(f"❌ Erro ao guardar input da simulação: {e}")
 
     return result
 

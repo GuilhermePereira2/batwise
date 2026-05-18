@@ -7,8 +7,10 @@ import boto3
 import json
 import botocore.session
 from botocore.exceptions import ClientError
-from typing import Optional, Dict
-from datetime import datetime, timedelta
+from decimal import Decimal
+from typing import Optional, Dict, Any
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from dotenv import load_dotenv
 from pathlib import Path
 import uuid
@@ -107,6 +109,35 @@ users_table = dynamodb.Table(USERS_TABLE_NAME)
 simulation_inputs_table = dynamodb.Table(SIMULATION_INPUTS_TABLE_NAME)
 
 
+def _is_admin_user(user: Dict) -> bool:
+    admin_value = user.get("admin")
+    if isinstance(admin_value, bool):
+        return admin_value
+    if admin_value is None:
+        return False
+    if isinstance(admin_value, (int, Decimal)):
+        return admin_value == 1
+    if isinstance(admin_value, str):
+        return admin_value.strip().lower() in {"true", "1", "yes", "sim"}
+    return bool(admin_value)
+
+
+def _timezone_from_name(timezone_name: Optional[str]):
+    if not timezone_name:
+        return ZoneInfo("UTC"), "UTC"
+    try:
+        return ZoneInfo(timezone_name), timezone_name
+    except ZoneInfoNotFoundError:
+        return ZoneInfo("UTC"), "UTC"
+
+
+def _to_dynamodb_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return json.loads(
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+        parse_float=Decimal,
+    )
+
+
 class DynamoDBUserHandler:
     """Handler para operações de utilizadores no DynamoDB"""
 
@@ -116,18 +147,31 @@ class DynamoDBUserHandler:
         Guarda o input completo da simulação para clientes não-admin.
         Admins são ignorados para não contaminar a base de dados de leads/clientes.
         """
-        if user.get("admin"):
+        if _is_admin_user(user):
             return None
 
-        now = datetime.utcnow().isoformat()
+        storage_payload = dict(payload)
+        client_timezone = storage_payload.pop("client_timezone", None)
+        storage_payload.pop("client_submitted_at", None)
+
+        now_utc = datetime.now(timezone.utc)
+        tzinfo, _ = _timezone_from_name(client_timezone)
+        local_now = now_utc.astimezone(tzinfo)
+        created_at = local_now.isoformat(timespec="seconds")
         item = {
             "simulationId": str(uuid.uuid4()),
             "userId": user.get("userId"),
             "email": user.get("email"),
             "full_name": user.get("full_name"),
-            "created_at": now,
-            "mode": payload.get("mode"),
-            "payload_json": json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+            "created_at": created_at,
+            "mode": storage_payload.get("mode"),
+            "input": _to_dynamodb_payload(storage_payload.get("input") or {}),
+            "tariff": _to_dynamodb_payload(storage_payload.get("tariff") or {}),
+            "solar": _to_dynamodb_payload(storage_payload.get("solar") or {}),
+            "assumptions": _to_dynamodb_payload(storage_payload.get("assumptions") or {}),
+            "max_investment": Decimal(str(storage_payload["max_investment"])) if storage_payload.get("max_investment") is not None else None,
+            "form_data": _to_dynamodb_payload(storage_payload.get("form_data") or {}),
+            "payload_json": json.dumps(storage_payload, ensure_ascii=False, separators=(",", ":")),
         }
 
         simulation_inputs_table.put_item(Item=item)
