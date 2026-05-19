@@ -725,21 +725,29 @@ def select_budgeted_recommendations(recommendations: List[Dict[str, Any]]) -> Li
     candidates = list(unique_map.values())
     selected_ids = set()
     result = []
+    seen_savings = set()
 
-    # 1. Budget: As 3 opções mais baratas de hardware
+    # 1. Budget: As 3 opções mais baratas de hardware com diferentes valores de poupança
     budget_candidates = sorted(candidates, key=lambda x: x["capex_total_eur"])
     budget_count = 0
     for rec in budget_candidates:
         if budget_count >= 3:
             break
+        
+        # Garantir que a poupança é diferente para oferecer variedade
+        savings = round(rec.get("savings_annual_eur", 0), 1)
+        if savings in seen_savings:
+            continue
+            
         rec_copy = dict(rec)
         rec_copy["budget_tier"] = "budget"
         rec_copy["budget_label"] = "Budget"
         result.append(rec_copy)
         selected_ids.add(recommendation_identity(rec))
+        seen_savings.add(savings)
         budget_count += 1
 
-    # 2. Balanced: As 3 opções com retorno (payback) mais rápido (excluindo as já selecionadas)
+    # 2. Balanced: As 3 opções com retorno (payback) mais rápido com diferentes valores de poupança (e diferentes do Budget)
     remaining_for_balanced = [r for r in candidates if recommendation_identity(r) not in selected_ids]
     balanced_candidates = sorted(
         remaining_for_balanced, 
@@ -749,11 +757,18 @@ def select_budgeted_recommendations(recommendations: List[Dict[str, Any]]) -> Li
     for rec in balanced_candidates:
         if balanced_count >= 3:
             break
+            
+        # Garantir que a poupança é diferente (mesmo em relação ao Budget)
+        savings = round(rec.get("savings_annual_eur", 0), 1)
+        if savings in seen_savings:
+            continue
+            
         rec_copy = dict(rec)
         rec_copy["budget_tier"] = "balanced"
         rec_copy["budget_label"] = "Balanced"
         result.append(rec_copy)
         selected_ids.add(recommendation_identity(rec))
+        seen_savings.add(savings)
         balanced_count += 1
 
     # 3. Premium: As 3 opções mais caras de hardware (excluindo as já selecionadas)
