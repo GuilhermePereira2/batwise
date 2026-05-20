@@ -20,7 +20,7 @@ import coverPdfAsset from '@/assets/Watt Builder_Cover.pdf';
 import {
     Battery, Home, FileText, Zap, Sun, Car,
     ChevronRight, ChevronLeft, Loader2,
-    CheckCircle2, TrendingUp, Wallet, Plus, Trash2
+    CheckCircle2, TrendingUp, Wallet, Plus, Trash2, Star
 } from 'lucide-react';
 
 type InputMode = 'house' | 'bill';
@@ -221,6 +221,60 @@ export default function Simulator() {
     const [isSendingReportEmail, setIsSendingReportEmail] = useState(false);
     const [feedbackMessage, setFeedbackMessage] = useState('');
     const [isSendingFeedback, setIsSendingFeedback] = useState(false);
+    const [userRating, setUserRating] = useState<number | null>(null);
+    const [ratingComment, setRatingComment] = useState('');
+    const [isSendingRating, setIsSendingRating] = useState(false);
+    const [hasRated, setHasRated] = useState(false);
+
+    const handleRatingSubmit = async (rating: number, comment?: string, isFinal: boolean = false) => {
+        setIsSendingRating(true);
+        try {
+            const response = await fetch(getApiUrl('send-contact-email'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: 'Avaliação de Soluções',
+                    email: user?.email || 'anonimo@watt-builder.com',
+                    subject: 'Nova Avaliação de Soluções WattBuilder',
+                    message: [
+                        'Avaliação recebida no simulador',
+                        '',
+                        `Classificação: ${rating} / 10 estrelas`,
+                        comment ? `Comentário: ${comment}` : 'Sem comentário adicional.',
+                        isFinal ? 'Submissão Final' : 'Submissão Parcial (apenas nota)',
+                        '',
+                        'Contexto:',
+                        `- Email do utilizador: ${user?.email || 'não indicado'}`,
+                    ].join('\n'),
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Erro no envio da avaliação');
+            }
+
+            if (isFinal) {
+                if (comment) {
+                    toast({
+                        title: 'Obrigado!',
+                        description: 'A sua avaliação e comentário foram enviados com sucesso.',
+                    });
+                }
+                setHasRated(true);
+            }
+        } catch (error) {
+            console.error('Erro ao enviar avaliação:', error);
+            if (isFinal) {
+                toast({
+                    title: 'Erro ao enviar avaliação',
+                    description: 'Tente novamente mais tarde.',
+                    variant: 'destructive',
+                });
+            }
+        } finally {
+            setIsSendingRating(false);
+        }
+    };
 
     const handleSendReportEmail = async () => {
         if (!reportEmail.trim()) {
@@ -539,6 +593,11 @@ export default function Simulator() {
             navigate('/login?redirect=/simulator');
             return;
         }
+
+        // Reset rating state for new simulation
+        setHasRated(false);
+        setUserRating(null);
+        setRatingComment('');
 
         setLoading(true);
         try {
@@ -957,7 +1016,7 @@ export default function Simulator() {
             // Fallback to saving without custom cover if something fails
             doc.save(`Estudo-WattBuilder-${formData.solar.city || 'Portugal'}-${new Date().toISOString().slice(0, 10)}.pdf`);
         }
-        };
+    };
     const activeTariffPeriods = getTariffPeriods(formData.tariff.type);
     const estimatedHouseTariffPrices = getHouseTariffPrices(formData.tariff.type, formData.house);
 
@@ -1269,8 +1328,8 @@ export default function Simulator() {
                                                     step="0.1"
                                                     min="0"
                                                     className="border-gray-300 focus-visible:ring-orange-600"
-                                                    value={formData.solar.peak_kw}
-                                                    onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, peak_kw: Number(e.target.value) } })}
+                                                    value={formData.solar.existing_inverter_max_power_kw}
+                                                    onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_max_power_kw: Number(e.target.value) } })}
                                                 />
                                             </div>
                                             <div className="space-y-2">
@@ -1834,6 +1893,70 @@ export default function Simulator() {
                                     getPriceBreakdown={getPriceBreakdown}
                                 />
                             )}
+
+                            {/* Secção de Avaliação */}
+                            <div className="bg-white p-8 rounded-2xl border-2 border-orange-100 shadow-sm text-center space-y-6">
+                                {!hasRated ? (
+                                    <>
+                                        <div>
+                                            <h3 className="text-xl font-bold mb-2">O que achou destas soluções?</h3>
+                                            <p className="text-gray-500">A sua avaliação ajuda-nos a melhorar o nosso algoritmo.</p>
+                                        </div>
+
+                                        <div className="flex flex-wrap justify-center gap-2">
+                                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
+                                                <button
+                                                    key={star}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setUserRating(star);
+                                                        handleRatingSubmit(star, undefined, false);
+                                                    }}
+                                                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${userRating === star ? 'bg-orange-600 text-white' : 'bg-gray-50 text-gray-400 hover:bg-orange-100 hover:text-orange-600'}`}
+                                                >
+                                                    <span className="font-bold text-sm">{star}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {userRating !== null && userRating <= 8 && (
+                                            <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-4 pt-4 max-w-lg mx-auto border-t border-gray-100">
+                                                <div className="text-left">
+                                                    <Label className="text-sm font-semibold">Como podemos melhorar? (Opcional)</Label>
+                                                    <Textarea
+                                                        value={ratingComment}
+                                                        onChange={(e) => setRatingComment(e.target.value)}
+                                                        placeholder="Diga-nos o que faltou ou o que poderia ser melhor..."
+                                                        className="mt-2 bg-white border-gray-200"
+                                                        rows={3}
+                                                    />
+                                                </div>
+                                                <Button
+                                                    onClick={() => handleRatingSubmit(userRating, ratingComment, true)}
+                                                    disabled={isSendingRating}
+                                                    className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                                                >
+                                                    {isSendingRating ? <Loader2 className="animate-spin w-4 h-4" /> : 'Submeter Comentário'}
+                                                </Button>
+                                            </div>
+                                        )}
+
+                                        {userRating !== null && userRating > 8 && (
+                                            <div className="animate-in fade-in duration-300 pt-2">
+                                                <p className="text-emerald-600 font-medium">Obrigado pela sua avaliação!</p>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <div className="py-4 animate-in zoom-in duration-500">
+                                        <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <CheckCircle2 className="w-8 h-8" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-gray-900">Obrigado pelo seu feedback!</h3>
+                                        <p className="text-gray-500">A sua opinião é fundamental para continuarmos a evoluir.</p>
+                                    </div>
+                                )}
+                            </div>
 
                             <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 text-sm text-gray-500">
                                 <h4 className="font-bold text-black mb-2">Notas da Simulação:</h4>
