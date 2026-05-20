@@ -226,6 +226,29 @@ export default function Simulator() {
     const [isSendingRating, setIsSendingRating] = useState(false);
     const [hasRated, setHasRated] = useState(false);
 
+    const handleNumericChange = (value: string, fieldLabel: string, callback: (val: number) => void) => {
+        if (value === '') {
+            callback(0);
+            return;
+        }
+        
+        // Allow typing the minus sign without immediately triggering NaN or negative check
+        if (value === '-') return;
+
+        const num = Number(value);
+        if (isNaN(num)) return;
+
+        if (num < 0) {
+            toast({
+                title: 'Valor Inválido',
+                description: `O valor para "${fieldLabel}" não pode ser negativo. Por favor, corrija o valor.`,
+                variant: 'destructive',
+            });
+            return;
+        }
+        callback(num);
+    };
+
     const handleRatingSubmit = async (rating: number, comment?: string, isFinal: boolean = false) => {
         setIsSendingRating(true);
         try {
@@ -593,6 +616,67 @@ export default function Simulator() {
             navigate('/login?redirect=/simulator');
             return;
         }
+
+        // --- VALIDATION SAFEGUARD ---
+        const errors: string[] = [];
+        
+        // Basic House Info
+        if (formData.house.occupants < 0) errors.push('Nº de pessoas');
+        if (formData.house.area_m2 < 0) errors.push('Área aproximada');
+        if (formData.house.floors < 0) errors.push('Nº de pisos');
+
+        // Mode specific validation
+        if (mode === 'house' && formData.house.use_last_bill) {
+            const consumption = formData.house.last_bill.consumption;
+            Object.keys(consumption).forEach(key => {
+                if (consumption[key as keyof typeof consumption] < 0) {
+                    errors.push(`Consumo ${key}`);
+                }
+            });
+            if (formData.house.last_bill.total < 0) errors.push('Valor total da fatura');
+        } else if (mode === 'bill') {
+            formData.bill.history.slice(0, formData.bill.historyMonths).forEach((entry: any, i: number) => {
+                if (entry.simple < 0) errors.push(`Mês ${i+1}: Consumo`);
+                if (entry.offPeak < 0) errors.push(`Mês ${i+1}: Vazio`);
+                if (entry.peak < 0) errors.push(`Mês ${i+1}: Cheia`);
+                if (entry.ponta < 0) errors.push(`Mês ${i+1}: Ponta`);
+                if (entry.bill_total < 0) errors.push(`Mês ${i+1}: Valor da fatura`);
+                if (entry.production < 0) errors.push(`Mês ${i+1}: Produção solar`);
+            });
+        }
+
+        // Solar & Battery Validation
+        if (formData.solar.has_solar) {
+            if (formData.solar.peak_kw < 0) errors.push('Potência de pico existente');
+            if (formData.solar.existing_inverter_max_power_kw < 0) errors.push('Potência máxima do inversor');
+            if (formData.solar.has_battery) {
+                if (formData.solar.battery_capacity_kwh < 0) errors.push('Capacidade da bateria atual');
+                if (formData.solar.existing_battery_max_power_kw < 0) errors.push('Potência máxima da bateria atual');
+            }
+        }
+
+        // EV Validation
+        if (formData.electric_vehicles.has_electric_vehicle) {
+            formData.electric_vehicles.vehicles.forEach((v: any, i: number) => {
+                if (v.daily_km < 0) errors.push(`Carro ${i+1}: Km por dia`);
+                if (v.consumption_kwh_per_km < 0) errors.push(`Carro ${i+1}: Consumo`);
+            });
+        }
+
+        // Investment Validation
+        if (formData.max_investment !== '' && Number(formData.max_investment) < 0) {
+            errors.push('Investimento Máximo');
+        }
+
+        if (errors.length > 0) {
+            toast({
+                title: 'Valores Inválidos Encontrados',
+                description: `Por favor, corrija os valores negativos nos seguintes campos: ${errors.join(', ')}.`,
+                variant: 'destructive',
+            });
+            return;
+        }
+        // --- END VALIDATION ---
 
         // Reset rating state for new simulation
         setHasRated(false);
@@ -1112,7 +1196,7 @@ export default function Simulator() {
                                             min="1"
                                             className="border-gray-300 focus-visible:ring-orange-600"
                                             value={formData.house.occupants}
-                                            onChange={(e) => setFormData({ ...formData, house: { ...formData.house, occupants: Number(e.target.value) } })}
+                                            onChange={(e) => handleNumericChange(e.target.value, 'Nº de pessoas', (val) => setFormData({ ...formData, house: { ...formData.house, occupants: val } }))}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -1122,7 +1206,7 @@ export default function Simulator() {
                                             min="10"
                                             className="border-gray-300 focus-visible:ring-orange-600"
                                             value={formData.house.area_m2}
-                                            onChange={(e) => setFormData({ ...formData, house: { ...formData.house, area_m2: Number(e.target.value) } })}
+                                            onChange={(e) => handleNumericChange(e.target.value, 'Área aproximada', (val) => setFormData({ ...formData, house: { ...formData.house, area_m2: val } }))}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -1132,7 +1216,7 @@ export default function Simulator() {
                                             min="1"
                                             className="border-gray-300 focus-visible:ring-orange-600"
                                             value={formData.house.floors}
-                                            onChange={(e) => setFormData({ ...formData, house: { ...formData.house, floors: Number(e.target.value) } })}
+                                            onChange={(e) => handleNumericChange(e.target.value, 'Nº de pisos', (val) => setFormData({ ...formData, house: { ...formData.house, floors: val } }))}
                                         />
                                     </div>
                                 </div>
@@ -1195,7 +1279,7 @@ export default function Simulator() {
 
                                 {mode === 'house' && (formData.house.use_last_bill || isAdminMode) ? (
                                     <div className="pt-4 border-t border-gray-200 space-y-4">
-                                        {formData.house.use_last_bill && (
+                                                {formData.house.use_last_bill && (
                                             <div className="grid gap-4 md:grid-cols-4">
                                                 {activeTariffPeriods.map((period) => (
                                                     <div key={period.key} className="space-y-2">
@@ -1205,7 +1289,7 @@ export default function Simulator() {
                                                             min="0"
                                                             className="border-gray-300 focus-visible:ring-orange-600"
                                                             value={formData.house.last_bill.consumption[period.key] ?? ''}
-                                                            onChange={(e) => setFormData({
+                                                            onChange={(e) => handleNumericChange(e.target.value, period.label, (val) => setFormData({
                                                                 ...formData,
                                                                 house: {
                                                                     ...formData.house,
@@ -1213,11 +1297,11 @@ export default function Simulator() {
                                                                         ...formData.house.last_bill,
                                                                         consumption: {
                                                                             ...formData.house.last_bill.consumption,
-                                                                            [period.key]: Number(e.target.value),
+                                                                            [period.key]: val,
                                                                         },
                                                                     },
                                                                 },
-                                                            })}
+                                                            }))}
                                                         />
                                                     </div>
                                                 ))}
@@ -1230,16 +1314,16 @@ export default function Simulator() {
                                                             step="0.01"
                                                             className="border-gray-300 focus-visible:ring-orange-600 pr-8"
                                                             value={formData.house.last_bill.total}
-                                                            onChange={(e) => setFormData({
+                                                            onChange={(e) => handleNumericChange(e.target.value, 'Valor total da fatura', (val) => setFormData({
                                                                 ...formData,
                                                                 house: {
                                                                     ...formData.house,
                                                                     last_bill: {
                                                                         ...formData.house.last_bill,
-                                                                        total: Number(e.target.value),
+                                                                        total: val,
                                                                     },
                                                                 },
-                                                            })}
+                                                            }))}
                                                         />
                                                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
                                                     </div>
@@ -1318,7 +1402,7 @@ export default function Simulator() {
                                                     min="0"
                                                     className="border-gray-300 focus-visible:ring-orange-600"
                                                     value={formData.solar.peak_kw}
-                                                    onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, peak_kw: Number(e.target.value) } })}
+                                                    onChange={(e) => handleNumericChange(e.target.value, 'Potência de pico existente', (val) => setFormData({ ...formData, solar: { ...formData.solar, peak_kw: val } }))}
                                                 />
                                             </div>
                                             <div className="space-y-2">
@@ -1329,7 +1413,7 @@ export default function Simulator() {
                                                     min="0"
                                                     className="border-gray-300 focus-visible:ring-orange-600"
                                                     value={formData.solar.existing_inverter_max_power_kw}
-                                                    onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_max_power_kw: Number(e.target.value) } })}
+                                                    onChange={(e) => handleNumericChange(e.target.value, 'Potência máxima do inversor', (val) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_max_power_kw: val } }))}
                                                 />
                                             </div>
                                             <div className="space-y-2">
@@ -1420,7 +1504,7 @@ export default function Simulator() {
                                                                 step="0.1"
                                                                 className="border-gray-300 focus-visible:ring-orange-600"
                                                                 value={formData.solar.battery_capacity_kwh}
-                                                                onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, battery_capacity_kwh: Number(e.target.value) } })}
+                                                                onChange={(e) => handleNumericChange(e.target.value, 'Capacidade da bateria atual', (val) => setFormData({ ...formData, solar: { ...formData.solar, battery_capacity_kwh: val } }))}
                                                             />
                                                         </div>
                                                         <div className="space-y-2">
@@ -1431,7 +1515,7 @@ export default function Simulator() {
                                                                 step="0.1"
                                                                 className="border-gray-300 focus-visible:ring-orange-600"
                                                                 value={formData.solar.existing_battery_max_power_kw}
-                                                                onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_max_power_kw: Number(e.target.value) } })}
+                                                                onChange={(e) => handleNumericChange(e.target.value, 'Potência máxima da bateria atual', (val) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_max_power_kw: val } }))}
                                                             />
                                                         </div>
                                                         <div className="space-y-2">
@@ -1529,7 +1613,7 @@ export default function Simulator() {
                                                                     min="0"
                                                                     className="border-gray-300 focus-visible:ring-orange-600"
                                                                     value={vehicle.daily_km}
-                                                                    onChange={(e) => updateElectricVehicle(index, 'daily_km', Number(e.target.value))}
+                                                                    onChange={(e) => handleNumericChange(e.target.value, 'Km por dia', (val) => updateElectricVehicle(index, 'daily_km', val))}
                                                                 />
                                                             </div>
                                                             <div className="space-y-2">
@@ -1540,7 +1624,7 @@ export default function Simulator() {
                                                                     min="0"
                                                                     className="border-gray-300 focus-visible:ring-orange-600"
                                                                     value={vehicle.consumption_kwh_per_km}
-                                                                    onChange={(e) => updateElectricVehicle(index, 'consumption_kwh_per_km', Number(e.target.value))}
+                                                                    onChange={(e) => handleNumericChange(e.target.value, 'Consumo (kWh/km)', (val) => updateElectricVehicle(index, 'consumption_kwh_per_km', val))}
                                                                 />
                                                             </div>
                                                             <div className="space-y-2">
@@ -1599,7 +1683,16 @@ export default function Simulator() {
                                                     className="border-gray-300 focus-visible:ring-orange-600"
                                                     value={formData.bill.historyMonths}
                                                     onChange={(e) => {
-                                                        const months = Math.min(12, Math.max(1, Number(e.target.value) || 1));
+                                                        const val = Number(e.target.value);
+                                                        if (val < 0) {
+                                                            toast({
+                                                                title: 'Valor Inválido',
+                                                                description: 'O número de meses não pode ser negativo.',
+                                                                variant: 'destructive',
+                                                            });
+                                                            return;
+                                                        }
+                                                        const months = Math.min(12, Math.max(1, val || 1));
                                                         const history = [...formData.bill.history];
                                                         if (history.length < months) {
                                                             history.push(...Array(months - history.length).fill(null).map(() => createHistoryEntry(formData.tariff.type)));
@@ -1617,7 +1710,7 @@ export default function Simulator() {
                                             {formData.bill.history.slice(0, formData.bill.historyMonths).map((entry: any, index: number) => (
                                                 <div key={index} className="rounded-xl border border-gray-200 p-4 bg-gray-50">
                                                     <div className="font-semibold mb-3">Mês {index + 1}</div>
-                                                    <div className={`grid gap-4 ${formData.tariff.type === 'tri' ? (formData.solar.has_solar ? 'md:grid-cols-5' : 'md:grid-cols-4') : formData.tariff.type === 'bi' ? (formData.solar.has_solar ? 'md:grid-cols-4' : 'md:grid-cols-3') : (formData.solar.has_solar ? 'md:grid-cols-3' : 'md:grid-cols-2')}`}>
+                                                        <div className={`grid gap-4 ${formData.tariff.type === 'tri' ? (formData.solar.has_solar ? 'md:grid-cols-5' : 'md:grid-cols-4') : formData.tariff.type === 'bi' ? (formData.solar.has_solar ? 'md:grid-cols-4' : 'md:grid-cols-3') : (formData.solar.has_solar ? 'md:grid-cols-3' : 'md:grid-cols-2')}`}>
                                                         {formData.tariff.type === 'simple' && (
                                                             <div className="space-y-2">
                                                                 <Label>Consumo (kWh)</Label>
@@ -1626,11 +1719,11 @@ export default function Simulator() {
                                                                     min="0"
                                                                     className="border-gray-300 focus-visible:ring-orange-600"
                                                                     value={entry.simple ?? ''}
-                                                                    onChange={(e) => {
+                                                                    onChange={(e) => handleNumericChange(e.target.value, 'Consumo', (val) => {
                                                                         const history = [...formData.bill.history];
-                                                                        history[index] = { ...history[index], simple: Number(e.target.value) };
+                                                                        history[index] = { ...history[index], simple: val };
                                                                         setFormData({ ...formData, bill: { ...formData.bill, history } });
-                                                                    }}
+                                                                    })}
                                                                 />
                                                             </div>
                                                         )}
@@ -1643,11 +1736,11 @@ export default function Simulator() {
                                                                         min="0"
                                                                         className="border-gray-300 focus-visible:ring-orange-600"
                                                                         value={entry.offPeak ?? ''}
-                                                                        onChange={(e) => {
+                                                                        onChange={(e) => handleNumericChange(e.target.value, 'Vazio', (val) => {
                                                                             const history = [...formData.bill.history];
-                                                                            history[index] = { ...history[index], offPeak: Number(e.target.value) };
+                                                                            history[index] = { ...history[index], offPeak: val };
                                                                             setFormData({ ...formData, bill: { ...formData.bill, history } });
-                                                                        }}
+                                                                        })}
                                                                     />
                                                                 </div>
                                                                 <div className="space-y-2">
@@ -1657,11 +1750,11 @@ export default function Simulator() {
                                                                         min="0"
                                                                         className="border-gray-300 focus-visible:ring-orange-600"
                                                                         value={entry.peak ?? ''}
-                                                                        onChange={(e) => {
+                                                                        onChange={(e) => handleNumericChange(e.target.value, 'Cheia', (val) => {
                                                                             const history = [...formData.bill.history];
-                                                                            history[index] = { ...history[index], peak: Number(e.target.value) };
+                                                                            history[index] = { ...history[index], peak: val };
                                                                             setFormData({ ...formData, bill: { ...formData.bill, history } });
-                                                                        }}
+                                                                        })}
                                                                     />
                                                                 </div>
                                                                 {formData.tariff.type === 'tri' && (
@@ -1672,11 +1765,11 @@ export default function Simulator() {
                                                                             min="0"
                                                                             className="border-gray-300 focus-visible:ring-orange-600"
                                                                             value={entry.ponta ?? ''}
-                                                                            onChange={(e) => {
+                                                                            onChange={(e) => handleNumericChange(e.target.value, 'Ponta', (val) => {
                                                                                 const history = [...formData.bill.history];
-                                                                                history[index] = { ...history[index], ponta: Number(e.target.value) };
+                                                                                history[index] = { ...history[index], ponta: val };
                                                                                 setFormData({ ...formData, bill: { ...formData.bill, history } });
-                                                                            }}
+                                                                            })}
                                                                         />
                                                                     </div>
                                                                 )}
@@ -1691,11 +1784,11 @@ export default function Simulator() {
                                                                     step="0.01"
                                                                     className="border-gray-300 focus-visible:ring-orange-600 pr-8"
                                                                     value={entry.bill_total ?? ''}
-                                                                    onChange={(e) => {
+                                                                    onChange={(e) => handleNumericChange(e.target.value, 'Valor da fatura', (val) => {
                                                                         const history = [...formData.bill.history];
-                                                                        history[index] = { ...history[index], bill_total: Number(e.target.value) };
+                                                                        history[index] = { ...history[index], bill_total: val };
                                                                         setFormData({ ...formData, bill: { ...formData.bill, history } });
-                                                                    }}
+                                                                    })}
                                                                 />
                                                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
                                                             </div>
@@ -1708,11 +1801,11 @@ export default function Simulator() {
                                                                     min="0"
                                                                     className="border-gray-300 focus-visible:ring-orange-600"
                                                                     value={entry.production ?? ''}
-                                                                    onChange={(e) => {
+                                                                    onChange={(e) => handleNumericChange(e.target.value, 'Produção solar', (val) => {
                                                                         const history = [...formData.bill.history];
-                                                                        history[index] = { ...history[index], production: Number(e.target.value) };
+                                                                        history[index] = { ...history[index], production: val };
                                                                         setFormData({ ...formData, bill: { ...formData.bill, history } });
-                                                                    }}
+                                                                    })}
                                                                 />
                                                             </div>
                                                         )}
@@ -1755,7 +1848,18 @@ export default function Simulator() {
                                             placeholder="Ex: 5000"
                                             className="border-gray-300 focus-visible:ring-orange-600 pr-8"
                                             value={formData.max_investment}
-                                            onChange={(e) => setFormData({ ...formData, max_investment: e.target.value })}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val !== '' && Number(val) < 0) {
+                                                    toast({
+                                                        title: 'Valor Inválido',
+                                                        description: 'O valor para "Investimento Máximo" não pode ser negativo.',
+                                                        variant: 'destructive',
+                                                    });
+                                                    return;
+                                                }
+                                                setFormData({ ...formData, max_investment: val });
+                                            }}
                                         />
                                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
                                     </div>

@@ -405,7 +405,18 @@ export const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents,
                       type="number"
                       className="h-8 text-sm"
                       value={laborCost}
-                      onChange={(e) => setLaborCost(Number(e.target.value))}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        if (val < 0) {
+                          toast({
+                            title: 'Valor Inválido',
+                            description: 'O valor não pode ser negativo.',
+                            variant: 'destructive',
+                          });
+                          return;
+                        }
+                        setLaborCost(val);
+                      }}
                     />
                   </div>
                   <div>
@@ -414,7 +425,18 @@ export const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents,
                       type="number"
                       className="h-8 text-sm"
                       value={shippingCost}
-                      onChange={(e) => setShippingCost(Number(e.target.value))}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        if (val < 0) {
+                          toast({
+                            title: 'Valor Inválido',
+                            description: 'O valor não pode ser negativo.',
+                            variant: 'destructive',
+                          });
+                          return;
+                        }
+                        setShippingCost(val);
+                      }}
                     />
                   </div>
                 </div>
@@ -424,7 +446,18 @@ export const SolutionDetailModal = ({ solution, isOpen, onClose, showComponents,
                     type="number"
                     className="h-8 text-sm"
                     value={margin}
-                    onChange={(e) => setMargin(Number(e.target.value))}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      if (val < 0) {
+                        toast({
+                          title: 'Valor Inválido',
+                          description: 'O valor não pode ser negativo.',
+                          variant: 'destructive',
+                        });
+                        return;
+                      }
+                      setMargin(val);
+                    }}
                   />
                 </div>
                 <div className="pt-2 border-t border-slate-200">

@@ -68,7 +68,18 @@ const BatteryForm = () => {
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value, type } = e.target;
+    
+    if (type === 'number' && Number(value) < 0) {
+      toast({
+        title: 'Valor Inválido',
+        description: 'O valor não pode ser negativo. Por favor, corrija o valor.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setFormData({ ...formData, [name]: value });
   };
 
   const handlePresetChange = (value: string) => {
