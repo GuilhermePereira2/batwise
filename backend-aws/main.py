@@ -339,7 +339,7 @@ async def send_contact_email(contact: ContactRequest):
         <p><strong>Email:</strong> {safe_email}</p>
         <hr>
         <p><strong>Mensagem:</strong></p>
-        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; line-height: 1.5;">
+        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; line-height: 1.5; white-space: pre-wrap; font-family: 'Courier New', Courier, monospace; font-size: 14px;">
         {message_html}
         </div>
         </div>

@@ -266,8 +266,10 @@ export default function Simulator() {
                         comment ? `Comentário: ${comment}` : 'Sem comentário adicional.',
                         isFinal ? 'Submissão Final' : 'Submissão Parcial (apenas nota)',
                         '',
-                        'Contexto:',
+                        '--- Contexto do Utilizador ---',
                         `- Email do utilizador: ${user?.email || 'não indicado'}`,
+                        '',
+                        getSimulationContextSummary(),
                     ].join('\n'),
                 }),
             });
@@ -313,8 +315,14 @@ export default function Simulator() {
                 body: JSON.stringify({
                     name: 'Relatório Tecnico Completo',
                     email: reportEmail.trim(),
-                    subject: 'Relatório Tecnico Completo',
-                    message: reportEmail.trim(),
+                    subject: 'Pedido de Relatório Tecnico Completo',
+                    message: [
+                        'O utilizador solicitou um relatório técnico completo.',
+                        '',
+                        `Email para contacto: ${reportEmail.trim()}`,
+                        '',
+                        getSimulationContextSummary(),
+                    ].join('\n'),
                 }),
             });
 
@@ -350,7 +358,7 @@ export default function Simulator() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name: 'Feedback Simulador',
-                    email: user?.email || reportEmail.trim() || 'general@watt-builder.com',
+                    email: user?.email || reportEmail.trim() || 'anonimo@watt-builder.com',
                     subject: 'Feedback Simulador WattBuilder',
                     message: [
                         'Feedback recebido no simulador',
@@ -358,9 +366,11 @@ export default function Simulator() {
                         'Mensagem:',
                         trimmedFeedback,
                         '',
-                        'Contexto:',
+                        '--- Contexto do Utilizador ---',
                         `- Modo de input: ${mode || 'não selecionado'}`,
                         `- Email do utilizador: ${user?.email || reportEmail.trim() || 'não indicado'}`,
+                        '',
+                        getSimulationContextSummary(),
                     ].join('\n'),
                 }),
             });
@@ -384,6 +394,65 @@ export default function Simulator() {
         } finally {
             setIsSendingFeedback(false);
         }
+    };
+
+    const getSimulationContextSummary = () => {
+        if (!mode) return 'Nenhuma simulação iniciada.';
+
+        const lines = [];
+        lines.push('--- DADOS DA SIMULAÇÃO (INPUT) ---');
+        lines.push(`Modo: ${mode === 'house' ? 'Dimensionamento por Casa' : 'Dimensionamento por Fatura'}`);
+
+        if (mode === 'house') {
+            lines.push(`Ocupantes: ${formData.house.occupants}`);
+            lines.push(`Área: ${formData.house.area_m2} m2`);
+            lines.push(`Andares: ${formData.house.floors}`);
+        } else if (mode === 'bill') {
+            lines.push(`Média Mensal: ${formData.bill.monthly_avg} €`);
+            lines.push(`Meses de Histórico: ${formData.bill.historyMonths}`);
+        }
+
+        lines.push(`Tarifa: ${formData.tariff.type}`);
+
+        if (formData.solar.has_solar) {
+            lines.push(`Solar: Sim (${formData.solar.peak_kw} kWp)`);
+            lines.push(`Localização: ${formData.solar.city}, ${formData.solar.country}`);
+            if (formData.solar.has_battery) {
+                lines.push(`Bateria Existente: Sim (${formData.solar.battery_capacity_kwh} kWh)`);
+            }
+        } else {
+            lines.push('Solar: Não');
+        }
+
+        if (formData.electric_vehicles.has_electric_vehicle) {
+            lines.push(`Veículos Elétricos: Sim (${formData.electric_vehicles.count})`);
+        }
+
+        lines.push(`Investimento Máximo: ${formData.max_investment || 'Não definido'} €`);
+
+        if (results && (results.recommendations || results.results)) {
+            lines.push('');
+            lines.push('--- RESULTADOS GERADOS ---');
+            const recommendations = results.recommendations || results.results || [];
+            recommendations.slice(0, 3).forEach((rec: any, i: number) => {
+                const label = rec.label || rec.type || `Solução ${i + 1}`;
+                lines.push(`Recomendação ${i + 1}: ${label}`);
+                if (rec.battery) {
+                    lines.push(`  Bateria: ${rec.battery.brand} ${rec.battery.model} (${rec.battery.capacity_kwh} kWh)`);
+                }
+                if (rec.financials) {
+                    lines.push(`  Payback: ${rec.financials.payback_years?.toFixed(1)} anos`);
+                    lines.push(`  Poupança Anual: ${rec.financials.annual_savings?.toFixed(0)} €`);
+                }
+            });
+        }
+
+        // Adicionar o JSON bruto no final para referência técnica completa
+        lines.push('');
+        lines.push('--- DADOS BRUTOS (JSON) ---');
+        lines.push(JSON.stringify(formData, null, 2));
+
+        return lines.join('\n');
     };
 
     const [formData, setFormData] = useState(() => {
