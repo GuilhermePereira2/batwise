@@ -188,6 +188,8 @@ const DEFAULT_STATE = {
         peak_kw: 4,
         country: 'Portugal',
         city: 'Lisboa',
+        location: '',
+        grid_type: 'all',
         existing_inverter_brand: '',
         existing_inverter_model: '',
         existing_inverter_max_power_kw: 0,
@@ -413,10 +415,11 @@ export default function Simulator() {
         }
 
         lines.push(`Tarifa: ${formData.tariff.type}`);
+        lines.push(`Localização: ${formData.solar.location ? formData.solar.location + ', ' : ''}${formData.solar.city}, ${formData.solar.country}`);
+        lines.push(`Rede: ${formData.solar.grid_type === 'single_phase' ? 'Monofásica' : formData.solar.grid_type === 'three_phase' ? 'Trifásica' : 'Não indicada'}`);
 
         if (formData.solar.has_solar) {
             lines.push(`Solar: Sim (${formData.solar.peak_kw} kWp)`);
-            lines.push(`Localização: ${formData.solar.city}, ${formData.solar.country}`);
             if (formData.solar.has_battery) {
                 lines.push(`Bateria Existente: Sim (${formData.solar.battery_capacity_kwh} kWh)`);
             }
@@ -957,8 +960,10 @@ export default function Simulator() {
             y += 15;
             doc.setFontSize(12);
             doc.setTextColor(...orange);
-            const location = [formData.solar.city, formData.solar.country].filter(Boolean).join(', ') || 'Desconhecido';
-            doc.text(`LOCALIZAÇÃO: ${location.toUpperCase()}`, margin, y);
+            const locationParts = [formData.solar.location, formData.solar.city, formData.solar.country].filter(Boolean);
+            const location = locationParts.join(', ') || 'Desconhecido';
+            const grid = formData.solar.grid_type === 'single_phase' ? 'MONOFÁSICA' : formData.solar.grid_type === 'three_phase' ? 'TRIFÁSICA' : 'NÃO INDICADA';
+            doc.text(`LOCALIZAÇÃO: ${location.toUpperCase()} | REDE: ${grid}`, margin, y);
 
             y += 15;
             doc.setTextColor(...black);
@@ -1428,6 +1433,67 @@ export default function Simulator() {
                                 <div className="pt-4 border-t border-gray-200 space-y-4">
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                                         <div>
+                                            <Label className="mb-1 text-base font-bold">Localização e Rede Elétrica</Label>
+                                            <p className="text-sm text-gray-500">Ajude-nos a identificar o perfil solar e compatibilidade da rede.</p>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="space-y-2">
+                                            <Label>País</Label>
+                                            <Input
+                                                type="text"
+                                                className="border-gray-300 focus-visible:ring-orange-600"
+                                                value={formData.solar.country}
+                                                onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, country: e.target.value } })}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Cidade</Label>
+                                            <Input
+                                                type="text"
+                                                className="border-gray-300 focus-visible:ring-orange-600"
+                                                value={formData.solar.city}
+                                                onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, city: e.target.value } })}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Localidade</Label>
+                                            <Input
+                                                type="text"
+                                                className="border-gray-300 focus-visible:ring-orange-600"
+                                                value={formData.solar.location}
+                                                onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, location: e.target.value } })}
+                                                placeholder="Ex: Alfragide"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Tipo de Instalação Elétrica</Label>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-md">
+                                            <Button
+                                                className={`h-12 ${formData.solar.grid_type === 'single_phase' ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, grid_type: 'single_phase' } })}
+                                            >
+                                                Monofásica (1 fase)
+                                            </Button>
+                                            <Button
+                                                className={`h-12 ${formData.solar.grid_type === 'three_phase' ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, grid_type: 'three_phase' } })}
+                                            >
+                                                Trifásica (3 fases)
+                                            </Button>
+                                        </div>
+                                        {formData.solar.grid_type === 'single_phase' && (
+                                            <p className="text-xs text-orange-600 font-medium">
+                                                Apenas serão sugeridos inversores monofásicos compatíveis com a sua rede.
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="pt-4 border-t border-gray-200 space-y-4">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                        <div>
                                             <Label className="mb-1">Tem painéis solares?</Label>
                                             <p className="text-sm text-gray-500">Se tiver, adicionamos perfil de produção mais preciso.</p>
                                         </div>
@@ -1503,24 +1569,6 @@ export default function Simulator() {
                                                     value={formData.solar.existing_inverter_model}
                                                     onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_model: e.target.value } })}
                                                     placeholder="Ex: SUN2000-5KTL"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>País</Label>
-                                                <Input
-                                                    type="text"
-                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                    value={formData.solar.country}
-                                                    onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, country: e.target.value } })}
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Cidade</Label>
-                                                <Input
-                                                    type="text"
-                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                    value={formData.solar.city}
-                                                    onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, city: e.target.value } })}
                                                 />
                                             </div>
                                             <div className="space-y-2 md:col-span-2">

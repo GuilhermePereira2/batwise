@@ -70,6 +70,7 @@ def rank_catalog(
     # 1. É um sistema novo com painéis
     # 2. É um sistema existente e o utilizador quer expandir os painéis
     requires_pv_input = expand_existing_solar or (not has_existing_solar and bool(panels))
+    grid_type_pref = (solar or {}).get("grid_type", "all")
 
     def append_recommendation(
         battery: Optional[Dict[str, Any]],
@@ -211,6 +212,7 @@ def rank_catalog(
                 catalog.get("compatibility"),
                 inverter_sizing_pv_peak,
                 requires_pv_input=requires_pv_input,
+                grid_type_pref=grid_type_pref,
             )
             if has_existing_solar:
                 existing_only_panel_set = build_existing_solar_panel_set(solar, roof_area_m2)
@@ -255,6 +257,7 @@ def rank_catalog(
                     catalog.get("compatibility"),
                     existing_solar_peak_kwp,
                     requires_pv_input=False,
+                    grid_type_pref=grid_type_pref,
                 )
                 append_recommendation(
                     battery, capacity, simulated_capacity, inverter_no_new_pv, existing_only_panel_set)
@@ -267,6 +270,7 @@ def rank_catalog(
                     catalog.get("compatibility"),
                     total_solar_peak_kwp,
                     requires_pv_input=True,
+                    grid_type_pref=grid_type_pref,
                 )
                 append_recommendation(
                     None, 0, existing_battery_capacity, inverter_no_new_bat, panel_set)
@@ -288,6 +292,7 @@ def rank_catalog(
                     catalog.get("compatibility"),
                     expansion_target_kwp,
                     requires_pv_input=True,  # Expansão obriga sempre a PV input
+                    grid_type_pref=grid_type_pref,
                 )
                 additional_target_kwp = expansion_target_kwp - existing_solar_peak_kwp
                 additional_panel_set = select_solar_panel_set(
@@ -966,6 +971,7 @@ def select_inverter_for_battery(
     compatibility: Optional[Dict[str, Any]] = None,
     pv_peak_kwp: float = 0.0,
     requires_pv_input: bool = False,
+    grid_type_pref: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """Pick the smallest compatible inverter that satisfies battery and PV needs."""
 
@@ -991,6 +997,16 @@ def select_inverter_for_battery(
                 continue
             pv_capable_inverters.append(inverter)
         compatible_inverters = pv_capable_inverters
+
+    # Filtro por tipo de rede (monofásica / trifásica)
+    if grid_type_pref == "single_phase":
+        compatible_inverters = [
+            inv for inv in compatible_inverters
+            if (inv.get("specs") or {}).get("grid_type") == "single_phase"
+            and int((inv.get("specs") or {}).get("phases") or 0) == 1
+        ]
+    # No caso de "three_phase", permitimos todos como solicitado ("podem ser considerados todos os inversores")
+
     if not compatible_inverters:
         return None
 
