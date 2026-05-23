@@ -27,6 +27,8 @@ import VerifyEmail from "./pages/VerifyEmail";
 import Terms from "./pages/Terms";
 import Simulator from "./pages/Simulator";
 import Privacy from "./pages/Privacy";
+import Cookies from "./pages/Cookies";
+import CookieConsent from "./components/CookieConsent";
 
 
 const queryClient = new QueryClient();
@@ -50,6 +52,7 @@ const routes = [
   { path: "/verify-email", element: <VerifyEmail /> },
   { path: "/terms", element: <Terms /> },
   { path: "/privacy", element: <Privacy /> },
+  { path: "/cookies", element: <Cookies /> },
   { path: "/simulator", element: <Simulator /> },
   { path: "/profile", element: <Profile /> },
   { path: "*", element: <NotFound /> },
@@ -103,6 +106,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <CookieConsent />
       <BrowserRouter>
         <LocationTracker />
         <AppModeProvider>

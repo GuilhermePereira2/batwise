@@ -918,5 +918,62 @@
         "toasts": {
             "errorFetching": "Error fetching cells"
         }
+    },
+    "cookies": {
+        "title": "Cookie Policy – Watt Builder",
+        "lastUpdated": "Last updated: May 23, 2026",
+        "intro": "Transparency is one of our greatest values at Watt Builder. Therefore, we want to explain clearly and simply how, when, and why we use cookies when you visit our platform (www.watt-builder.com).",
+        "whatAreCookies": {
+            "title": "1. What are Cookies?",
+            "content": "Cookies are small text files that a website, when visited, places on your computer or mobile device through the internet browser. These files help the website recognize your device the next time you visit, saving your preferences and improving your browsing experience (for example, by remembering the data from your last simulation so you don't have to fill it all out again)."
+        },
+        "types": {
+            "title": "2. What types of Cookies do we use?",
+            "necessary": {
+                "title": "Strictly Necessary Cookies (Essential)",
+                "content": "These are fundamental for the platform to function correctly. Without these cookies, basic features such as page navigation, site security, or saving your privacy preferences cannot work. These cookies do not require your consent and cannot be disabled."
+            },
+            "performance": {
+                "title": "Analytical or Performance Cookies",
+                "content": "They allow us to count visits and traffic sources so we can measure and improve our site's performance. They help us know which pages are most popular and how users move around the platform. All information is aggregated and anonymous."
+            },
+            "functional": {
+                "title": "Functional Cookies",
+                "content": "They allow the site to provide enhanced functionality and personalization (for example, saving the last simulation you did so you don't have to fill everything out again)."
+            },
+            "marketing": {
+                "title": "Advertising/Marketing Cookies",
+                "content": "They can be set by our advertising partners (such as Google Ads or Meta). They are used to build a profile of your interests and show you relevant ads on other sites, based on the unique identification of your browser."
+            }
+        },
+        "duration": {
+            "title": "3. How long are they stored?",
+            "session": {
+                "title": "Session Cookies",
+                "content": "They are temporary and remain in your browser only until you close the site."
+            },
+            "persistent": {
+                "title": "Persistent Cookies",
+                "content": "They are saved on your device for a predefined period or until you delete them manually."
+            }
+        },
+        "manage": {
+            "title": "4. How to manage or disable Cookies?",
+            "content": "The user has full control. At any time, you can change your preferences through our panel:",
+            "button": "Open Preference Panel",
+            "browserNav": "You can also manage cookies directly in your browser.",
+            "note": "Note: If you choose to disable strictly necessary or functional cookies, some parts of Watt Builder may not function correctly."
+        },
+        "contact": {
+            "title": "5. Contacts",
+            "content": "If you have any questions about our use of cookies or how we protect your privacy, do not hesitate to contact us:",
+            "email": "Email:"
+        },
+        "bannerTitle": "Cookie Settings",
+        "message": "We use cookies to improve your experience, analyze site traffic, and personalize content. By clicking \"Accept All\", you agree to our use of all cookies.",
+        "accept": "Accept All",
+        "decline": "Decline Optional",
+        "manageBtn": "Manage",
+        "policy": "Cookie Policy"
     }
 }

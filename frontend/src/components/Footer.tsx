@@ -46,6 +46,7 @@ const Footer = () => {
               <Link to="/signup" className="text-primary-foreground/70 hover:text-white transition-colors">{t('footer.account.signUp')}</Link>
               <Link to="/terms" className="text-primary-foreground/70 hover:text-white transition-colors">{t('footer.account.terms')}</Link>
               <Link to="/privacy" className="text-primary-foreground/70 hover:text-white transition-colors">{t('footer.account.privacy')}</Link>
+              <Link to="/cookies" className="text-primary-foreground/70 hover:text-white transition-colors">Política de Cookies</Link>
             </div>
           </div>
 

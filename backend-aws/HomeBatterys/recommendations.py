@@ -195,6 +195,11 @@ def rank_catalog(
                     "max_reasonable_payback_years": round(
                         max_reasonable_payback_years(project_years), 1),
                 },
+                # Extra fields for Plotting
+                "panel_power_kwp": round(panel_set.get("array_power_kwp", 0), 2) if panel_set else 0,
+                "cost_per_kwh_battery": round(battery_price / capacity, 2) if capacity > 0 else 0,
+                "cost_per_kwp_panels": round(panels_price / panel_set.get("array_power_kwp", 0), 2) if panel_set and panel_set.get("array_power_kwp", 0) > 0 else 0,
+                "max_system_power_kw": round(float((inverter.get("specs", {}) if inverter else {}).get("power_kw", 0) or 0), 2),
             }
         )
 
@@ -319,7 +324,10 @@ def rank_catalog(
                     append_recommendation(
                         battery, capacity, simulated_capacity, expanded_inverter, expanded_panel_set)
 
-    return select_budgeted_recommendations(recommendations)
+    return {
+        "best": select_budgeted_recommendations(recommendations),
+        "all": recommendations
+    }
 
 
 def build_battery_quantity_variants(

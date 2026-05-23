@@ -146,7 +146,7 @@ def optimize_home_battery(
         selection_reason = "no_economic_case"
 
     # Step 4: map the selected target to catalogue batteries, inverters and PV.
-    recommendations = rank_catalog(
+    ranked_results = rank_catalog(
         catalog,
         selected,
         base,
@@ -183,7 +183,8 @@ def optimize_home_battery(
             "savings_annual_eur": selected["annual_savings_eur"],
             "payback_years": selected["payback_years"],
         },
-        "recommendations": recommendations,
+        "recommendations": ranked_results.get("best", []),
+        "all_recommendations": ranked_results.get("all", []),
         "capacity_curve": rows,
         "assumptions_used": {
             "battery_dod": dod,

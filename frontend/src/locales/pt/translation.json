@@ -918,5 +918,62 @@
         "toasts": {
             "errorFetching": "Erro ao carregar células"
         }
+    },
+    "cookies": {
+        "title": "Política de Cookies – Watt Builder",
+        "lastUpdated": "Última atualização: 23 de Maio de 2026",
+        "intro": "A transparência é um dos nossos maiores valores na Watt Builder. Por isso, queremos explicar-lhe de forma clara e simples como, quando e porquê utilizamos cookies quando visita a nossa plataforma (www.watt-builder.com).",
+        "whatAreCookies": {
+            "title": "1. O que são Cookies?",
+            "content": "Os cookies são pequenos ficheiros de texto que um site, ao ser visitado, coloca no seu computador ou dispositivo móvel através do navegador de internet (browser). Estes ficheiros ajudam o site a reconhecer o seu dispositivo na próxima vez que o visitar, guardando as suas preferências e melhorando a sua experiência de navegação (por exemplo, lembrando os dados da sua última simulação para não ter de preencher tudo de novo)."
+        },
+        "types": {
+            "title": "2. Que tipos de Cookies utilizamos?",
+            "necessary": {
+                "title": "Cookies Estritamente Necessários (Essenciais)",
+                "content": "São fundamentais para que a plataforma funcione corretamente. Sem estes cookies, funcionalidades básicas como navegar nas páginas, manter a segurança do site ou guardar as suas preferências de privacidade não podem funcionar. Estes cookies não requerem o seu consentimento e não podem ser desativados."
+            },
+            "performance": {
+                "title": "Cookies Analíticos ou de Desempenho",
+                "content": "Permitem-nos contar visitas e fontes de tráfego, para que possamos medir e melhorar o desempenho do nosso site. Ajudam-nos a saber quais são as páginas mais populares e como os utilizadores se movimentam pela plataforma. Toda a informação é agregada e anónima."
+            },
+            "functional": {
+                "title": "Cookies Funcionais",
+                "content": "Permitem que o site forneça funcionalidades e personalização melhoradas (por exemplo, guardar a última simulação que fez para não ter de preencher tudo de novo)."
+            },
+            "marketing": {
+                "title": "Cookies de Publicidade/Marketing",
+                "content": "Podem ser estabelecidos pelos nossos parceiros de publicidade (como Google Ads ou Meta). São usados para construir um perfil dos seus interesses e mostrar-lhe anúncios relevantes noutros sites, baseando-se na identificação exclusiva do seu navegador."
+            }
+        },
+        "duration": {
+            "title": "3. Durante quanto tempo ficam guardados?",
+            "session": {
+                "title": "Cookies de Sessão",
+                "content": "São temporários e permanecem no seu navegador apenas até fechar o site."
+            },
+            "persistent": {
+                "title": "Cookies Persistentes",
+                "content": "Ficam guardados no seu dispositivo durante um período predefinido ou até que os apague manualmente."
+            }
+        },
+        "manage": {
+            "title": "4. Como gerir ou desativar os Cookies?",
+            "content": "O utilizador tem controlo total. A qualquer momento, pode alterar as suas preferências através do nosso painel:",
+            "button": "Abrir Painel de Preferências",
+            "browserNav": "Pode também gerir os cookies diretamente no seu navegador.",
+            "note": "Nota: Se optar por desativar os cookies estritamente necessários ou funcionais, algumas partes da Watt Builder poderão não funcionar corretamente."
+        },
+        "contact": {
+            "title": "5. Contactos",
+            "content": "Se tiver alguma dúvida sobre a nossa utilização de cookies ou sobre como protegemos a sua privacidade, não hesite em contactar-nos:",
+            "email": "Email:"
+        },
+        "bannerTitle": "Configurações de Cookies",
+        "message": "Utilizamos cookies para melhorar a sua experiência, analisar o tráfego do site e personalizar conteúdos. Ao clicar em \"Aceitar Todos\", concorda com o uso de todos os cookies.",
+        "accept": "Aceitar Todos",
+        "decline": "Recusar Opcionais",
+        "manageBtn": "Gerir",
+        "policy": "Política de Cookies"
     }
 }
