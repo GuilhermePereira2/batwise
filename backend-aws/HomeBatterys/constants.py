@@ -24,7 +24,7 @@ DEFAULT_USABLE_ROOF_RATIO = 0.75
 # Technical catalogue filters. These keep suggestions practical, not just cheap.
 MIN_SOLAR_TO_INVERTER_RATIO = 0.0
 BALANCED_SOLAR_TO_INVERTER_RATIO = 1.20
-MIN_EXISTING_SOLAR_EXPANSION_KWP = 2.0
+MIN_EXISTING_SOLAR_EXPANSION_KWP = 1.0
 
 # Economic filters. Long-payback systems are omitted from the recommendation cards.
 MIN_RECOMMENDATION_ANNUAL_SAVINGS_EUR = 1.0

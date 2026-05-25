@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
+from datetime import datetime, timedelta
 
 from .constants import (
     DEFAULT_EV_CONSUMPTION_KWH_PER_KM,
@@ -24,6 +25,57 @@ def build_hourly_profile(
     house/bill inputs into representative monthly totals, then distributes those
     totals with residential hourly shapes and seasonal solar factors.
     """
+
+    if mode == "eredes" and "csv_profile" in input_data:
+        csv_profile = input_data["csv_profile"]
+        import_kwh = csv_profile.get("load_kwh", [0.0] * 8760)
+        export_kwh = csv_profile.get("pv_kwh", [0.0] * 8760)
+        
+        # Ensure we have exactly 8760 points
+        import_kwh = (import_kwh + [0.0] * 8760)[:8760]
+        export_kwh = (export_kwh + [0.0] * 8760)[:8760]
+
+        # If user HAS solar, 'import_kwh' is only net import.
+        # To size expansion correctly, we need TOTAL house load.
+        # Real Load = Import + (Production - Export)
+        existing_peak = get_existing_solar_peak_kwp(solar)
+        if solar.get("has_solar") and existing_peak > 0:
+            annual_yield = existing_peak * solar_yield_kwh_per_kwp(solar)
+            factor_sum = sum(MONTH_SOLAR_FACTORS)
+            monthly_production = [annual_yield * f / factor_sum for f in MONTH_SOLAR_FACTORS]
+            
+            # Pre-calculate the sum of the hourly shape weights
+            solar_shape_sum = sum(solar_hour_weight(h) for h in range(24))
+            
+            # Reconstruct hourly production profile
+            total_load = []
+            for i in range(8760):
+                month_idx = (datetime(2023, 1, 1) + timedelta(hours=i)).month - 1
+                hour = i % 24
+                # Synthetic hourly production for the existing peak
+                # We distribute the monthly total across days and then by hour
+                prod_hour = (monthly_production[month_idx] * solar_hour_weight(hour) / 
+                             (solar_shape_sum or 1.0) / 30.4) # Approx daily
+                
+                # Real Load = Import + max(0, Production - Export)
+                # (Self-consumption is Production - Export)
+                self_consumption = max(0.0, prod_hour - export_kwh[i])
+                total_load.append(import_kwh[i] + self_consumption)
+            
+            load = total_load
+            pv = export_kwh # Use Export (Injection) as the charging source for batteries
+        else:
+            load = import_kwh
+            pv = [0.0] * 8760 # If no solar, no injection possible to charge battery yet
+
+        return (
+            {"load_kwh": load, "pv_kwh": pv},
+            {
+                "annual_consumption_kwh": sum(load),
+                "annual_solar_kwh": sum(pv),
+                "annual_ev_consumption_kwh": estimate_monthly_ev_consumption(input_data) * 12,
+            },
+        )
 
     monthly_consumption = estimate_monthly_consumption(
         mode, input_data, tariff, include_ev=False)
@@ -280,8 +332,24 @@ def estimate_recommended_solar_peak_kw(profile_summary: Dict[str, float], solar:
     """Return existing PV size or a conservative new PV target in kWp."""
 
     existing_peak = get_existing_solar_peak_kwp(solar)
+    
+    # If user already has solar, only recommend expanding if they explicitly asked for it
     if solar.get("has_solar") and existing_peak > 0:
-        return round(existing_peak, 2)
+        if not solar.get("expand_solar"):
+            return round(existing_peak, 2)
+        
+        # If they want to expand, but current load is small, still offer a minimum expansion
+        # to ensure new hybrid inverters can reach minimum MPPT voltage.
+        # (e.g. at least 3-4 kWp total is safer for most single-phase hybrids)
+        annual_consumption = profile_summary["annual_consumption_kwh"]
+        yield_val = solar_yield_kwh_per_kwp(solar)
+        ideal_target = annual_consumption / yield_val if yield_val > 0 else existing_peak
+        
+        # Minimum safe total for hybrid inverters is around 2.5 - 3.0 kWp
+        # If user explicitly asked for expansion, we ensure we reach at least this safe floor.
+        safe_technical_floor = 2.64 # ~6 panels of 440W
+        
+        return round(max(existing_peak, ideal_target, safe_technical_floor), 2)
 
     annual_consumption = profile_summary["annual_consumption_kwh"]
     target_peak = annual_consumption / \

@@ -37,7 +37,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartTooltip } from "@/components/ui/chart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type InputMode = 'house' | 'bill';
+type InputMode = 'house' | 'bill' | 'eredes';
 type TariffType = 'simple' | 'bi' | 'tri';
 type TariffPeriod = 'simple' | 'offPeak' | 'peak' | 'ponta';
 
@@ -210,7 +210,7 @@ const parseStepParam = (value: string | null) => {
 };
 
 const parseModeParam = (value: string | null): InputMode | null => {
-    return value === 'house' || value === 'bill' ? value : null;
+    return value === 'house' || value === 'bill' || value === 'eredes' ? value : null;
 };
 
 const DEFAULT_STATE = {
@@ -239,6 +239,11 @@ const DEFAULT_STATE = {
         },
         historyMonths: 1,
         history: [{ simple: 350, bill_total: 0, production: 0 }],
+    },
+    eredes: {
+        has_solar_before: false,
+        csv_profile: null as any,
+        file_name: '',
     },
     tariff: {
         type: 'simple',
@@ -279,7 +284,67 @@ export default function Simulator() {
     const { toast } = useToast();
     const [step, setStep] = useState(() => parseStepParam(searchParams.get('step')));
     const [loading, setLoading] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
     const [mode, setMode] = useState<InputMode | null>(() => parseModeParam(searchParams.get('mode')));
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!isAuthenticated || !token) {
+            toast({
+                title: 'Autenticação necessária',
+                description: 'Por favor, faça login para processar ficheiros E-Redes.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        setIsUploading(true);
+        const formDataUpload = new FormData();
+        formDataUpload.append('file', file);
+        formDataUpload.append('has_solar', String(formData.eredes.has_solar_before));
+
+        try {
+            const response = await fetch(getApiUrl('api/simulator/upload-csv'), {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                body: formDataUpload,
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Erro ao processar ficheiro');
+            }
+
+            const data = await response.json();
+            setFormData({
+                ...formData,
+                eredes: {
+                    ...formData.eredes,
+                    csv_profile: data,
+                    file_name: file.name
+                }
+            });
+
+            toast({
+                title: 'Ficheiro processado',
+                description: `O ficheiro "${file.name}" foi processado com sucesso (8760 horas geradas).`,
+            });
+        } catch (error: any) {
+            console.error('Erro no upload:', error);
+            toast({
+                title: 'Erro no processamento',
+                description: error.message || 'Verifique o formato do ficheiro E-Redes.',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
     const [results, setResults] = useState<any>(null);
     const [selectedRecommendation, setSelectedRecommendation] = useState<any>(null);
     const [reportEmail, setReportEmail] = useState('');
@@ -632,7 +697,8 @@ export default function Simulator() {
                 },
                 solar: { ...DEFAULT_STATE.solar, ...(parsed.solar || {}) },
                 max_investment: parsed.max_investment ?? DEFAULT_STATE.max_investment,
-                electric_vehicles: normalizeElectricVehicles(parsed.electric_vehicles || DEFAULT_STATE.electric_vehicles)
+                electric_vehicles: normalizeElectricVehicles(parsed.electric_vehicles || DEFAULT_STATE.electric_vehicles),
+                eredes: parsed.eredes || DEFAULT_STATE.eredes
             };
         } catch {
             return DEFAULT_STATE;
@@ -895,11 +961,37 @@ export default function Simulator() {
             const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
             const tariffPrices = mode === 'house'
                 ? getHouseTariffPrices(formData.tariff.type, formData.house)
-                : getBillTariffPrices(formData.tariff.type, formData.bill);
+                : mode === 'bill' ? getBillTariffPrices(formData.tariff.type, formData.bill)
+                    : getDefaultTariffPrices(formData.tariff.type); // eredes uses default for pricing context if needed
+
             const tariffPayload = {
                 type: formData.tariff.type,
                 prices: tariffPrices,
             };
+
+            const simulationInput = {
+                ...(mode === 'house' ? formData.house : mode === 'bill' ? formData.bill : {}),
+                site: {
+                    area_m2: formData.house.area_m2,
+                    floors: formData.house.floors,
+                    occupants: formData.house.occupants,
+                },
+                electric_vehicles: formData.electric_vehicles,
+            };
+
+            if (mode === 'eredes') {
+                if (!formData.eredes.csv_profile) {
+                    toast({
+                        title: 'Ficheiro em falta',
+                        description: 'Por favor, faça o upload e processe o ficheiro E-Redes antes de simular.',
+                        variant: 'destructive',
+                    });
+                    setLoading(false);
+                    return;
+                }
+                (simulationInput as any).csv_profile = formData.eredes.csv_profile;
+            }
+
             const response = await fetch(getApiUrl('api/simulator/size'), {
                 method: 'POST',
                 headers: {
@@ -908,17 +1000,9 @@ export default function Simulator() {
                 },
                 body: JSON.stringify({
                     mode,
-                    input: {
-                        ...(mode === 'house' ? formData.house : formData.bill),
-                        site: {
-                            area_m2: formData.house.area_m2,
-                            floors: formData.house.floors,
-                            occupants: formData.house.occupants,
-                        },
-                        electric_vehicles: formData.electric_vehicles,
-                    },
+                    input: simulationInput,
                     tariff: tariffPayload,
-                    solar: formData.solar,
+                    solar: mode === 'eredes' ? { ...formData.solar, has_solar: formData.eredes.has_solar_before } : formData.solar,
                     max_investment: formData.max_investment ? Number(formData.max_investment) : null,
                     assumptions: { battery_dod: 0.9, system_losses: 0.1, component_margin: 0.1, installation_margin: 0.25 },
                     form_data: formData,
@@ -1377,27 +1461,374 @@ export default function Simulator() {
                                 </CardContent>
                             </Card>
 
-                            <Card className="md:col-span-2 opacity-50 bg-gray-50 border-dashed border-2 border-gray-300">
-                                <CardContent className="p-4 flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <Zap className="text-gray-400" />
-                                        <span className="font-medium text-gray-500">Importação automática E-Redes</span>
-                                    </div>
-                                    <Badge variant="outline" className="border-gray-300 text-gray-500">Brevemente</Badge>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    )}
+                                    <Card
+                                        onClick={() => goToStep(2, 'eredes')}
+                                        className={`cursor-pointer border-2 transition-all hover:shadow-lg ${mode === 'eredes' ? 'border-orange-600 bg-orange-50/50' : 'border-gray-200 hover:border-black'}`}
+                                    >
+                                        <CardContent className="p-8 text-center">
+                                            <div className="bg-orange-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <Zap className="text-white w-8 h-8" />
+                                            </div>
+                                            <h3 className="text-xl font-bold mb-2">Ficheiro E-Redes</h3>
+                                            <p className="text-gray-500 text-sm">Upload do ficheiro de consumos da E-Redes (.csv ou .xlsx) para simulação real.</p>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            )}
 
-                    {/* Step 2: Form */}
-                    {step === 2 && (
-                        <Card className="shadow-xl border-gray-200 animate-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
-                            <CardHeader>
-                                <CardTitle>Configuração de Consumo</CardTitle>
-                                <CardDescription className="text-gray-500">Ajuste os valores para uma simulação precisa.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Step 2: Form */}
+                            {step === 2 && (
+                                <Card className="shadow-xl border-gray-200 animate-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
+                                    <CardHeader>
+                                        <CardTitle>{mode === 'eredes' ? 'Ficheiro de Consumos E-Redes' : 'Configuração de Consumo'}</CardTitle>
+                                        <CardDescription className="text-gray-500">
+                                            {mode === 'eredes' ? 'Faça o upload do seu ficheiro .csv ou .xlsx para uma simulação com base em dados reais.' : 'Ajuste os valores para uma simulação precisa.'}
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-6">
+                                        {mode === 'eredes' ? (
+                                            <div className="space-y-8 animate-in fade-in duration-500">
+                                                <div className="p-8 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50 text-center space-y-4">
+                                                    <div className="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                                                        <Zap className="text-orange-600 w-8 h-8" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-lg font-bold">Upload do Ficheiro</h3>
+                                                        <p className="text-sm text-gray-500 max-w-xs mx-auto">Selecione o ficheiro exportado do portal E-Redes (.csv ou .xlsx).</p>
+                                                    </div>
+                                                    <div className="flex flex-col items-center gap-2">
+                                                        <Input
+                                                            type="file"
+                                                            accept=".csv, .xlsx, .xls"
+                                                            onChange={handleFileUpload}
+                                                            className="max-w-xs bg-white cursor-pointer"
+                                                            disabled={isUploading}
+                                                        />
+                                                {formData.eredes.file_name && (
+                                                    <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200">
+                                                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                                                        {formData.eredes.file_name}
+                                                    </Badge>
+                                                )}
+                                                {isUploading && <div className="flex items-center text-orange-600 text-sm font-medium"><Loader2 className="animate-spin w-4 h-4 mr-2" /> Processando ficheiro...</div>}
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-4 border-t border-gray-200">
+                                            <Label className="text-gray-400 text-xs uppercase tracking-widest">Características da Habitação</Label>
+                                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
+                                                <div className="space-y-2">
+                                                    <Label>Nº de pessoas na habitação</Label>
+                                                    <Input
+                                                        type="number"
+                                                        min="1"
+                                                        className="border-gray-300 focus-visible:ring-orange-600"
+                                                        value={formData.house.occupants}
+                                                        onChange={(e) => handleNumericChange(e.target.value, 'Nº de pessoas', (val) => setFormData({ ...formData, house: { ...formData.house, occupants: val } }))}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Área aproximada (m²)</Label>
+                                                    <Input
+                                                        type="number"
+                                                        min="10"
+                                                        className="border-gray-300 focus-visible:ring-orange-600"
+                                                        value={formData.house.area_m2}
+                                                        onChange={(e) => handleNumericChange(e.target.value, 'Área aproximada', (val) => setFormData({ ...formData, house: { ...formData.house, area_m2: val } }))}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Nº de pisos</Label>
+                                                    <Input
+                                                        type="number"
+                                                        min="1"
+                                                        className="border-gray-300 focus-visible:ring-orange-600"
+                                                        value={formData.house.floors}
+                                                        onChange={(e) => handleNumericChange(e.target.value, 'Nº de pisos', (val) => setFormData({ ...formData, house: { ...formData.house, floors: val } }))}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-4 border-t border-gray-200">
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                                <div>
+                                                    <Label className="mb-1">Pretende inserir os dados da última fatura?</Label>
+                                                    <p className="text-sm text-gray-500">Usamos esses dados apenas para estimar o preço por kWh.</p>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2 sm:w-auto">
+                                                    <Button
+                                                        className={`h-12 ${formData.house.use_last_bill ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
+                                                        onClick={() => setFormData({ ...formData, house: { ...formData.house, use_last_bill: false } })}
+                                                    >
+                                                        Não
+                                                    </Button>
+                                                    <Button
+                                                        className={`h-12 ${formData.house.use_last_bill ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                        onClick={() => setFormData({ ...formData, house: { ...formData.house, use_last_bill: true } })}
+                                                    >
+                                                        Sim
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {(formData.house.use_last_bill || isAdminMode) && (
+                                            <div className="pt-4 border-t border-gray-100 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                                                {formData.house.use_last_bill && (
+                                                    <div className="grid gap-4 md:grid-cols-4">
+                                                        {activeTariffPeriods.map((period) => (
+                                                            <div key={period.key} className="space-y-2">
+                                                                <Label>{period.label} (kWh)</Label>
+                                                                <Input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    className="border-gray-300 focus-visible:ring-orange-600"
+                                                                    value={formData.house.last_bill.consumption[period.key] ?? ''}
+                                                                    onChange={(e) => handleNumericChange(e.target.value, period.label, (val) => setFormData({
+                                                                        ...formData,
+                                                                        house: {
+                                                                            ...formData.house,
+                                                                            last_bill: {
+                                                                                ...formData.house.last_bill,
+                                                                                consumption: {
+                                                                                    ...formData.house.last_bill.consumption,
+                                                                                    [period.key]: val,
+                                                                                },
+                                                                            },
+                                                                        },
+                                                                    }))}
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                        <div className="space-y-2">
+                                                            <Label>Valor total da fatura</Label>
+                                                            <div className="relative">
+                                                                <Input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="0.01"
+                                                                    className="border-gray-300 focus-visible:ring-orange-600 pr-8"
+                                                                    value={formData.house.last_bill.total}
+                                                                    onChange={(e) => handleNumericChange(e.target.value, 'Valor total da fatura', (val) => setFormData({
+                                                                        ...formData,
+                                                                        house: {
+                                                                            ...formData.house,
+                                                                            last_bill: {
+                                                                                ...formData.house.last_bill,
+                                                                                total: val,
+                                                                            },
+                                                                        },
+                                                                    }))}
+                                                                />
+                                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {isAdminMode && (
+                                                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                                                        <div className="mb-3 flex items-center justify-between gap-3">
+                                                            <p className="text-sm font-semibold">
+                                                                {formData.house.use_last_bill ? 'Preço estimado' : 'Preços padrão'}
+                                                            </p>
+                                                            <Badge variant="outline" className="border-gray-300 text-gray-600">
+                                                                {formData.tariff.type === 'simple' ? 'Simples' : formData.tariff.type === 'bi' ? 'Bi-horário' : 'Tri-horário'}
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="grid gap-3 sm:grid-cols-3">
+                                                            {activeTariffPeriods.map((period) => (
+                                                                <div key={period.key} className="rounded-md bg-white border border-gray-200 px-3 py-2">
+                                                                    <p className="text-xs uppercase tracking-widest text-gray-400">{period.label}</p>
+                                                                    <p className="mt-1 font-semibold text-gray-900">
+                                                                        {formatTariffPrice(estimatedHouseTariffPrices[period.key])}
+                                                                    </p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        <div className="pt-4 border-t border-gray-200">
+                                            <Label className="text-gray-400 text-xs uppercase tracking-widest">Tarifário</Label>
+                                            <div className="mt-4">
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    {[
+                                                        { key: 'simple', label: 'Simples' },
+                                                        { key: 'bi', label: 'Bi-horário' },
+                                                        { key: 'tri', label: 'Tri-horário' }
+                                                    ].map((option) => (
+                                                        <Button
+                                                            key={option.key}
+                                                            className={`text-sm h-12 ${formData.tariff.type === option.key ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                            onClick={() => setFormData({
+                                                                ...formData,
+                                                                tariff: { ...formData.tariff, type: option.key as 'simple' | 'bi' | 'tri' }
+                                                            })}
+                                                        >
+                                                            {option.label}
+                                                        </Button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-4 border-t border-gray-100 space-y-4">
+                                            <Label className="text-gray-400 text-xs uppercase tracking-widest">Localização e Rede Elétrica</Label>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                <div className="space-y-2">
+                                                    <Label>País</Label>
+                                                    <Input
+                                                        type="text"
+                                                        className="border-gray-300 focus-visible:ring-orange-600"
+                                                        value={formData.solar.country}
+                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, country: e.target.value } })}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Cidade</Label>
+                                                    <Input
+                                                        type="text"
+                                                        className="border-gray-300 focus-visible:ring-orange-600"
+                                                        value={formData.solar.city}
+                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, city: e.target.value } })}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Localidade</Label>
+                                                    <Input
+                                                        type="text"
+                                                        className="border-gray-300 focus-visible:ring-orange-600"
+                                                        value={formData.solar.location}
+                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, location: e.target.value } })}
+                                                        placeholder="Ex: Alfragide"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Tipo de Instalação Elétrica</Label>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-md">
+                                                    <Button
+                                                        className={`h-12 ${formData.solar.grid_type === 'single_phase' ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, grid_type: 'single_phase' } })}
+                                                    >
+                                                        Monofásica (1 fase)
+                                                    </Button>
+                                                    <Button
+                                                        className={`h-12 ${formData.solar.grid_type === 'three_phase' ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, grid_type: 'three_phase' } })}
+                                                    >
+                                                        Trifásica (3 fases)
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4 pt-4 border-t border-gray-100">
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                                <div>
+                                                    <Label className="mb-1 text-base font-bold">Já tem painéis solares instalados na sua casa?</Label>
+                                                    <p className="text-sm text-gray-500">O algoritmo analisará o excedente para dimensionar a bateria.</p>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2 sm:w-auto">
+                                                    <Button
+                                                        className={`h-12 ${!formData.eredes.has_solar_before ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                        onClick={() => {
+                                                            setFormData({
+                                                                ...formData,
+                                                                eredes: { ...formData.eredes, has_solar_before: false },
+                                                                solar: { ...formData.solar, has_solar: false }
+                                                            });
+                                                        }}
+                                                    >
+                                                        Não
+                                                    </Button>
+                                                    <Button
+                                                        className={`h-12 ${formData.eredes.has_solar_before ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                        onClick={() => {
+                                                            setFormData({
+                                                                ...formData,
+                                                                eredes: { ...formData.eredes, has_solar_before: true },
+                                                                solar: { ...formData.solar, has_solar: true }
+                                                            });
+                                                        }}
+                                                    >
+                                                        Sim
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            {formData.eredes.has_solar_before && (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-300">
+                                                    <div className="space-y-2">
+                                                        <Label>Potência de pico existente (kWp)</Label>
+                                                        <Input
+                                                            type="number"
+                                                            step="0.1"
+                                                            min="0"
+                                                            className="border-gray-300 focus-visible:ring-orange-600"
+                                                            value={formData.solar.peak_kw}
+                                                            onChange={(e) => handleNumericChange(e.target.value, 'Potência de pico existente', (val) => setFormData({ ...formData, solar: { ...formData.solar, peak_kw: val } }))}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label>Potência máxima do inversor atual (kW)</Label>
+                                                        <Input
+                                                            type="number"
+                                                            step="0.1"
+                                                            min="0"
+                                                            className="border-gray-300 focus-visible:ring-orange-600"
+                                                            value={formData.solar.existing_inverter_max_power_kw}
+                                                            onChange={(e) => handleNumericChange(e.target.value, 'Potência máxima do inversor', (val) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_max_power_kw: val } }))}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label>Marca do inversor atual</Label>
+                                                        <Input
+                                                            type="text"
+                                                            className="border-gray-300 focus-visible:ring-orange-600"
+                                                            value={formData.solar.existing_inverter_brand}
+                                                            onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_brand: e.target.value } })}
+                                                            placeholder="Ex: Huawei"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label>Modelo do inversor atual</Label>
+                                                        <Input
+                                                            type="text"
+                                                            className="border-gray-300 focus-visible:ring-orange-600"
+                                                            value={formData.solar.existing_inverter_model}
+                                                            onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_model: e.target.value } })}
+                                                            placeholder="Ex: SUN2000-5KTL"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2 md:col-span-2">
+                                                        <Label>Deseja adicionar mais painéis solares?</Label>
+                                                        <div className="grid grid-cols-2 gap-2 max-w-sm">
+                                                            <Button
+                                                                className={`h-12 ${formData.solar.expand_solar ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
+                                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, expand_solar: false } })}
+                                                            >
+                                                                Não
+                                                            </Button>
+                                                            <Button
+                                                                className={`h-12 ${formData.solar.expand_solar ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, expand_solar: true } })}
+                                                            >
+                                                                Sim
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                     <div className="space-y-2">
                                         <Label>Nº de pessoas na habitação</Label>
                                         <Input
@@ -2090,45 +2521,47 @@ export default function Simulator() {
                                         </div>
                                     </div>
                                 )}
+                            </>
+                        )}
 
-                                <div className="pt-4 border-t border-gray-200">
-                                    <Label>Qual o valor máximo de investimento que pretende? (Opcional)</Label>
-                                    <div className="mt-2 relative max-w-sm">
-                                        <Input
-                                            type="number"
-                                            min="0"
-                                            placeholder="Ex: 5000"
-                                            className="border-gray-300 focus-visible:ring-orange-600 pr-8"
-                                            value={formData.max_investment}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                if (val !== '' && Number(val) < 0) {
-                                                    toast({
-                                                        title: 'Valor Inválido',
-                                                        description: 'O valor para "Investimento Máximo" não pode ser negativo.',
-                                                        variant: 'destructive',
-                                                    });
-                                                    return;
-                                                }
-                                                setFormData({ ...formData, max_investment: val });
-                                            }}
-                                        />
-                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
-                                    </div>
-                                    <p className="mt-1 text-xs text-gray-500">Se deixar em branco, mostraremos todas as opções disponíveis.</p>
-                                </div>
+                        <div className="pt-4 border-t border-gray-200">
+                            <Label>Qual o valor máximo de investimento que pretende? (Opcional)</Label>
+                            <div className="mt-2 relative max-w-sm">
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    placeholder="Ex: 5000"
+                                    className="border-gray-300 focus-visible:ring-orange-600 pr-8"
+                                    value={formData.max_investment}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val !== '' && Number(val) < 0) {
+                                            toast({
+                                                title: 'Valor Inválido',
+                                                description: 'O valor para "Investimento Máximo" não pode ser negativo.',
+                                                variant: 'destructive',
+                                            });
+                                            return;
+                                        }
+                                        setFormData({ ...formData, max_investment: val });
+                                    }}
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
+                            </div>
+                            <p className="mt-1 text-xs text-gray-500">Se deixar em branco, mostraremos todas as opções disponíveis.</p>
+                        </div>
 
-                                <div className="flex gap-3 pt-4">
-                                    <Button variant="outline" className="border-gray-300 text-black hover:bg-gray-100" onClick={() => goToStep(1, null)}>
-                                        <ChevronLeft className="mr-2 w-4 h-4" /> Voltar
-                                    </Button>
-                                    <Button className="flex-grow bg-orange-600 hover:bg-orange-700 text-white h-12 text-lg" onClick={runSimulation} disabled={loading}>
-                                        {loading ? <Loader2 className="animate-spin mr-2" /> : "Gerar Recomendação"}
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
+                        <div className="flex gap-3 pt-4">
+                            <Button variant="outline" className="border-gray-300 text-black hover:bg-gray-100" onClick={() => goToStep(1, null)}>
+                                <ChevronLeft className="mr-2 w-4 h-4" /> Voltar
+                            </Button>
+                            <Button className="flex-grow bg-orange-600 hover:bg-orange-700 text-white h-12 text-lg" onClick={runSimulation} disabled={loading}>
+                                {loading ? <Loader2 className="animate-spin mr-2" /> : "Gerar Recomendação"}
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
                     {/* Step 3: Results */}
                     {step === 3 && results && (

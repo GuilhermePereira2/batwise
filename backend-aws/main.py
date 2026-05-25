@@ -15,6 +15,7 @@ import os
 import json
 import csv
 import io
+import pandas as pd
 import sqlite3
 from html import escape
 from fastapi.security import OAuth2PasswordBearer
@@ -170,6 +171,135 @@ def read_root():
     return {
         "status": "Operational 🚀"
     }
+
+
+@app.post("/api/simulator/upload-csv")
+async def upload_eredes_csv(
+    file: UploadFile = File(...),
+    has_solar: bool = Form(...),
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        filename = file.filename.lower()
+        content = await file.read()
+        
+        # 1. Ler os dados para um DataFrame
+        if filename.endswith('.csv'):
+            # Tentar detectar delimitador e skip rows
+            try:
+                sample = content[:4096].decode("utf-8-sig")
+            except UnicodeDecodeError:
+                sample = content[:4096].decode("iso-8859-1")
+            
+            delimiter = ';' if ';' in sample else ','
+            
+            # Localizar cabeçalho (procurar "data" e "hora")
+            skip = 0
+            lines_sample = sample.splitlines()
+            for i, line in enumerate(lines_sample):
+                lower_line = line.lower()
+                if "data" in lower_line and "hora" in lower_line:
+                    skip = i
+                    break
+            
+            try:
+                df = pd.read_csv(io.BytesIO(content), sep=delimiter, skiprows=skip, decimal=',', encoding="utf-8-sig")
+            except:
+                df = pd.read_csv(io.BytesIO(content), sep=delimiter, skiprows=skip, decimal=',', encoding="iso-8859-1")
+        elif filename.endswith(('.xlsx', '.xls')):
+            # Localizar cabeçalho no Excel
+            temp_df = pd.read_excel(io.BytesIO(content), nrows=20, header=None)
+            skip = 0
+            for i, row in temp_df.iterrows():
+                row_str = " ".join(map(str, row.values)).lower()
+                if "data" in row_str and "hora" in row_str:
+                    skip = i
+                    break
+            df = pd.read_excel(io.BytesIO(content), skiprows=skip)
+        else:
+            raise HTTPException(status_code=400, detail="Formato não suportado (.csv, .xlsx)")
+
+        if df.empty:
+            raise HTTPException(status_code=400, detail="O ficheiro está vazio ou é inválido.")
+
+        # 2. Identificar colunas criticamente necessárias
+        cols = {c: c.lower() for c in df.columns}
+        date_col = next((c for c, l in cols.items() if "data" in l), None)
+        time_col = next((c for c, l in cols.items() if "hora" in l), None)
+        consume_col = next((c for c, l in cols.items() if "consumo" in l and "ativa" in l), None)
+        inject_col = next((c for c, l in cols.items() if "inje" in l and "ativa" in l), None)
+
+        if not date_col or not time_col or not consume_col:
+            raise HTTPException(status_code=400, detail="Não foi possível identificar as colunas 'Data', 'Hora' ou 'Consumo'.")
+
+        # 3. Limpeza e Conversão Rápida (Vectorized)
+        df = df.dropna(subset=[date_col, time_col, consume_col])
+        
+        # Converter Consumo e Injeção para float (kWh)
+        df[consume_col] = pd.to_numeric(df[consume_col].astype(str).str.replace(',', '.'), errors='coerce').fillna(0) / 4.0
+        if inject_col:
+            df[inject_col] = pd.to_numeric(df[inject_col].astype(str).str.replace(',', '.'), errors='coerce').fillna(0) / 4.0
+        else:
+            df['__inject'] = 0.0
+            inject_col = '__inject'
+
+        # Converter Data e Extrair Características
+        # Tentamos vários formatos de data de uma vez via pandas (muito mais rápido que loops)
+        df['dt_obj'] = pd.to_datetime(df[date_col].astype(str).str.split(' ').str[0], dayfirst=True, errors='coerce')
+        df = df.dropna(subset=['dt_obj'])
+        
+        # Extrair hora a partir da string ou objeto
+        def parse_hour(x):
+            try:
+                if isinstance(x, str): return int(x.split(':')[0])
+                if hasattr(x, 'hour'): return x.hour
+                return int(str(x).split(':')[0])
+            except: return 0
+
+        df['hour_int'] = df[time_col].apply(parse_hour)
+        df['month'] = df['dt_obj'].dt.month
+        df['is_weekend'] = df['dt_obj'].dt.weekday >= 5
+
+        # 4. Agrupar por Buckets para Médias (Extrapolação)
+        # Buckets: (Month, Weekend, Hour)
+        buckets = df.groupby(['month', 'is_weekend', 'hour_int'])[[consume_col, inject_col]].mean().to_dict('index')
+        
+        # Médias Globais (fallback se faltar um mês específico)
+        global_avgs = df.groupby(['is_weekend', 'hour_int'])[[consume_col, inject_col]].mean().to_dict('index')
+
+        # 5. Gerar Perfil 8760 (Ano 2023)
+        start_date = datetime(2023, 1, 1)
+        load_kwh = []
+        pv_kwh = []
+
+        for i in range(8760):
+            curr = start_date + timedelta(hours=i)
+            is_w = curr.weekday() >= 5
+            h = curr.hour
+            key = (curr.month, is_w, h)
+            
+            if key in buckets:
+                val = buckets[key]
+            elif (is_w, h) in global_avgs:
+                val = global_avgs[(is_w, h)]
+            else:
+                val = {consume_col: 0.0, inject_col: 0.0}
+            
+            load_kwh.append(round(val[consume_col], 4))
+            pv_kwh.append(round(val[inject_col], 4) if has_solar else 0.0)
+
+        return {
+            "load_kwh": load_kwh,
+            "pv_kwh": pv_kwh,
+            "annual_consumption_kwh": sum(load_kwh),
+            "annual_solar_kwh": sum(pv_kwh)
+        }
+
+    except HTTPException as he: raise he
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erro de processamento: {str(e)}")
 
 
 @app.get("/cells", response_model=List[CellData])
