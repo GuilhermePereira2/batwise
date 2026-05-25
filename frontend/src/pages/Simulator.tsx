@@ -23,6 +23,15 @@ import {
     CheckCircle2, TrendingUp, Wallet, Plus, Trash2, Star,
     LineChart as LucideLineChart, LayoutGrid, Info, ArrowRight, Sparkles, Lightbulb
 } from 'lucide-react';
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartTooltip } from "@/components/ui/chart";
@@ -143,6 +152,55 @@ const getBillMonthTariffPrices = (tariffType: string, entry: any) => {
     return estimateTariffPricesFromLastBill(tariffType, monthBill);
 };
 
+const FEEDBACK_FORM_QUESTIONS = [
+    {
+        id: 'q1',
+        question: '1. Onde sente que os nossos resultados poderiam estar mais próximos da sua realidade?',
+        options: [
+            'O meu perfil de consumo de energia (não refletia exatamente a minha casa).',
+            'O tamanho do sistema (quantidade de painéis ou capacidade da bateria).',
+            'Os equipamentos sugeridos (os preços ou as marcas apresentadas).',
+            'As estimativas financeiras (poupança anual e tempo de retorno).',
+            'A apresentação visual ou a clareza da informação no relatório.'
+        ]
+    },
+    {
+        id: 'q2',
+        question: '2. Em relação aos equipamentos (Painéis e Baterias) que sugerimos, qual a sua perspetiva?',
+        options: [
+            'Os preços pareceram-me acima dos valores praticados no mercado.',
+            'Os preços pareceram-me abaixo do esperado.',
+            'O sistema sugerido pareceu-me sobre dimensionado para o que preciso.',
+            'O sistema sugerido pareceu-me subdimensionado.',
+            'Senti a falta de algumas marcas da minha preferência.',
+            'Faltou-me informação técnica para compreender as escolhas do algoritmo.',
+            'Os equipamentos pareceram-me bem, o ponto a melhorar é outro.'
+        ]
+    },
+    {
+        id: 'q3',
+        question: '3. Sobre a estimativa de poupança e investimento financeiro, o que o deixou com mais dúvidas?',
+        options: [
+            'A estimativa de poupança anual pareceu-me demasiado otimista.',
+            'O tempo para recuperar o investimento (Payback) pareceu-me demasiado curto.',
+            'O investimento inicial sugerido difere de orçamentos reais que já obtive.',
+            'Tive dificuldade em compreender como chegaram a estes cálculos financeiros.',
+            'Gostaria de ver outros custos espelhados (ex: manutenção, seguros, taxas).'
+        ]
+    },
+    {
+        id: 'q4',
+        question: '4. Durante a sua navegação na Watt Builder, o que sentiu que faltava para ser uma experiência 10/10?',
+        options: [
+            'Um formulário inicial mais rápido e simples.',
+            'Um formulário mais detalhado (mais opções para descrever bem os meus consumos).',
+            'Mais explicações fáceis sobre conceitos técnicos (ex: o que é um inversor híbrido).',
+            'A possibilidade de eu mesmo ajustar manualmente a quantidade de painéis/baterias no fim.',
+            'O site estava um pouco lento ou surgiu algum erro técnico.'
+        ]
+    }
+];
+
 const formatTariffPrice = (value: number) => `${Number(value || 0).toFixed(3)} €/kWh`;
 
 const parseStepParam = (value: string | null) => {
@@ -232,9 +290,63 @@ export default function Simulator() {
     const [ratingComment, setRatingComment] = useState('');
     const [isSendingRating, setIsSendingRating] = useState(false);
     const [hasRated, setHasRated] = useState(false);
+    const [feedbackQuestions, setFeedbackQuestions] = useState<{ [key: string]: string[] }>({
+        q1: [],
+        q2: [],
+        q3: [],
+        q4: [],
+    });
     const [xAxis, setXAxis] = useState('new_battery_capacity_kwh');
     const [yAxis, setYAxis] = useState('capex_total_eur');
     const [activeTab, setActiveTab] = useState('best');
+    const [allSolutionsView, setAllSolutionsView] = useState<'chart' | 'table'>('chart');
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+    const [filterType, setFilterType] = useState<'all' | 'battery_only' | 'solar_only' | 'hybrid'>('all');
+
+    const filteredRecommendations = React.useMemo(() => {
+        const items = [...(results?.all_recommendations || [])];
+        return items.filter(rec => {
+            const hasBattery = !!rec.battery;
+            const hasSolar = !!rec.solar_panels;
+
+            if (filterType === 'battery_only') return hasBattery && !hasSolar;
+            if (filterType === 'solar_only') return hasSolar && !hasBattery;
+            if (filterType === 'hybrid') return hasBattery && hasSolar;
+            return true;
+        });
+    }, [results?.all_recommendations, filterType]);
+
+    const sortedRecommendations = React.useMemo(() => {
+        const items = [...filteredRecommendations];
+        if (sortConfig !== null) {
+            items.sort((a, b) => {
+                let aValue = a[sortConfig.key];
+                let bValue = b[sortConfig.key];
+
+                // Handle nested battery/inverter/panel names for sorting if needed, 
+                // but usually the numeric keys are what users want to sort by.
+                if (aValue === undefined || aValue === null) return 1;
+                if (bValue === undefined || bValue === null) return -1;
+
+                if (aValue < bValue) {
+                    return sortConfig.direction === 'asc' ? -1 : 1;
+                }
+                if (aValue > bValue) {
+                    return sortConfig.direction === 'asc' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
+        return items;
+    }, [filteredRecommendations, sortConfig]);
+
+    const handleSort = (key: string) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
 
     const handleNumericChange = (value: string, fieldLabel: string, callback: (val: number) => void) => {
         if (value === '') {
@@ -262,6 +374,19 @@ export default function Simulator() {
     const handleRatingSubmit = async (rating: number, comment?: string, isFinal: boolean = false) => {
         setIsSendingRating(true);
         try {
+            const feedbackText = isFinal ? [
+                '--- Respostas ao Formulário ---',
+                `1. Onde sente que os nossos resultados poderiam estar mais próximos da sua realidade?`,
+                `   R: ${feedbackQuestions.q1.join(', ') || 'Nenhuma selecionada'}`,
+                `2. Em relação aos equipamentos (Painéis e Baterias) que sugerimos, qual a sua perspetiva?`,
+                `   R: ${feedbackQuestions.q2.join(', ') || 'Nenhuma selecionada'}`,
+                `3. Sobre a estimativa de poupança e investimento financeiro, o que o deixou com mais dúvidas?`,
+                `   R: ${feedbackQuestions.q3.join(', ') || 'Nenhuma selecionada'}`,
+                `4. Durante a sua navegação na Watt Builder, o que sentiu que faltava para ser uma experiência 10/10?`,
+                `   R: ${feedbackQuestions.q4.join(', ') || 'Nenhuma selecionada'}`,
+                ''
+            ].join('\n') : '';
+
             const response = await fetch(getApiUrl('send-contact-email'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -273,7 +398,9 @@ export default function Simulator() {
                         'Avaliação recebida no simulador',
                         '',
                         `Classificação: ${rating} / 10 estrelas`,
-                        comment ? `Comentário: ${comment}` : 'Sem comentário adicional.',
+                        feedbackText,
+                        comment ? `Comentário Adicional: ${comment}` : 'Sem comentário adicional.',
+                        '',
                         isFinal ? 'Submissão Final' : 'Submissão Parcial (apenas nota)',
                         '',
                         '--- Contexto do Utilizador ---',
@@ -2121,131 +2248,332 @@ export default function Simulator() {
 
                                 <TabsContent value="all" className="focus-visible:outline-none focus-visible:ring-0">
                                     <Card className="border-gray-200">
-                                        <CardHeader className="pb-4">
-                                            <CardTitle className="text-xl">Todas as Soluções Geradas</CardTitle>
-                                            <CardDescription>
-                                                Analise como as diferentes variáveis se relacionam em todas as soluções tecnicamente viáveis.
-                                            </CardDescription>
+                                        <CardHeader className="pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                            <div>
+                                                <CardTitle className="text-xl">Todas as Soluções Geradas</CardTitle>
+                                                <CardDescription>
+                                                    Analise como as diferentes variáveis se relacionam em todas as soluções tecnicamente viáveis.
+                                                </CardDescription>
+                                            </div>
+                                            <div className="flex bg-gray-100 p-1 rounded-lg">
+                                                <Button
+                                                    variant={allSolutionsView === 'chart' ? 'secondary' : 'ghost'}
+                                                    size="sm"
+                                                    onClick={() => setAllSolutionsView('chart')}
+                                                    className={`rounded-md ${allSolutionsView === 'chart' ? 'bg-white shadow-sm text-black' : 'text-gray-500'}`}
+                                                >
+                                                    <LucideLineChart className="w-4 h-4 mr-2" />
+                                                    Gráfico
+                                                </Button>
+                                                <Button
+                                                    variant={allSolutionsView === 'table' ? 'secondary' : 'ghost'}
+                                                    size="sm"
+                                                    onClick={() => setAllSolutionsView('table')}
+                                                    className={`rounded-md ${allSolutionsView === 'table' ? 'bg-white shadow-sm text-black' : 'text-gray-500'}`}
+                                                >
+                                                    <LayoutGrid className="w-4 h-4 mr-2" />
+                                                    Tabela
+                                                </Button>
+                                            </div>
                                         </CardHeader>
                                         <CardContent className="space-y-6">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <Label>Eixo X (Horizontal)</Label>
-                                                    <Select value={xAxis} onValueChange={setXAxis}>
-                                                        <SelectTrigger className="bg-white">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="new_battery_capacity_kwh">Energia da bateria (kWh)</SelectItem>
-                                                            <SelectItem value="panel_power_kwp">Potência dos painéis (kWp)</SelectItem>
-                                                            <SelectItem value="capex_total_eur">Custo total (€)</SelectItem>
-                                                            <SelectItem value="payback_years">Anos de retorno</SelectItem>
-                                                            <SelectItem value="cost_per_kwh_battery">€/kWh da bateria</SelectItem>
-                                                            <SelectItem value="cost_per_kwp_panels">€/kWp dos painéis</SelectItem>
-                                                            <SelectItem value="max_system_power_kw">Máxima potência do sistema (kW)</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label>Eixo Y (Vertical)</Label>
-                                                    <Select value={yAxis} onValueChange={setYAxis}>
-                                                        <SelectTrigger className="bg-white">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="new_battery_capacity_kwh">Energia da bateria (kWh)</SelectItem>
-                                                            <SelectItem value="panel_power_kwp">Potência dos painéis (kWp)</SelectItem>
-                                                            <SelectItem value="capex_total_eur">Custo total (€)</SelectItem>
-                                                            <SelectItem value="payback_years">Anos de retorno</SelectItem>
-                                                            <SelectItem value="cost_per_kwh_battery">€/kWh da bateria</SelectItem>
-                                                            <SelectItem value="cost_per_kwp_panels">€/kWp dos painéis</SelectItem>
-                                                            <SelectItem value="max_system_power_kw">Máxima potência do sistema (kW)</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
+                                            {/* Filtros Avançados */}
+                                            <div className="flex flex-wrap items-center gap-3 pb-2">
+                                                <Label className="text-gray-500 mr-1">Filtrar por:</Label>
+                                                {[
+                                                    { id: 'all', label: 'Todas', icon: Sparkles },
+                                                    { id: 'battery_only', label: 'Só Bateria', icon: Battery },
+                                                    { id: 'solar_only', label: 'Só Painéis', icon: Sun },
+                                                    { id: 'hybrid', label: 'Híbridas (Bat + Painéis)', icon: Zap },
+                                                ].map((f) => {
+                                                    const Icon = f.icon;
+                                                    return (
+                                                        <Button
+                                                            key={f.id}
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => setFilterType(f.id as any)}
+                                                            className={`h-9 rounded-full px-4 border-gray-200 transition-all ${filterType === f.id ? 'bg-orange-600 border-orange-600 text-white hover:bg-orange-700' : 'bg-white text-gray-600 hover:border-gray-400'}`}
+                                                        >
+                                                            <Icon className={`w-3.5 h-3.5 mr-2 ${filterType === f.id ? 'text-white' : 'text-orange-500'}`} />
+                                                            {f.label}
+                                                        </Button>
+                                                    );
+                                                })}
                                             </div>
 
-                                            <div className="h-[500px] w-full mt-4">
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                                        <XAxis
-                                                            type="number"
-                                                            dataKey={xAxis}
-                                                            name={xAxis}
-                                                            stroke="#9CA3AF"
-                                                            fontSize={12}
-                                                            tickLine={false}
-                                                            axisLine={false}
-                                                            tickFormatter={(val) => xAxis.includes('eur') || xAxis.includes('cost') ? `${val}€` : val}
-                                                        />
-                                                        <YAxis
-                                                            type="number"
-                                                            dataKey={yAxis}
-                                                            name={yAxis}
-                                                            stroke="#9CA3AF"
-                                                            fontSize={12}
-                                                            tickLine={false}
-                                                            axisLine={false}
-                                                            tickFormatter={(val) => yAxis.includes('eur') || yAxis.includes('cost') ? `${val}€` : val}
-                                                        />
-                                                        <ZAxis type="number" range={[1200, 1200]} />
-                                                        <ChartTooltip
-                                                            cursor={{ strokeDasharray: '3 3' }}
-                                                            content={({ active, payload }) => {
-                                                                if (active && payload && payload.length) {
-                                                                    const data = payload[0].payload;
-                                                                    return (
-                                                                        <div className="bg-white p-4 border border-gray-200 shadow-xl rounded-xl min-w-[200px]">
-                                                                            <p className="font-bold text-gray-900 mb-2 text-base">Solução Técnica</p>
-                                                                            <div className="space-y-2 text-sm">
-                                                                                <div className="pb-2 border-b border-gray-100">
-                                                                                    <p className="text-xs text-gray-500 uppercase font-semibold">Equipamento</p>
-                                                                                    <p className="text-gray-900 truncate">Bat: {getBatteryDescription(data)}</p>
-                                                                                    <p className="text-gray-900 truncate">Inv: {data.inverter?.brand} {data.inverter?.model}</p>
-                                                                                    <p className="text-gray-900 truncate">Pan: {data.solar_panels ? (data.solar_panels.panel ? `${data.solar_panels.quantity} x ${data.solar_panels.panel.brand} ${data.solar_panels.panel.model}` : `${data.solar_panels.quantity} un.`) : 'N/A'}</p>
+                                            {allSolutionsView === 'chart' ? (
+                                                <>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                                                        <div className="space-y-2">
+                                                            <Label className="text-gray-600 text-xs uppercase font-bold tracking-wider">Eixo X (Horizontal)</Label>
+                                                            <Select value={xAxis} onValueChange={setXAxis}>
+                                                                <SelectTrigger className="bg-white border-gray-200 shadow-sm h-11">
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="new_battery_capacity_kwh">Energia da bateria (kWh)</SelectItem>
+                                                                    <SelectItem value="panel_power_kwp">Potência dos painéis (kWp)</SelectItem>
+                                                                    <SelectItem value="capex_total_eur">Custo total (€)</SelectItem>
+                                                                    <SelectItem value="payback_years">Anos de retorno</SelectItem>
+                                                                    <SelectItem value="cost_per_kwh_battery">€/kWh da bateria</SelectItem>
+                                                                    <SelectItem value="cost_per_kwp_panels">€/kWp dos painéis</SelectItem>
+                                                                    <SelectItem value="max_system_power_kw">Máxima potência do sistema (kW)</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label className="text-gray-600 text-xs uppercase font-bold tracking-wider">Eixo Y (Vertical)</Label>
+                                                            <Select value={yAxis} onValueChange={setYAxis}>
+                                                                <SelectTrigger className="bg-white border-gray-200 shadow-sm h-11">
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="new_battery_capacity_kwh">Energia da bateria (kWh)</SelectItem>
+                                                                    <SelectItem value="panel_power_kwp">Potência dos painéis (kWp)</SelectItem>
+                                                                    <SelectItem value="capex_total_eur">Custo total (€)</SelectItem>
+                                                                    <SelectItem value="payback_years">Anos de retorno</SelectItem>
+                                                                    <SelectItem value="cost_per_kwh_battery">€/kWh da bateria</SelectItem>
+                                                                    <SelectItem value="cost_per_kwp_panels">€/kWp dos painéis</SelectItem>
+                                                                    <SelectItem value="max_system_power_kw">Máxima potência do sistema (kW)</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="h-[550px] w-full mt-4 bg-white rounded-xl border border-gray-100 p-2 shadow-inner">
+                                                        <ResponsiveContainer width="100%" height="100%">
+                                                            <ScatterChart margin={{ top: 30, right: 30, bottom: 30, left: 30 }}>
+                                                                <CartesianGrid strokeDasharray="3 3" vertical={true} stroke="#f3f4f6" />
+                                                                <XAxis
+                                                                    type="number"
+                                                                    dataKey={xAxis}
+                                                                    name={xAxis}
+                                                                    stroke="#94a3b8"
+                                                                    fontSize={11}
+                                                                    tickLine={false}
+                                                                    axisLine={false}
+                                                                    tickFormatter={(val) => xAxis.includes('eur') || xAxis.includes('cost') ? `${val}€` : val}
+                                                                    label={{ value: xAxis.replace(/_/g, ' '), position: 'bottom', offset: 0, fill: '#64748b', fontSize: 10, fontWeight: 'bold' }}
+                                                                />
+                                                                <YAxis
+                                                                    type="number"
+                                                                    dataKey={yAxis}
+                                                                    name={yAxis}
+                                                                    stroke="#94a3b8"
+                                                                    fontSize={11}
+                                                                    tickLine={false}
+                                                                    axisLine={false}
+                                                                    tickFormatter={(val) => yAxis.includes('eur') || yAxis.includes('cost') ? `${val}€` : val}
+                                                                    label={{ value: yAxis.replace(/_/g, ' '), angle: -90, position: 'left', offset: 10, fill: '#64748b', fontSize: 10, fontWeight: 'bold' }}
+                                                                />
+                                                                <ZAxis type="number" range={[200, 200]} />
+                                                                <ChartTooltip
+                                                                    cursor={{ strokeDasharray: '3 3', stroke: '#94a3b8' }}
+                                                                    content={({ active, payload }) => {
+                                                                        if (active && payload && payload.length) {
+                                                                            const data = payload[0].payload;
+                                                                            const isHybrid = !!data.battery && !!data.solar_panels;
+                                                                            const isSolarOnly = !data.battery && !!data.solar_panels;
+                                                                            const isBatteryOnly = !!data.battery && !data.solar_panels;
+
+                                                                            return (
+                                                                                <div className="bg-white/95 backdrop-blur-sm p-5 border border-gray-200 shadow-2xl rounded-2xl min-w-[280px] animate-in fade-in zoom-in-95 duration-200">
+                                                                                    <div className="flex items-center justify-between mb-3">
+                                                                                        <Badge className={isHybrid ? 'bg-orange-600' : isSolarOnly ? 'bg-blue-600' : 'bg-emerald-600'}>
+                                                                                            {isHybrid ? 'Híbrido' : isSolarOnly ? 'Só Solar' : 'Só Bateria'}
+                                                                                        </Badge>
+                                                                                        <span className="text-xl font-bold text-gray-900">{formatPrice(data.capex_total_eur)}</span>
+                                                                                    </div>
+
+                                                                                    <div className="space-y-3">
+                                                                                        <div className="space-y-1.5 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                                                                            {data.battery && (
+                                                                                                <div className="flex items-center gap-2 text-xs">
+                                                                                                    <Battery className="w-3.5 h-3.5 text-orange-600" />
+                                                                                                    <span className="font-medium truncate">{getBatteryDescription(data)}</span>
+                                                                                                </div>
+                                                                                            )}
+                                                                                            {data.inverter && (
+                                                                                                <div className="flex items-center gap-2 text-xs">
+                                                                                                    <Zap className="w-3.5 h-3.5 text-blue-600" />
+                                                                                                    <span className="font-medium truncate">{data.inverter.brand} {data.inverter.model}</span>
+                                                                                                </div>
+                                                                                            )}
+                                                                                            {data.solar_panels && (
+                                                                                                <div className="flex items-center gap-2 text-xs">
+                                                                                                    <Sun className="w-3.5 h-3.5 text-amber-500" />
+                                                                                                    <span className="font-medium truncate">{data.solar_panels.quantity}x {data.solar_panels.panel?.brand || 'Painéis'}</span>
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
+
+                                                                                        <div className="grid grid-cols-2 gap-3 text-xs">
+                                                                                            <div className="flex flex-col">
+                                                                                                <span className="text-gray-500">Payback</span>
+                                                                                                <span className="font-bold text-gray-900">{data.payback_years} anos</span>
+                                                                                            </div>
+                                                                                            <div className="flex flex-col">
+                                                                                                <span className="text-gray-500">Poupança Anual</span>
+                                                                                                <span className="font-bold text-emerald-600">{formatPrice(data.savings_annual_eur)}</span>
+                                                                                            </div>
+                                                                                            <div className="flex flex-col">
+                                                                                                <span className="text-gray-500">Potência Solar</span>
+                                                                                                <span className="font-bold text-gray-900">{data.panel_power_kwp} kWp</span>
+                                                                                            </div>
+                                                                                            <div className="flex flex-col">
+                                                                                                <span className="text-gray-500">Capacidade Bat.</span>
+                                                                                                <span className="font-bold text-gray-900">{data.new_battery_capacity_kwh} kWh</span>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <p className="text-[10px] text-orange-500 font-bold text-center mt-2 animate-pulse">CLIQUE PARA MAIS DETALHES</p>
+                                                                                    </div>
                                                                                 </div>
-                                                                                <div className="flex justify-between gap-8">
-                                                                                    <span className="text-gray-500">Custo Total:</span>
-                                                                                    <span className="font-semibold">{formatPrice(data.capex_total_eur)}</span>
-                                                                                </div>
-                                                                                <div className="flex justify-between gap-8">
-                                                                                    <span className="text-gray-500">Potência Solar:</span>
-                                                                                    <span className="font-semibold">{data.panel_power_kwp} kWp</span>
-                                                                                </div>
-                                                                                <div className="flex justify-between gap-8">
-                                                                                    <span className="text-gray-500">Capacidade:</span>
-                                                                                    <span className="font-semibold">{data.new_battery_capacity_kwh} kWh</span>
-                                                                                </div>
-                                                                                <div className="flex justify-between gap-8">
-                                                                                    <span className="text-gray-500">Payback:</span>
-                                                                                    <span className="font-semibold">{data.payback_years} anos</span>
-                                                                                </div>
-                                                                                <div className="flex justify-between gap-8">
-                                                                                    <span className="text-gray-500">Poupança:</span>
-                                                                                    <span className="font-semibold text-orange-600">{formatPrice(data.savings_annual_eur)}/ano</span>
+                                                                            );
+                                                                        }
+                                                                        return null;
+                                                                    }}
+                                                                />
+                                                                <Scatter
+                                                                    name="Híbridas"
+                                                                    data={filteredRecommendations.filter(r => !!r.battery && !!r.solar_panels)}
+                                                                    fill="#ea580c"
+                                                                    size={100}
+                                                                    className="cursor-pointer transition-all hover:scale-125"
+                                                                    onClick={(data) => setSelectedRecommendation(data)}
+                                                                />
+                                                                <Scatter
+                                                                    name="Só Bateria"
+                                                                    data={filteredRecommendations.filter(r => !!r.battery && !r.solar_panels)}
+                                                                    fill="#10b981"
+                                                                    size={100}
+                                                                    className="cursor-pointer transition-all hover:scale-125"
+                                                                    onClick={(data) => setSelectedRecommendation(data)}
+                                                                />
+                                                                <Scatter
+                                                                    name="Só Solar"
+                                                                    data={filteredRecommendations.filter(r => !r.battery && !!r.solar_panels)}
+                                                                    fill="#2563eb"
+                                                                    size={100}
+                                                                    className="cursor-pointer transition-all hover:scale-125"
+                                                                    onClick={(data) => setSelectedRecommendation(data)}
+                                                                />
+                                                            </ScatterChart>
+                                                        </ResponsiveContainer>
+                                                    </div>
+
+                                                    <div className="flex justify-center gap-6 mt-2 pb-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-3 h-3 rounded-full bg-orange-600" />
+                                                            <span className="text-xs font-bold text-gray-600">Híbrida</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                                                            <span className="text-xs font-bold text-gray-600">Só Bateria</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-3 h-3 rounded-full bg-blue-600" />
+                                                            <span className="text-xs font-bold text-gray-600">Só Solar</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <p className="text-center text-xs text-gray-400 italic">
+                                                        * Passe com o rato nos pontos para ver o resumo. Clique para ver o relatório completo de cada solução.
+                                                    </p>
+                                                </>
+                                            ) : (
+                                                <div className="overflow-x-auto rounded-lg border border-gray-100">
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow className="bg-gray-50 hover:bg-gray-50 text-[11px]">
+                                                                <TableHead className="font-bold text-gray-900">Bateria</TableHead>
+                                                                <TableHead className="font-bold text-gray-900">Inversor</TableHead>
+                                                                <TableHead className="font-bold text-gray-900">Painéis</TableHead>
+                                                                <TableHead className="font-bold text-gray-900 text-right cursor-pointer hover:text-orange-600 transition-colors" onClick={() => handleSort('capex_total_eur')}>
+                                                                    Custo (€) {sortConfig?.key === 'capex_total_eur' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                                                </TableHead>
+                                                                <TableHead className="font-bold text-gray-900 text-right cursor-pointer hover:text-orange-600 transition-colors" onClick={() => handleSort('payback_years')}>
+                                                                    Payback (Anos) {sortConfig?.key === 'payback_years' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                                                </TableHead>
+                                                                <TableHead className="font-bold text-gray-900 text-right cursor-pointer hover:text-orange-600 transition-colors" onClick={() => handleSort('new_battery_capacity_kwh')}>
+                                                                    Bat. (kWh) {sortConfig?.key === 'new_battery_capacity_kwh' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                                                </TableHead>
+                                                                <TableHead className="font-bold text-gray-900 text-right cursor-pointer hover:text-orange-600 transition-colors" onClick={() => handleSort('panel_power_kwp')}>
+                                                                    Sol. (kWp) {sortConfig?.key === 'panel_power_kwp' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                                                </TableHead>
+                                                                <TableHead className="font-bold text-gray-900 text-right cursor-pointer hover:text-orange-600 transition-colors" onClick={() => handleSort('cost_per_kwh_battery')}>
+                                                                    €/kWh Bat. {sortConfig?.key === 'cost_per_kwh_battery' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                                                </TableHead>
+                                                                <TableHead className="font-bold text-gray-900 text-right cursor-pointer hover:text-orange-600 transition-colors" onClick={() => handleSort('cost_per_kwp_panels')}>
+                                                                    €/kWp Painéis {sortConfig?.key === 'cost_per_kwp_panels' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                                                </TableHead>
+                                                                <TableHead className="font-bold text-gray-900 text-right cursor-pointer hover:text-orange-600 transition-colors" onClick={() => handleSort('max_system_power_kw')}>
+                                                                    Pot. Máx. (kW) {sortConfig?.key === 'max_system_power_kw' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                                                </TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {sortedRecommendations.map((data: any, idx: number) => (
+                                                                <TableRow
+                                                                    key={idx}
+                                                                    className="cursor-pointer hover:bg-orange-50/50 transition-colors text-[11px]"
+                                                                    onClick={() => setSelectedRecommendation(data)}
+                                                                >
+                                                                    <TableCell>
+                                                                        {data.battery ? (
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <Battery className="w-3 h-3 text-orange-600 shrink-0" />
+                                                                                <div>
+                                                                                    <div className="font-medium truncate max-w-[120px]">{data.battery.brand} {data.battery.model}</div>
+                                                                                    <div className="text-gray-400 text-[10px]">Qtd: {data.battery.quantity || 1}</div>
                                                                                 </div>
                                                                             </div>
-                                                                        </div>
-                                                                    );
-                                                                }
-                                                                return null;
-                                                            }}
-                                                        />
-                                                        <Scatter
-                                                            name="Soluções"
-                                                            data={results.all_recommendations || []}
-                                                            fill="#ea580c"
-                                                            size={200}
-                                                            className="cursor-pointer"
-                                                            onClick={(data) => setSelectedRecommendation(data)}
-                                                        />
-                                                    </ScatterChart>
-                                                </ResponsiveContainer>
-                                            </div>
-                                            <p className="text-center text-xs text-gray-400">
-                                                Dica: Clique em qualquer ponto para ver os detalhes da solução.
-                                            </p>
+                                                                        ) : ''}
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        {data.inverter ? (
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <Zap className="w-3 h-3 text-blue-600 shrink-0" />
+                                                                                <div>
+                                                                                    <div className="font-medium truncate max-w-[120px]">{data.inverter.brand} {data.inverter.model}</div>
+                                                                                    <div className="text-gray-400 text-[10px]">Qtd: {data.inverter.quantity || 1}</div>
+                                                                                </div>
+                                                                            </div>
+                                                                        ) : ''}
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        {data.solar_panels ? (
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <Sun className="w-3 h-3 text-amber-500 shrink-0" />
+                                                                                <div>
+                                                                                    <div className="font-medium truncate max-w-[120px]">{data.solar_panels.panel?.brand} {data.solar_panels.panel?.model}</div>
+                                                                                    <div className="text-gray-400 text-[10px]">Qtd: {data.solar_panels.quantity}</div>
+                                                                                </div>
+                                                                            </div>
+                                                                        ) : ''}
+                                                                    </TableCell>
+                                                                    <TableCell className="text-right font-bold text-gray-900">{Math.round(data.capex_total_eur).toLocaleString()}€</TableCell>
+                                                                    <TableCell className="text-right">{data.payback_years}</TableCell>
+                                                                    <TableCell className="text-right font-medium">{data.new_battery_capacity_kwh} kWh</TableCell>
+                                                                    <TableCell className="text-right font-medium">{data.panel_power_kwp} kWp</TableCell>
+                                                                    <TableCell className="text-right text-gray-500">{data.cost_per_kwh_battery ? `${Math.round(data.cost_per_kwh_battery)}€` : ''}</TableCell>
+                                                                    <TableCell className="text-right text-gray-500">{data.cost_per_kwp_panels ? `${Math.round(data.cost_per_kwp_panels)}€` : ''}</TableCell>
+                                                                    <TableCell className="text-right font-medium">{data.max_system_power_kw ? `${data.max_system_power_kw}kW` : ''}</TableCell>
+                                                                </TableRow>
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                    {sortedRecommendations.length === 0 && (
+                                                        <div className="p-12 text-center bg-gray-50 border-t border-gray-100">
+                                                            <div className="bg-gray-200 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                                <Info className="text-gray-400 w-6 h-6" />
+                                                            </div>
+                                                            <p className="text-gray-500 font-medium">Nenhuma solução encontrada com este filtro.</p>
+                                                            <Button variant="link" onClick={() => setFilterType('all')} className="text-orange-600">Ver todas as soluções</Button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </CardContent>
                                     </Card>
                                 </TabsContent>
@@ -2289,10 +2617,42 @@ export default function Simulator() {
                                             ))}
                                         </div>
 
-                                        {userRating !== null && userRating <= 8 && (
-                                            <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-4 pt-4 max-w-lg mx-auto border-t border-gray-100">
-                                                <div className="text-left">
-                                                    <Label className="text-sm font-semibold">Como podemos melhorar? (Opcional)</Label>
+                                        {userRating !== null && userRating <= 9 && (
+                                            <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-8 pt-6 max-w-2xl mx-auto border-t border-gray-100 text-left">
+                                                {FEEDBACK_FORM_QUESTIONS.map((q) => (
+                                                    <div key={q.id} className="space-y-3">
+                                                        <Label className="text-base font-bold text-gray-900">{q.question}</Label>
+                                                        <div className="grid grid-cols-1 gap-2">
+                                                            {q.options.map((option) => (
+                                                                <div
+                                                                    key={option}
+                                                                    className="flex items-start space-x-3 p-3 rounded-lg border border-gray-100 hover:bg-orange-50/50 transition-colors cursor-pointer"
+                                                                >
+                                                                    <Checkbox
+                                                                        id={`${q.id}-${option}`}
+                                                                        checked={(feedbackQuestions[q.id] || []).includes(option)}
+                                                                        onCheckedChange={(checked) => {
+                                                                            const current = feedbackQuestions[q.id] || [];
+                                                                            const next = checked
+                                                                                ? [...current, option]
+                                                                                : current.filter(item => item !== option);
+                                                                            setFeedbackQuestions({ ...feedbackQuestions, [q.id]: next });
+                                                                        }}
+                                                                    />
+                                                                    <label
+                                                                        htmlFor={`${q.id}-${option}`}
+                                                                        className="text-sm leading-tight text-gray-700 cursor-pointer w-full"
+                                                                    >
+                                                                        {option}
+                                                                    </label>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+
+                                                <div className="space-y-3 pt-4">
+                                                    <Label className="text-base font-bold text-gray-900">Algo mais que queira partilhar? (Opcional)</Label>
                                                     <Textarea
                                                         value={ratingComment}
                                                         onChange={(e) => setRatingComment(e.target.value)}
@@ -2304,14 +2664,14 @@ export default function Simulator() {
                                                 <Button
                                                     onClick={() => handleRatingSubmit(userRating, ratingComment, true)}
                                                     disabled={isSendingRating}
-                                                    className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                                                    className="w-full bg-orange-600 hover:bg-orange-700 text-white h-12 text-lg font-bold"
                                                 >
-                                                    {isSendingRating ? <Loader2 className="animate-spin w-4 h-4" /> : 'Submeter Comentário'}
+                                                    {isSendingRating ? <Loader2 className="animate-spin w-5 h-5" /> : 'Submeter Feedback'}
                                                 </Button>
                                             </div>
                                         )}
 
-                                        {userRating !== null && userRating > 8 && (
+                                        {userRating !== null && userRating > 9 && (
                                             <div className="animate-in fade-in duration-300 pt-2">
                                                 <p className="text-emerald-600 font-medium">Obrigado pela sua avaliação!</p>
                                             </div>
