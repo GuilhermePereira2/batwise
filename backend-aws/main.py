@@ -278,58 +278,105 @@ async def upload_eredes_csv(
         if not date_col or not time_col or not consume_col:
             raise HTTPException(status_code=400, detail="Não foi possível identificar as colunas 'Data', 'Hora' ou 'Consumo'.")
 
-        # 3. Limpeza e Conversão Rápida (Vectorized)
+        # 3. Limpeza e Conversão Rápida
         df = df.dropna(subset=[date_col, time_col, consume_col])
         
-        # Converter Consumo e Injeção para float (kWh)
-        df[consume_col] = pd.to_numeric(df[consume_col].astype(str).str.replace(',', '.'), errors='coerce').fillna(0) / 4.0
+        # Função robusta para converter string de Excel para float
+        # O user confirmou que tanto PONTO como VÍRGULA devem ser tratados como decimais.
+        def clean_numeric(val):
+            if pd.isna(val): return 0.0
+            s = str(val).strip()
+            if not s: return 0.0
+            
+            # Se tiver ambos (ex: 1.250,50 ou 1,250.50), identificamos o decimal (o último)
+            if '.' in s and ',' in s:
+                dot_idx = s.rfind('.')
+                comma_idx = s.rfind(',')
+                if dot_idx > comma_idx: # Ponto é o decimal
+                    s = s.replace(',', '')
+                else: # Vírgula é o decimal
+                    s = s.replace('.', '').replace(',', '.')
+            else:
+                # Se só tiver um deles, é o decimal
+                s = s.replace(',', '.')
+            
+            try:
+                return float(s)
+            except:
+                return 0.0
+
+        df[consume_col] = df[consume_col].apply(clean_numeric)
         if inject_col:
-            df[inject_col] = pd.to_numeric(df[inject_col].astype(str).str.replace(',', '.'), errors='coerce').fillna(0) / 4.0
+            df[inject_col] = df[inject_col].apply(clean_numeric)
         else:
             df['__inject'] = 0.0
             inject_col = '__inject'
 
-        # Converter Data e Extrair Características
-        # Tentamos vários formatos de data de uma vez via pandas (muito mais rápido que loops)
-        df['dt_obj'] = pd.to_datetime(df[date_col].astype(str).str.split(' ').str[0], dayfirst=True, errors='coerce')
-        df = df.dropna(subset=['dt_obj'])
+        # Heurística de Unidade (Wh vs kWh)
+        # Se 0.3 (Excel) representa 0.3 kWh, então a unidade é kWh.
+        # Se 300 (Excel) representa 300 Wh, então a unidade é Wh.
+        # Se os valores forem quase sempre < 10, é kWh.
+        max_val = df[consume_col].max()
+        unit_multiplier = 1.0
+        if max_val > 10.0:
+            unit_multiplier = 0.001
+            print(f"📏 Unidade Wh detetada (Max={max_val}). Factor 0.001 aplicado.")
         
-        # Extrair hora a partir da string ou objeto
-        def parse_hour(x):
-            try:
-                if isinstance(x, str): return int(x.split(':')[0])
-                if hasattr(x, 'hour'): return x.hour
-                return int(str(x).split(':')[0])
-            except: return 0
+        df[consume_col] *= unit_multiplier
+        df[inject_col] *= unit_multiplier
 
-        df['hour_int'] = df[time_col].apply(parse_hour)
-        df['month'] = df['dt_obj'].dt.month
-        df['is_weekend'] = df['dt_obj'].dt.weekday >= 5
-
-        # 4. Agrupar por Buckets para Médias (Extrapolação)
-        # Buckets: (Month, Weekend, Hour)
-        buckets = df.groupby(['month', 'is_weekend', 'hour_int'])[[consume_col, inject_col]].mean().to_dict('index')
+        # Converter Data e Hora para Datetime e ajustar alinhamento
+        # E-Redes usa o fim do intervalo como timestamp (ex: 01:00 é o intervalo 00:45-01:00).
+        # Subtraímos 1 minuto para que 01:00 caia na Hora 0.
+        df['datetime_full'] = pd.to_datetime(
+            df[date_col].astype(str).str.split(' ').str[0] + ' ' + df[time_col].astype(str),
+            dayfirst=True, errors='coerce'
+        )
+        df = df.dropna(subset=['datetime_full'])
+        df['dt_adjusted'] = df['datetime_full'] - pd.Timedelta(minutes=1)
         
-        # Médias Globais (fallback se faltar um mês específico)
-        global_avgs = df.groupby(['is_weekend', 'hour_int'])[[consume_col, inject_col]].mean().to_dict('index')
+        # 4. Agrupar por Hora Real para somar os intervalos (ex: 4 x 0.3kWh = 1.2kWh/h)
+        # Nota: Pandas mais recentes usam 'h' em vez de 'H' para frequências.
+        df['hour_floor'] = df['dt_adjusted'].dt.floor('h')
+        # Agrupar por timestamp exato para somar os 4 intervalos de 15min
+        hourly_df = df.groupby('hour_floor')[[consume_col, inject_col]].sum().reset_index()
+        
+        # Mapeamento do dia do ano e hora: "MM-DD-HH" para consulta rápida
+        # IMPORTANTE: Usamos 'dt_adjusted' para garantir que mapeamos para o ponto certo do ano
+        hourly_df['hour_key'] = hourly_df['hour_floor'].dt.strftime('%m-%d-%H')
+        raw_data_map = hourly_df.set_index('hour_key')[[consume_col, inject_col]].to_dict('index')
 
-        # 5. Gerar Perfil 8760 (Ano 2023)
+        # 5. Buckets para médias (Extrapolação para horas em falta)
+        df['month'] = df['dt_adjusted'].dt.month
+        df['is_weekend'] = df['dt_adjusted'].dt.weekday >= 5
+        df['hour_int'] = df['dt_adjusted'].dt.hour
+        
+        # Totais horários por dia antes da média
+        h_agg = df.groupby([df['dt_adjusted'].dt.date, 'month', 'is_weekend', 'hour_int'])[[consume_col, inject_col]].sum().reset_index()
+        buckets = h_agg.groupby(['month', 'is_weekend', 'hour_int'])[[consume_col, inject_col]].mean().to_dict('index')
+        global_avgs = h_agg.groupby(['is_weekend', 'hour_int'])[[consume_col, inject_col]].mean().to_dict('index')
+
+        # 6. Gerar Perfil 8760 (Ano 2023)
         start_date = datetime(2023, 1, 1)
         load_kwh = []
         pv_kwh = []
 
         for i in range(8760):
             curr = start_date + timedelta(hours=i)
-            is_w = curr.weekday() >= 5
-            h = curr.hour
-            key = (curr.month, is_w, h)
+            hour_key = curr.strftime('%m-%d-%H')
             
-            if key in buckets:
-                val = buckets[key]
-            elif (is_w, h) in global_avgs:
-                val = global_avgs[(is_w, h)]
+            if hour_key in raw_data_map:
+                val = raw_data_map[hour_key]
             else:
-                val = {consume_col: 0.0, inject_col: 0.0}
+                is_w = curr.weekday() >= 5
+                h = curr.hour
+                bk = (curr.month, is_w, h)
+                if bk in buckets:
+                    val = buckets[bk]
+                elif (is_w, h) in global_avgs:
+                    val = global_avgs[(is_w, h)]
+                else:
+                    val = {consume_col: 0.0, inject_col: 0.0}
             
             load_kwh.append(round(val[consume_col], 4))
             pv_kwh.append(round(val[inject_col], 4) if has_solar else 0.0)

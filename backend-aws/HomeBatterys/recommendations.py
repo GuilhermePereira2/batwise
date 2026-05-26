@@ -445,18 +445,44 @@ def profile_for_panel_set(
     solar: Optional[Dict[str, Any]],
     panel_set: Optional[Dict[str, Any]],
 ) -> Dict[str, List[float]]:
-    if not panel_set or not panel_set.get("expanded"):
+    if not panel_set or (not panel_set.get("expanded") and not panel_set.get("existing")):
         return profile
 
     existing_peak = get_existing_solar_peak_kwp(solar)
     total_peak = float(panel_set.get("array_power_kwp", 0) or 0)
-    if existing_peak <= 0 or total_peak <= existing_peak:
+    
+    if total_peak <= 0:
         return profile
 
-    scale = total_peak / existing_peak
+    # Se não houve alteração no pico, mantemos o perfil original
+    if abs(total_peak - existing_peak) < 0.01:
+        return profile
+
+    # Para calcular o novo perfil de PV disponível (excesso), precisamos da produção sintética total
+    # e subtrair o consumo real da casa.
+    from .profile import solar_yield_kwh_per_kwp, MONTH_SOLAR_FACTORS, solar_hour_weight
+    from datetime import datetime, timedelta
+
+    annual_yield = total_peak * solar_yield_kwh_per_kwp(solar or {})
+    factor_sum = sum(MONTH_SOLAR_FACTORS)
+    monthly_production = [annual_yield * f / factor_sum for f in MONTH_SOLAR_FACTORS]
+    solar_shape_sum = sum(solar_hour_weight(h) for h in range(24))
+
+    new_pv_total = []
+    load = profile["load_kwh"]
+
+    for i in range(8760):
+        month_idx = (datetime(2023, 1, 1) + timedelta(hours=i)).month - 1
+        hour = i % 24
+        # Produção sintética para o novo pico total
+        prod_hour = (monthly_production[month_idx] * solar_hour_weight(hour) / 
+                     (solar_shape_sum or 1.0) / 30.4)
+        
+        new_pv_total.append(round(prod_hour, 4))
+
     return {
-        "load_kwh": profile["load_kwh"],
-        "pv_kwh": [value * scale for value in profile["pv_kwh"]],
+        "load_kwh": load,
+        "pv_kwh": new_pv_total,
     }
 
 

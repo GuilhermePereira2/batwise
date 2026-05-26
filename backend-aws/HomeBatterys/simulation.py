@@ -16,6 +16,7 @@ def simulate_capacity(
     roundtrip_efficiency: float,
     sell_price_eur_kwh: float,
     allow_grid_arbitrage: bool,
+    return_series: bool = False
 ) -> SimulationResult:
     """Dispatch one battery capacity over the hourly profile.
 
@@ -42,6 +43,8 @@ def simulate_capacity(
     battery_to_load = 0.0
     has_pv_generation = sum(pv_kwh) > 1.0
 
+    soc_series = [] if return_series else None
+
     for load, pv, price in zip(load_kwh, pv_kwh, prices_eur_kwh):
         if usable > 0 and allow_grid_arbitrage and price <= low_threshold:
             space = usable - soc
@@ -60,6 +63,8 @@ def simulate_capacity(
             export = net - charge_from_solar
             grid_export += export
             annual_cost -= export * sell_price_eur_kwh
+            if return_series:
+                soc_series.append(round(soc, 3))
             continue
 
         demand = -net
@@ -76,6 +81,9 @@ def simulate_capacity(
         from_grid = demand - discharge
         grid_import += from_grid
         annual_cost += from_grid * price
+        
+        if return_series:
+            soc_series.append(round(soc, 3))
 
     equivalent_cycles = battery_to_load / usable if usable > 0 else 0.0
     return SimulationResult(
@@ -86,6 +94,9 @@ def simulate_capacity(
         grid_to_battery_kwh=grid_to_battery,
         battery_to_load_kwh=battery_to_load,
         equivalent_cycles=equivalent_cycles,
+        soc_series=soc_series,
+        load_series=load_kwh if return_series else None,
+        pv_series=pv_kwh if return_series else None
     )
 
 def build_capacity_candidates(profile_summary: Dict[str, float], tariff: Dict[str, Any], catalog: Optional[Dict[str, Any]]) -> List[float]:

@@ -15,13 +15,15 @@ import { useAuth } from '@/context/AuthContext';
 import { useAppMode } from '@/context/AppModeContext';
 import { useToast } from '@/hooks/use-toast';
 import RecommendationModal from '@/components/RecommendationModal';
+import DebugSimulationChart from '@/components/DebugSimulationChart';
 // @ts-ignore
 import coverPdfAsset from '@/assets/Watt Builder_Cover.pdf';
 import {
     Battery, Home, FileText, Zap, Sun, Car,
     ChevronRight, ChevronLeft, Loader2,
     CheckCircle2, TrendingUp, Wallet, Plus, Trash2, Star,
-    LineChart as LucideLineChart, LayoutGrid, Info, ArrowRight, Sparkles, Lightbulb
+    LineChart as LucideLineChart, LayoutGrid, Info, ArrowRight, Sparkles, Lightbulb,
+    Download
 } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -546,6 +548,33 @@ export default function Simulator() {
         } finally {
             setIsSubmittingPremium(false);
         }
+    };
+
+    const downloadDebugCSV = () => {
+        if (!results?.debug_series) return;
+        
+        const { load, pv, soc } = results.debug_series;
+        const rows = [['Hora', 'Consumo (kWh)', 'Producao Solar (kWh)', 'Estado Bateria (kWh)']];
+        
+        for (let i = 0; i < load.length; i++) {
+            rows.push([
+                i.toString(),
+                load[i].toString().replace('.', ','),
+                (pv[i] || 0).toString().replace('.', ','),
+                (soc[i] || 0).toString().replace('.', ',')
+            ]);
+        }
+        
+        const csvContent = rows.map(e => e.join(";")).join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `debug_simulacao_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     const handleSendReportEmail = async () => {
@@ -1107,7 +1136,7 @@ export default function Simulator() {
             products.push(...recommendation.replacement_notes.map((note: string) => `Nota: ${note}`));
         }
 
-        const body = `Olá, \ngostaria de solicitar um orçamento para a instalação dos seguintes produtos sugeridos pela simulação:\n\n${products.join('\n')}\n\nLocal da casa: ${formData.solar.city}, ${formData.house.area_m2} m²\n\nObrigado.`;
+        const body = `Olá, \ngostaria de solicitar 20 orçamentos para a instalação dos seguintes produtos sugeridos pela simulação:\n\n${products.join('\n')}\n\nLocal da casa: ${formData.solar.city}, ${formData.house.area_m2} m²\n\nObrigado.`;
         const subject = 'Solicitação de Orçamento para instalação';
 
         // Removemos o localStorage e o window.location.href
@@ -2628,7 +2657,21 @@ export default function Simulator() {
                                     )}
                                     Descarregar Relatório Técnico Detalhado - 9,90€
                                 </Button>
+                                {isAdminMode && results?.debug_series && (
+                                    <Button
+                                        onClick={downloadDebugCSV}
+                                        variant="outline"
+                                        className="border-orange-200 text-orange-700 hover:bg-orange-50"
+                                    >
+                                        <Download className="mr-2 h-4 w-4" />
+                                        Exportar CSV (Debug)
+                                    </Button>
+                                )}
                             </div>
+
+                            {isAdminMode && results?.debug_series && (
+                                <DebugSimulationChart data={results.debug_series} />
+                            )}
 
                             <Tabs defaultValue="best" value={activeTab} onValueChange={setActiveTab} className="w-full">
                                 <TabsList className="grid w-full max-w-md grid-cols-2 mb-8 h-12 p-1 bg-gray-100 rounded-xl">
@@ -2710,6 +2753,12 @@ export default function Simulator() {
                                                                         </div>
                                                                     </div>
 
+                                                                    {rec.tariff_optimization && (
+                                                                        <div className="absolute top-2 right-2 p-1.5 rounded-full bg-orange-100 border border-orange-200 text-orange-600 shadow-sm animate-pulse" title={`Dica de Otimização: Mude para ${rec.tariff_optimization.recommended_type === 'bi' ? 'Bi-horário' : rec.tariff_optimization.recommended_type === 'tri' ? 'Tri-horário' : 'Simples'}`}>
+                                                                            <Lightbulb className="w-4 h-4" />
+                                                                        </div>
+                                                                    )}
+
                                                                     <div className="flex flex-col gap-2 mt-auto">
                                                                         <Button
                                                                             onClick={(e) => {
@@ -2719,7 +2768,7 @@ export default function Simulator() {
                                                                             className="w-full bg-white border border-gray-300 text-black hover:bg-gray-50"
                                                                             size="sm"
                                                                         >
-                                                                            Solicitar Orçamento
+                                                                            Solicitar 20 orçamentos (19,90€)
                                                                         </Button>
                                                                     </div>
                                                                 </CardContent>

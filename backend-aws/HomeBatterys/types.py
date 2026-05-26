@@ -14,3 +14,8 @@ class SimulationResult:
     grid_to_battery_kwh: float
     battery_to_load_kwh: float
     equivalent_cycles: float
+    
+    # Optional hourly series for debugging/admin charts
+    soc_series: Optional[List[float]] = None
+    load_series: Optional[List[float]] = None
+    pv_series: Optional[List[float]] = None

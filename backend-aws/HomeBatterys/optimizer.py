@@ -9,7 +9,7 @@ from .profile import (
     estimate_recommended_solar_peak_kw,
     estimate_roof_area_m2,
 )
-from .recommendations import get_existing_battery_capacity_kwh, rank_catalog
+from .recommendations import get_existing_battery_capacity_kwh, rank_catalog, profile_for_panel_set
 from .simulation import (
     build_capacity_candidates,
     choose_technical_capacity,
@@ -166,6 +166,63 @@ def optimize_home_battery(
         max_investment=max_investment,
     )
 
+    # Step 5: Tariff Optimization Insight (Calculate if other tariffs are better)
+    current_tariff_type = tariff.get("type", "simple")
+    alternative_types = [t for t in ["simple", "bi", "tri"] if t != current_tariff_type]
+    has_existing_solar = bool((solar or {}).get("has_solar"))
+
+    # Final Technical/Debug Simulation for the selected baseline system
+    debug_result = simulate_capacity(
+        capacity_kwh=selected["capacity_kwh"],
+        load_kwh=profile["load_kwh"],
+        pv_kwh=profile["pv_kwh"],
+        prices_eur_kwh=prices,
+        dod=dod,
+        roundtrip_efficiency=roundtrip_efficiency,
+        sell_price_eur_kwh=sell_price,
+        allow_grid_arbitrage=allow_grid_arbitrage,
+        return_series=True
+    )
+
+    for rec in ranked_results.get("best", []):
+        best_alt = None
+        current_savings = rec.get("savings_annual_eur", 0)
+        
+        for alt_type in alternative_types:
+            alt_tariff = {**tariff, "type": alt_type, "prices": {}}
+            alt_prices = build_hourly_prices(alt_tariff)
+            alt_arbitrage = should_allow_grid_arbitrage(alt_tariff)
+            
+            # Baseline with alternative tariff
+            alt_no_system_base = simulate_capacity(0.0, profile["load_kwh"], [0.0]*8760, alt_prices, dod, roundtrip_efficiency, sell_price, False)
+            alt_base = simulate_capacity(0.0, profile["load_kwh"], profile["pv_kwh"], alt_prices, dod, roundtrip_efficiency, sell_price, False)
+            alt_current_bill = alt_base.annual_cost_eur if has_existing_solar else alt_no_system_base.annual_cost_eur
+            
+            # Rec system with alternative tariff
+            variant_profile = profile_for_panel_set(profile, solar, rec.get("solar_panels"))
+            alt_result = simulate_capacity(
+                rec.get("simulated_capacity_kwh", 0),
+                variant_profile["load_kwh"],
+                variant_profile["pv_kwh"],
+                alt_prices,
+                dod,
+                roundtrip_efficiency,
+                sell_price,
+                alt_arbitrage
+            )
+            
+            alt_savings = alt_current_bill - alt_result.annual_cost_eur
+            if alt_savings > current_savings + 20: # No mínimo 20€ de diferença anual
+                if not best_alt or alt_savings > best_alt["total_savings_eur"]:
+                    best_alt = {
+                        "recommended_type": alt_type,
+                        "extra_savings_eur": round(alt_savings - current_savings, 2),
+                        "total_savings_eur": round(alt_savings, 2)
+                    }
+        
+        if best_alt:
+            rec["tariff_optimization"] = best_alt
+
     return {
         "summary": {
             "annual_consumption_estimated": round(profile_summary["annual_consumption_kwh"], 1),
@@ -202,6 +259,11 @@ def optimize_home_battery(
         + [
             "O preço instalado estimado soma bateria, inversor e painéis.",
         ],
+        "debug_series": {
+            "load": debug_result.load_series,
+            "pv": debug_result.pv_series,
+            "soc": debug_result.soc_series
+        } if debug_result.soc_series else None
     }
 
 

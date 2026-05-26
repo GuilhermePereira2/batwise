@@ -35,38 +35,50 @@ def build_hourly_profile(
         import_kwh = (import_kwh + [0.0] * 8760)[:8760]
         export_kwh = (export_kwh + [0.0] * 8760)[:8760]
 
-        # If user HAS solar, 'import_kwh' is only net import.
-        # To size expansion correctly, we need TOTAL house load.
-        # Real Load = Import + (Production - Export)
         existing_peak = get_existing_solar_peak_kwp(solar)
+        
+        # To reconstruct total load, we need a production estimate.
+        # If no solar existed, total load is just the import.
+        # If solar existed, Load = Import + Production - Export.
+        
+        load = []
+        pv = []
+        
         if solar.get("has_solar") and existing_peak > 0:
             annual_yield = existing_peak * solar_yield_kwh_per_kwp(solar)
             factor_sum = sum(MONTH_SOLAR_FACTORS)
             monthly_production = [annual_yield * f / factor_sum for f in MONTH_SOLAR_FACTORS]
-            
-            # Pre-calculate the sum of the hourly shape weights
             solar_shape_sum = sum(solar_hour_weight(h) for h in range(24))
             
-            # Reconstruct hourly production profile
-            total_load = []
+            load = []
+            pv = []
             for i in range(8760):
                 month_idx = (datetime(2023, 1, 1) + timedelta(hours=i)).month - 1
                 hour = i % 24
-                # Synthetic hourly production for the existing peak
-                # We distribute the monthly total across days and then by hour
+                # Produção sintética (o que o painel gera no telhado)
                 prod_hour = (monthly_production[month_idx] * solar_hour_weight(hour) / 
-                             (solar_shape_sum or 1.0) / 30.4) # Approx daily
+                             (solar_shape_sum or 1.0) / 30.4)
                 
-                # Real Load = Import + max(0, Production - Export)
-                # (Self-consumption is Production - Export)
-                self_consumption = max(0.0, prod_hour - export_kwh[i])
-                total_load.append(import_kwh[i] + self_consumption)
-            
-            load = total_load
-            pv = export_kwh # Use Export (Injection) as the charging source for batteries
+                # O que o Excel reporta como injeção (excesso)
+                real_export = export_kwh[i]
+                
+                # Garantir que a produção sintética não é menor que a injeção real
+                # (Se o Excel diz que injetou 2kW, o painel tem de ter produzido pelo menos 2kW)
+                pv_hour = max(prod_hour, real_export)
+                
+                # Autoconsumo Estimado = Produção Total - Injeção na Rede
+                # (Isto é a energia solar que ficou dentro de casa)
+                self_consumption = max(0.0, pv_hour - real_export)
+                
+                # Carga Total da Casa = Importação da Rede + Autoconsumo do Painel
+                # (Isto é a 'curva vermelha' real da casa, independente do sol)
+                load_hour = import_kwh[i] + self_consumption
+                
+                load.append(round(load_hour, 4))
+                pv.append(round(pv_hour, 4))
         else:
             load = import_kwh
-            pv = [0.0] * 8760 # If no solar, no injection possible to charge battery yet
+            pv = [0.0] * 8760
 
         return (
             {"load_kwh": load, "pv_kwh": pv},
@@ -377,19 +389,21 @@ def solar_yield_kwh_per_kwp(solar: Dict[str, Any]) -> float:
     return 1500.0
 
 def solar_hour_weight(hour: int) -> float:
+    # Adjusted for Portugal (WET/WEST), centered around 13:00-14:00
     weights = {
-        6: 0.05,
-        7: 0.20,
-        8: 0.45,
-        9: 0.70,
-        10: 0.90,
-        11: 1.00,
+        6: 0.02,
+        7: 0.08,
+        8: 0.25,
+        9: 0.50,
+        10: 0.75,
+        11: 0.92,
         12: 1.00,
-        13: 0.95,
-        14: 0.80,
-        15: 0.60,
-        16: 0.35,
-        17: 0.15,
-        18: 0.04,
+        13: 1.00,
+        14: 0.95,
+        15: 0.80,
+        16: 0.55,
+        17: 0.30,
+        18: 0.12,
+        19: 0.03,
     }
     return weights.get(hour, 0.0)
