@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/table";
 import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ChartTooltip } from "@/components/ui/chart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -285,6 +286,8 @@ export default function Simulator() {
     const [step, setStep] = useState(() => parseStepParam(searchParams.get('step')));
     const [loading, setLoading] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
+    const [isSubmittingPremium, setIsSubmittingPremium] = useState(false);
     const [mode, setMode] = useState<InputMode | null>(() => parseModeParam(searchParams.get('mode')));
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -500,6 +503,48 @@ export default function Simulator() {
             }
         } finally {
             setIsSendingRating(false);
+        }
+    };
+
+    const handlePremiumInterest = async () => {
+        if (!isAuthenticated || !token) {
+            toast({
+                title: 'Autenticação necessária',
+                description: 'Por favor, faça login para aceder a esta funcionalidade.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        setIsSubmittingPremium(true);
+        try {
+            const response = await fetch(getApiUrl('api/premium-report-interest'), {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            });
+
+            if (response.ok) {
+                setIsPremiumModalOpen(true);
+            } else {
+                toast({
+                    title: "Erro",
+                    description: "Não foi possível registar o seu interesse. Por favor tente mais tarde.",
+                    variant: "destructive"
+                });
+            }
+        } catch (error) {
+            console.error("Premium interest error:", error);
+            toast({
+                title: "Erro de Conexão",
+                description: "Verifique a sua internet e tente novamente.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsSubmittingPremium(false);
         }
     };
 
@@ -1461,49 +1506,49 @@ export default function Simulator() {
                                 </CardContent>
                             </Card>
 
-                                    <Card
-                                        onClick={() => goToStep(2, 'eredes')}
-                                        className={`cursor-pointer border-2 transition-all hover:shadow-lg ${mode === 'eredes' ? 'border-orange-600 bg-orange-50/50' : 'border-gray-200 hover:border-black'}`}
-                                    >
-                                        <CardContent className="p-8 text-center">
-                                            <div className="bg-orange-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                <Zap className="text-white w-8 h-8" />
-                                            </div>
-                                            <h3 className="text-xl font-bold mb-2">Ficheiro E-Redes</h3>
-                                            <p className="text-gray-500 text-sm">Upload do ficheiro de consumos da E-Redes (.csv ou .xlsx) para simulação real.</p>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-                            )}
+                            <Card
+                                onClick={() => goToStep(2, 'eredes')}
+                                className={`cursor-pointer border-2 transition-all hover:shadow-lg ${mode === 'eredes' ? 'border-orange-600 bg-orange-50/50' : 'border-gray-200 hover:border-black'}`}
+                            >
+                                <CardContent className="p-8 text-center">
+                                    <div className="bg-orange-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <Zap className="text-white w-8 h-8" />
+                                    </div>
+                                    <h3 className="text-xl font-bold mb-2">Ficheiro E-Redes</h3>
+                                    <p className="text-gray-500 text-sm">Upload do ficheiro de consumos da E-Redes (.csv ou .xlsx) para simulação real.</p>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    )}
 
-                            {/* Step 2: Form */}
-                            {step === 2 && (
-                                <Card className="shadow-xl border-gray-200 animate-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
-                                    <CardHeader>
-                                        <CardTitle>{mode === 'eredes' ? 'Ficheiro de Consumos E-Redes' : 'Configuração de Consumo'}</CardTitle>
-                                        <CardDescription className="text-gray-500">
-                                            {mode === 'eredes' ? 'Faça o upload do seu ficheiro .csv ou .xlsx para uma simulação com base em dados reais.' : 'Ajuste os valores para uma simulação precisa.'}
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="space-y-6">
-                                        {mode === 'eredes' ? (
-                                            <div className="space-y-8 animate-in fade-in duration-500">
-                                                <div className="p-8 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50 text-center space-y-4">
-                                                    <div className="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
-                                                        <Zap className="text-orange-600 w-8 h-8" />
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="text-lg font-bold">Upload do Ficheiro</h3>
-                                                        <p className="text-sm text-gray-500 max-w-xs mx-auto">Selecione o ficheiro exportado do portal E-Redes (.csv ou .xlsx).</p>
-                                                    </div>
-                                                    <div className="flex flex-col items-center gap-2">
-                                                        <Input
-                                                            type="file"
-                                                            accept=".csv, .xlsx, .xls"
-                                                            onChange={handleFileUpload}
-                                                            className="max-w-xs bg-white cursor-pointer"
-                                                            disabled={isUploading}
-                                                        />
+                    {/* Step 2: Form */}
+                    {step === 2 && (
+                        <Card className="shadow-xl border-gray-200 animate-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
+                            <CardHeader>
+                                <CardTitle>{mode === 'eredes' ? 'Ficheiro de Consumos E-Redes' : 'Configuração de Consumo'}</CardTitle>
+                                <CardDescription className="text-gray-500">
+                                    {mode === 'eredes' ? 'Faça o upload do seu ficheiro .csv ou .xlsx para uma simulação com base em dados reais.' : 'Ajuste os valores para uma simulação precisa.'}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {mode === 'eredes' ? (
+                                    <div className="space-y-8 animate-in fade-in duration-500">
+                                        <div className="p-8 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50 text-center space-y-4">
+                                            <div className="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                                                <Zap className="text-orange-600 w-8 h-8" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-bold">Upload do Ficheiro</h3>
+                                                <p className="text-sm text-gray-500 max-w-xs mx-auto">Selecione o ficheiro exportado do portal E-Redes (.csv ou .xlsx).</p>
+                                            </div>
+                                            <div className="flex flex-col items-center gap-2">
+                                                <Input
+                                                    type="file"
+                                                    accept=".csv, .xlsx, .xls"
+                                                    onChange={handleFileUpload}
+                                                    className="max-w-xs bg-white cursor-pointer"
+                                                    disabled={isUploading}
+                                                />
                                                 {formData.eredes.file_name && (
                                                     <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200">
                                                         <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -1829,739 +1874,739 @@ export default function Simulator() {
                                 ) : (
                                     <>
                                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    <div className="space-y-2">
-                                        <Label>Nº de pessoas na habitação</Label>
-                                        <Input
-                                            type="number"
-                                            min="1"
-                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                            value={formData.house.occupants}
-                                            onChange={(e) => handleNumericChange(e.target.value, 'Nº de pessoas', (val) => setFormData({ ...formData, house: { ...formData.house, occupants: val } }))}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Área aproximada (m²)</Label>
-                                        <Input
-                                            type="number"
-                                            min="10"
-                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                            value={formData.house.area_m2}
-                                            onChange={(e) => handleNumericChange(e.target.value, 'Área aproximada', (val) => setFormData({ ...formData, house: { ...formData.house, area_m2: val } }))}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Nº de pisos</Label>
-                                        <Input
-                                            type="number"
-                                            min="1"
-                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                            value={formData.house.floors}
-                                            onChange={(e) => handleNumericChange(e.target.value, 'Nº de pisos', (val) => setFormData({ ...formData, house: { ...formData.house, floors: val } }))}
-                                        />
-                                    </div>
-                                </div>
-
-                                {mode === 'house' ? (
-                                    <>
-                                        <div className="pt-4 border-t border-gray-200">
-                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                                <div>
-                                                    <Label className="mb-1">Pretende inserir os dados da última fatura?</Label>
-                                                    <p className="text-sm text-gray-500">Usamos esses dados apenas para estimar o preço por kWh.</p>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-2 sm:w-auto">
-                                                    <Button
-                                                        className={`h-12 ${formData.house.use_last_bill ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
-                                                        onClick={() => setFormData({ ...formData, house: { ...formData.house, use_last_bill: false } })}
-                                                    >
-                                                        Não
-                                                    </Button>
-                                                    <Button
-                                                        className={`h-12 ${formData.house.use_last_bill ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                        onClick={() => setFormData({ ...formData, house: { ...formData.house, use_last_bill: true } })}
-                                                    >
-                                                        Sim
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="space-y-0">
-                                    </div>
-                                )}
-
-                                <div className="pt-4 border-t border-gray-200">
-                                    <Label className="text-gray-400 text-xs uppercase tracking-widest">Tarifário</Label>
-                                    <div className="mt-4 space-y-4">
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {[
-                                                { key: 'simple', label: 'Simples' },
-                                                { key: 'bi', label: 'Bi-horário' },
-                                                { key: 'tri', label: 'Tri-horário' }
-                                            ].map((option) => (
-                                                <Button
-                                                    key={option.key}
-                                                    className={`text-sm h-12 ${formData.tariff.type === option.key ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                    onClick={() => setFormData({
-                                                        ...formData,
-                                                        tariff: { ...formData.tariff, type: option.key as 'simple' | 'bi' | 'tri' },
-                                                        bill: { ...formData.bill, history: formData.bill.history.map((entry: any) => normalizeHistoryEntry(entry, option.key)) }
-                                                    })}
-                                                >
-                                                    {option.label}
-                                                </Button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-
-
-                                {mode === 'house' && (formData.house.use_last_bill || isAdminMode) ? (
-                                    <div className="pt-4 border-t border-gray-200 space-y-4">
-                                        {formData.house.use_last_bill && (
-                                            <div className="grid gap-4 md:grid-cols-4">
-                                                {activeTariffPeriods.map((period) => (
-                                                    <div key={period.key} className="space-y-2">
-                                                        <Label>{period.label} (kWh)</Label>
-                                                        <Input
-                                                            type="number"
-                                                            min="0"
-                                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                                            value={formData.house.last_bill.consumption[period.key] ?? ''}
-                                                            onChange={(e) => handleNumericChange(e.target.value, period.label, (val) => setFormData({
-                                                                ...formData,
-                                                                house: {
-                                                                    ...formData.house,
-                                                                    last_bill: {
-                                                                        ...formData.house.last_bill,
-                                                                        consumption: {
-                                                                            ...formData.house.last_bill.consumption,
-                                                                            [period.key]: val,
-                                                                        },
-                                                                    },
-                                                                },
-                                                            }))}
-                                                        />
-                                                    </div>
-                                                ))}
-                                                <div className="space-y-2">
-                                                    <Label>Valor total da fatura</Label>
-                                                    <div className="relative">
-                                                        <Input
-                                                            type="number"
-                                                            min="0"
-                                                            step="0.01"
-                                                            className="border-gray-300 focus-visible:ring-orange-600 pr-8"
-                                                            value={formData.house.last_bill.total}
-                                                            onChange={(e) => handleNumericChange(e.target.value, 'Valor total da fatura', (val) => setFormData({
-                                                                ...formData,
-                                                                house: {
-                                                                    ...formData.house,
-                                                                    last_bill: {
-                                                                        ...formData.house.last_bill,
-                                                                        total: val,
-                                                                    },
-                                                                },
-                                                            }))}
-                                                        />
-                                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {isAdminMode && (
-                                            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                                                <div className="mb-3 flex items-center justify-between gap-3">
-                                                    <p className="text-sm font-semibold">
-                                                        {formData.house.use_last_bill ? 'Preço estimado' : 'Preços padrão'}
-                                                    </p>
-                                                    <Badge variant="outline" className="border-gray-300 text-gray-600">
-                                                        {formData.tariff.type === 'simple' ? 'Simples' : formData.tariff.type === 'bi' ? 'Bi-horário' : 'Tri-horário'}
-                                                    </Badge>
-                                                </div>
-                                                <div className="grid gap-3 sm:grid-cols-3">
-                                                    {activeTariffPeriods.map((period) => (
-                                                        <div key={period.key} className="rounded-md bg-white border border-gray-200 px-3 py-2">
-                                                            <p className="text-xs uppercase tracking-widest text-gray-400">{period.label}</p>
-                                                            <p className="mt-1 font-semibold text-gray-900">
-                                                                {formatTariffPrice(estimatedHouseTariffPrices[period.key])}
-                                                            </p>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : null}
-
-                                <div className="pt-4 border-t border-gray-200 space-y-4">
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                        <div>
-                                            <Label className="mb-1 text-base font-bold">Localização e Rede Elétrica</Label>
-                                            <p className="text-sm text-gray-500">Ajude-nos a identificar o perfil solar e compatibilidade da rede.</p>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                        <div className="space-y-2">
-                                            <Label>País</Label>
-                                            <Input
-                                                type="text"
-                                                className="border-gray-300 focus-visible:ring-orange-600"
-                                                value={formData.solar.country}
-                                                onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, country: e.target.value } })}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Cidade</Label>
-                                            <Input
-                                                type="text"
-                                                className="border-gray-300 focus-visible:ring-orange-600"
-                                                value={formData.solar.city}
-                                                onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, city: e.target.value } })}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Localidade</Label>
-                                            <Input
-                                                type="text"
-                                                className="border-gray-300 focus-visible:ring-orange-600"
-                                                value={formData.solar.location}
-                                                onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, location: e.target.value } })}
-                                                placeholder="Ex: Alfragide"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Tipo de Instalação Elétrica</Label>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-md">
-                                            <Button
-                                                className={`h-12 ${formData.solar.grid_type === 'single_phase' ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, grid_type: 'single_phase' } })}
-                                            >
-                                                Monofásica (1 fase)
-                                            </Button>
-                                            <Button
-                                                className={`h-12 ${formData.solar.grid_type === 'three_phase' ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, grid_type: 'three_phase' } })}
-                                            >
-                                                Trifásica (3 fases)
-                                            </Button>
-                                        </div>
-                                        {formData.solar.grid_type === 'single_phase' && (
-                                            <p className="text-xs text-orange-600 font-medium">
-                                                Apenas serão sugeridos inversores monofásicos compatíveis com a sua rede.
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="pt-4 border-t border-gray-200 space-y-4">
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                        <div>
-                                            <Label className="mb-1">Tem painéis solares?</Label>
-                                            <p className="text-sm text-gray-500">Se tiver, adicionamos perfil de produção mais preciso.</p>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2 sm:w-auto">
-                                            <Button
-                                                className={`h-12 ${formData.solar.has_solar ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
-                                                onClick={() => setFormData({
-                                                    ...formData,
-                                                    solar: {
-                                                        ...formData.solar,
-                                                        has_solar: false,
-                                                        existing_inverter_brand: '',
-                                                        existing_inverter_model: '',
-                                                        existing_inverter_max_power_kw: 0,
-                                                        has_battery: false,
-                                                        battery_capacity_kwh: 0,
-                                                        existing_battery_brand: '',
-                                                        existing_battery_model: '',
-                                                        existing_battery_max_power_kw: 0,
-                                                    }
-                                                })}
-                                            >
-                                                Não
-                                            </Button>
-                                            <Button
-                                                className={`h-12 ${formData.solar.has_solar ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_solar: true } })}
-                                            >
-                                                Sim
-                                            </Button>
-                                        </div>
-                                    </div>
-
-                                    {formData.solar.has_solar && (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div className="space-y-2">
-                                                <Label>Potência de pico existente (kWp)</Label>
-                                                <Input
-                                                    type="number"
-                                                    step="0.1"
-                                                    min="0"
-                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                    value={formData.solar.peak_kw}
-                                                    onChange={(e) => handleNumericChange(e.target.value, 'Potência de pico existente', (val) => setFormData({ ...formData, solar: { ...formData.solar, peak_kw: val } }))}
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Potência máxima do inversor atual (kW)</Label>
-                                                <Input
-                                                    type="number"
-                                                    step="0.1"
-                                                    min="0"
-                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                    value={formData.solar.existing_inverter_max_power_kw}
-                                                    onChange={(e) => handleNumericChange(e.target.value, 'Potência máxima do inversor', (val) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_max_power_kw: val } }))}
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Marca do inversor atual</Label>
-                                                <Input
-                                                    type="text"
-                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                    value={formData.solar.existing_inverter_brand}
-                                                    onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_brand: e.target.value } })}
-                                                    placeholder="Ex: Huawei"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Modelo do inversor atual</Label>
-                                                <Input
-                                                    type="text"
-                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                    value={formData.solar.existing_inverter_model}
-                                                    onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_model: e.target.value } })}
-                                                    placeholder="Ex: SUN2000-5KTL"
-                                                />
-                                            </div>
-                                            <div className="space-y-2 md:col-span-2">
-                                                <Label>Deseja adicionar mais painéis solares?</Label>
-                                                <div className="grid grid-cols-2 gap-2 max-w-sm">
-                                                    <Button
-                                                        className={`h-12 ${formData.solar.expand_solar ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
-                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, expand_solar: false } })}
-                                                    >
-                                                        Não
-                                                    </Button>
-                                                    <Button
-                                                        className={`h-12 ${formData.solar.expand_solar ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, expand_solar: true } })}
-                                                    >
-                                                        Sim
-                                                    </Button>
-                                                </div>
-                                                {!formData.solar.expand_solar && (
-                                                    <p className="mt-2 text-sm text-gray-500">
-                                                        As sugestões focar-se-ão apenas em baterias para o sistema existente.
-                                                    </p>
-                                                )}
-                                            </div>
-
-                                            <div className="space-y-2 md:col-span-2">
-                                                <Label>Já tem bateria?</Label>
-                                                <div className="grid grid-cols-2 gap-2 max-w-sm">
-                                                    <Button
-                                                        className={`h-12 ${formData.solar.has_battery ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
-                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_battery: false, battery_capacity_kwh: 0, existing_battery_brand: '', existing_battery_model: '', existing_battery_max_power_kw: 0 } })}
-                                                    >
-                                                        Não
-                                                    </Button>
-                                                    <Button
-                                                        className={`h-12 ${formData.solar.has_battery ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_battery: true, battery_capacity_kwh: formData.solar.battery_capacity_kwh || 5 } })}
-                                                    >
-                                                        Sim
-                                                    </Button>
-                                                </div>
-
-                                                {formData.solar.has_battery && (
-                                                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                        <div className="space-y-2">
-                                                            <Label>Capacidade da bateria atual (kWh)</Label>
-                                                            <Input
-                                                                type="number"
-                                                                min="0"
-                                                                step="0.1"
-                                                                className="border-gray-300 focus-visible:ring-orange-600"
-                                                                value={formData.solar.battery_capacity_kwh}
-                                                                onChange={(e) => handleNumericChange(e.target.value, 'Capacidade da bateria atual', (val) => setFormData({ ...formData, solar: { ...formData.solar, battery_capacity_kwh: val } }))}
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label>Potência máxima da bateria atual (kW)</Label>
-                                                            <Input
-                                                                type="number"
-                                                                min="0"
-                                                                step="0.1"
-                                                                className="border-gray-300 focus-visible:ring-orange-600"
-                                                                value={formData.solar.existing_battery_max_power_kw}
-                                                                onChange={(e) => handleNumericChange(e.target.value, 'Potência máxima da bateria atual', (val) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_max_power_kw: val } }))}
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label>Marca da bateria atual</Label>
-                                                            <Input
-                                                                type="text"
-                                                                className="border-gray-300 focus-visible:ring-orange-600"
-                                                                value={formData.solar.existing_battery_brand}
-                                                                onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_brand: e.target.value } })}
-                                                                placeholder="Ex: Huawei"
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label>Modelo do bateria atual</Label>
-                                                            <Input
-                                                                type="text"
-                                                                className="border-gray-300 focus-visible:ring-orange-600"
-                                                                value={formData.solar.existing_battery_model}
-                                                                onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_model: e.target.value } })}
-                                                                placeholder="Ex: Luna2000"
-                                                            />
-                                                        </div>
-                                                        <p className="text-xs text-gray-500 md:col-span-2">
-                                                            Estes dados serão considerados como equipamento já instalado no dimensionamento.
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="pt-4 border-t border-gray-200 space-y-4">
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                        <div className="flex items-start gap-3">
-                                            <Car className="w-5 h-5 mt-1 text-orange-600" />
-                                            <div>
-                                                <Label className="mb-1">Tem carro elétrico?</Label>
-                                                <p className="text-sm text-gray-500">Adicionamos o consumo de carregamento à simulação energética.</p>
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2 sm:w-auto">
-                                            <Button
-                                                className={`h-12 ${formData.electric_vehicles.has_electric_vehicle ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
-                                                onClick={() => updateElectricVehicleCount(0)}
-                                            >
-                                                Não
-                                            </Button>
-                                            <Button
-                                                className={`h-12 ${formData.electric_vehicles.has_electric_vehicle ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                onClick={() => updateElectricVehicleCount(Math.max(1, formData.electric_vehicles.count || 1))}
-                                            >
-                                                Sim
-                                            </Button>
-                                        </div>
-                                    </div>
-
-                                    {formData.electric_vehicles.has_electric_vehicle && (
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between gap-4">
-                                                <div>
-                                                    <p className="text-sm font-semibold">Carros elétricos</p>
-                                                    <p className="text-sm text-gray-500">{formData.electric_vehicles.vehicles.length} adicionados</p>
-                                                </div>
-                                                <Button
-                                                    type="button"
-                                                    className="h-10 bg-black text-white hover:bg-gray-800"
-                                                    onClick={addElectricVehicle}
-                                                    disabled={formData.electric_vehicles.vehicles.length >= 6}
-                                                >
-                                                    <Plus className="w-4 h-4 mr-2" />
-                                                    Adicionar carro
-                                                </Button>
-                                            </div>
-
-                                            <div className="space-y-4">
-                                                {formData.electric_vehicles.vehicles.map((vehicle: any, index: number) => (
-                                                    <div key={index} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                                                        <div className="mb-3 flex items-center justify-between gap-3">
-                                                            <div className="font-semibold">Carro {index + 1}</div>
-                                                            <Button
-                                                                type="button"
-                                                                variant="outline"
-                                                                className="h-9 border-gray-300 text-black hover:bg-gray-100"
-                                                                onClick={() => removeElectricVehicle(index)}
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </Button>
-                                                        </div>
-                                                        <div className="grid gap-4 md:grid-cols-4">
-                                                            <div className="space-y-2">
-                                                                <Label>Km por dia</Label>
-                                                                <Input
-                                                                    type="number"
-                                                                    min="0"
-                                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                                    value={vehicle.daily_km}
-                                                                    onChange={(e) => handleNumericChange(e.target.value, 'Km por dia', (val) => updateElectricVehicle(index, 'daily_km', val))}
-                                                                />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label>Consumo (kWh/km)</Label>
-                                                                <Input
-                                                                    type="number"
-                                                                    step="0.01"
-                                                                    min="0"
-                                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                                    value={vehicle.consumption_kwh_per_km}
-                                                                    onChange={(e) => handleNumericChange(e.target.value, 'Consumo (kWh/km)', (val) => updateElectricVehicle(index, 'consumption_kwh_per_km', val))}
-                                                                />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label>Marca</Label>
-                                                                <Input
-                                                                    type="text"
-                                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                                    value={vehicle.brand}
-                                                                    onChange={(e) => updateElectricVehicle(index, 'brand', e.target.value)}
-                                                                />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label>Modelo</Label>
-                                                                <Input
-                                                                    type="text"
-                                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                                    value={vehicle.model}
-                                                                    onChange={(e) => updateElectricVehicle(index, 'model', e.target.value)}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                        <div className="mt-4 space-y-2">
-                                                            <Label>Quando carrega normalmente?</Label>
-                                                            <div className="grid gap-2 md:grid-cols-3">
-                                                                {[
-                                                                    { key: 'night', label: 'Só à noite' },
-                                                                    { key: 'day', label: 'Durante o dia' },
-                                                                    { key: 'mixed', label: 'Dia e noite' },
-                                                                ].map((option) => (
-                                                                    <Button
-                                                                        key={option.key}
-                                                                        className={`h-11 ${vehicle.charging_schedule === option.key ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                                        onClick={() => updateElectricVehicle(index, 'charging_schedule', option.key)}
-                                                                    >
-                                                                        {option.label}
-                                                                    </Button>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {mode === 'bill' && (
-                                    <div className="pt-4 border-t border-gray-200 space-y-4">
-                                        <div className="grid gap-4 md:grid-cols-2">
-                                            <div className="space-y-2">
-                                                <Label>Meses de histórico</Label>
+                                                <Label>Nº de pessoas na habitação</Label>
                                                 <Input
                                                     type="number"
                                                     min="1"
-                                                    max="12"
                                                     className="border-gray-300 focus-visible:ring-orange-600"
-                                                    value={formData.bill.historyMonths}
-                                                    onChange={(e) => {
-                                                        const val = Number(e.target.value);
-                                                        if (val < 0) {
-                                                            toast({
-                                                                title: 'Valor Inválido',
-                                                                description: 'O número de meses não pode ser negativo.',
-                                                                variant: 'destructive',
-                                                            });
-                                                            return;
-                                                        }
-                                                        const months = Math.min(12, Math.max(1, val || 1));
-                                                        const history = [...formData.bill.history];
-                                                        if (history.length < months) {
-                                                            history.push(...Array(months - history.length).fill(null).map(() => createHistoryEntry(formData.tariff.type)));
-                                                        } else {
-                                                            history.length = months;
-                                                        }
-                                                        setFormData({ ...formData, bill: { ...formData.bill, historyMonths: months, history } });
-                                                    }}
+                                                    value={formData.house.occupants}
+                                                    onChange={(e) => handleNumericChange(e.target.value, 'Nº de pessoas', (val) => setFormData({ ...formData, house: { ...formData.house, occupants: val } }))}
                                                 />
-                                                <p className="text-sm text-gray-500">Até 12 meses de consumo anteriores para maior precisão.</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Área aproximada (m²)</Label>
+                                                <Input
+                                                    type="number"
+                                                    min="10"
+                                                    className="border-gray-300 focus-visible:ring-orange-600"
+                                                    value={formData.house.area_m2}
+                                                    onChange={(e) => handleNumericChange(e.target.value, 'Área aproximada', (val) => setFormData({ ...formData, house: { ...formData.house, area_m2: val } }))}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Nº de pisos</Label>
+                                                <Input
+                                                    type="number"
+                                                    min="1"
+                                                    className="border-gray-300 focus-visible:ring-orange-600"
+                                                    value={formData.house.floors}
+                                                    onChange={(e) => handleNumericChange(e.target.value, 'Nº de pisos', (val) => setFormData({ ...formData, house: { ...formData.house, floors: val } }))}
+                                                />
                                             </div>
                                         </div>
 
-                                        <div className="space-y-4">
-                                            {formData.bill.history.slice(0, formData.bill.historyMonths).map((entry: any, index: number) => (
-                                                <div key={index} className="rounded-xl border border-gray-200 p-4 bg-gray-50">
-                                                    <div className="font-semibold mb-3">Mês {index + 1}</div>
-                                                    <div className={`grid gap-4 ${formData.tariff.type === 'tri' ? (formData.solar.has_solar ? 'md:grid-cols-5' : 'md:grid-cols-4') : formData.tariff.type === 'bi' ? (formData.solar.has_solar ? 'md:grid-cols-4' : 'md:grid-cols-3') : (formData.solar.has_solar ? 'md:grid-cols-3' : 'md:grid-cols-2')}`}>
-                                                        {formData.tariff.type === 'simple' && (
-                                                            <div className="space-y-2">
-                                                                <Label>Consumo (kWh)</Label>
+                                        {mode === 'house' ? (
+                                            <>
+                                                <div className="pt-4 border-t border-gray-200">
+                                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                                        <div>
+                                                            <Label className="mb-1">Pretende inserir os dados da última fatura?</Label>
+                                                            <p className="text-sm text-gray-500">Usamos esses dados apenas para estimar o preço por kWh.</p>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-2 sm:w-auto">
+                                                            <Button
+                                                                className={`h-12 ${formData.house.use_last_bill ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
+                                                                onClick={() => setFormData({ ...formData, house: { ...formData.house, use_last_bill: false } })}
+                                                            >
+                                                                Não
+                                                            </Button>
+                                                            <Button
+                                                                className={`h-12 ${formData.house.use_last_bill ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                                onClick={() => setFormData({ ...formData, house: { ...formData.house, use_last_bill: true } })}
+                                                            >
+                                                                Sim
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="space-y-0">
+                                            </div>
+                                        )}
+
+                                        <div className="pt-4 border-t border-gray-200">
+                                            <Label className="text-gray-400 text-xs uppercase tracking-widest">Tarifário</Label>
+                                            <div className="mt-4 space-y-4">
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    {[
+                                                        { key: 'simple', label: 'Simples' },
+                                                        { key: 'bi', label: 'Bi-horário' },
+                                                        { key: 'tri', label: 'Tri-horário' }
+                                                    ].map((option) => (
+                                                        <Button
+                                                            key={option.key}
+                                                            className={`text-sm h-12 ${formData.tariff.type === option.key ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                            onClick={() => setFormData({
+                                                                ...formData,
+                                                                tariff: { ...formData.tariff, type: option.key as 'simple' | 'bi' | 'tri' },
+                                                                bill: { ...formData.bill, history: formData.bill.history.map((entry: any) => normalizeHistoryEntry(entry, option.key)) }
+                                                            })}
+                                                        >
+                                                            {option.label}
+                                                        </Button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+
+
+                                        {mode === 'house' && (formData.house.use_last_bill || isAdminMode) ? (
+                                            <div className="pt-4 border-t border-gray-200 space-y-4">
+                                                {formData.house.use_last_bill && (
+                                                    <div className="grid gap-4 md:grid-cols-4">
+                                                        {activeTariffPeriods.map((period) => (
+                                                            <div key={period.key} className="space-y-2">
+                                                                <Label>{period.label} (kWh)</Label>
                                                                 <Input
                                                                     type="number"
                                                                     min="0"
                                                                     className="border-gray-300 focus-visible:ring-orange-600"
-                                                                    value={entry.simple ?? ''}
-                                                                    onChange={(e) => handleNumericChange(e.target.value, 'Consumo', (val) => {
-                                                                        const history = [...formData.bill.history];
-                                                                        history[index] = { ...history[index], simple: val };
-                                                                        setFormData({ ...formData, bill: { ...formData.bill, history } });
-                                                                    })}
+                                                                    value={formData.house.last_bill.consumption[period.key] ?? ''}
+                                                                    onChange={(e) => handleNumericChange(e.target.value, period.label, (val) => setFormData({
+                                                                        ...formData,
+                                                                        house: {
+                                                                            ...formData.house,
+                                                                            last_bill: {
+                                                                                ...formData.house.last_bill,
+                                                                                consumption: {
+                                                                                    ...formData.house.last_bill.consumption,
+                                                                                    [period.key]: val,
+                                                                                },
+                                                                            },
+                                                                        },
+                                                                    }))}
                                                                 />
                                                             </div>
-                                                        )}
-                                                        {formData.tariff.type !== 'simple' && (
-                                                            <>
-                                                                <div className="space-y-2">
-                                                                    <Label>Vazio (kWh)</Label>
-                                                                    <Input
-                                                                        type="number"
-                                                                        min="0"
-                                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                                        value={entry.offPeak ?? ''}
-                                                                        onChange={(e) => handleNumericChange(e.target.value, 'Vazio', (val) => {
-                                                                            const history = [...formData.bill.history];
-                                                                            history[index] = { ...history[index], offPeak: val };
-                                                                            setFormData({ ...formData, bill: { ...formData.bill, history } });
-                                                                        })}
-                                                                    />
-                                                                </div>
-                                                                <div className="space-y-2">
-                                                                    <Label>Cheia (kWh)</Label>
-                                                                    <Input
-                                                                        type="number"
-                                                                        min="0"
-                                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                                        value={entry.peak ?? ''}
-                                                                        onChange={(e) => handleNumericChange(e.target.value, 'Cheia', (val) => {
-                                                                            const history = [...formData.bill.history];
-                                                                            history[index] = { ...history[index], peak: val };
-                                                                            setFormData({ ...formData, bill: { ...formData.bill, history } });
-                                                                        })}
-                                                                    />
-                                                                </div>
-                                                                {formData.tariff.type === 'tri' && (
-                                                                    <div className="space-y-2">
-                                                                        <Label>Ponta (kWh)</Label>
-                                                                        <Input
-                                                                            type="number"
-                                                                            min="0"
-                                                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                                                            value={entry.ponta ?? ''}
-                                                                            onChange={(e) => handleNumericChange(e.target.value, 'Ponta', (val) => {
-                                                                                const history = [...formData.bill.history];
-                                                                                history[index] = { ...history[index], ponta: val };
-                                                                                setFormData({ ...formData, bill: { ...formData.bill, history } });
-                                                                            })}
-                                                                        />
-                                                                    </div>
-                                                                )}
-                                                            </>
-                                                        )}
+                                                        ))}
                                                         <div className="space-y-2">
-                                                            <Label>Valor da fatura</Label>
+                                                            <Label>Valor total da fatura</Label>
                                                             <div className="relative">
                                                                 <Input
                                                                     type="number"
                                                                     min="0"
                                                                     step="0.01"
                                                                     className="border-gray-300 focus-visible:ring-orange-600 pr-8"
-                                                                    value={entry.bill_total ?? ''}
-                                                                    onChange={(e) => handleNumericChange(e.target.value, 'Valor da fatura', (val) => {
-                                                                        const history = [...formData.bill.history];
-                                                                        history[index] = { ...history[index], bill_total: val };
-                                                                        setFormData({ ...formData, bill: { ...formData.bill, history } });
-                                                                    })}
+                                                                    value={formData.house.last_bill.total}
+                                                                    onChange={(e) => handleNumericChange(e.target.value, 'Valor total da fatura', (val) => setFormData({
+                                                                        ...formData,
+                                                                        house: {
+                                                                            ...formData.house,
+                                                                            last_bill: {
+                                                                                ...formData.house.last_bill,
+                                                                                total: val,
+                                                                            },
+                                                                        },
+                                                                    }))}
                                                                 />
                                                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
                                                             </div>
                                                         </div>
-                                                        {formData.solar.has_solar && (
-                                                            <div className="space-y-2">
-                                                                <Label>Produção solar (kWh)</Label>
-                                                                <Input
-                                                                    type="number"
-                                                                    min="0"
-                                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                                    value={entry.production ?? ''}
-                                                                    onChange={(e) => handleNumericChange(e.target.value, 'Produção solar', (val) => {
-                                                                        const history = [...formData.bill.history];
-                                                                        history[index] = { ...history[index], production: val };
-                                                                        setFormData({ ...formData, bill: { ...formData.bill, history } });
-                                                                    })}
-                                                                />
+                                                    </div>
+                                                )}
+
+                                                {isAdminMode && (
+                                                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                                                        <div className="mb-3 flex items-center justify-between gap-3">
+                                                            <p className="text-sm font-semibold">
+                                                                {formData.house.use_last_bill ? 'Preço estimado' : 'Preços padrão'}
+                                                            </p>
+                                                            <Badge variant="outline" className="border-gray-300 text-gray-600">
+                                                                {formData.tariff.type === 'simple' ? 'Simples' : formData.tariff.type === 'bi' ? 'Bi-horário' : 'Tri-horário'}
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="grid gap-3 sm:grid-cols-3">
+                                                            {activeTariffPeriods.map((period) => (
+                                                                <div key={period.key} className="rounded-md bg-white border border-gray-200 px-3 py-2">
+                                                                    <p className="text-xs uppercase tracking-widest text-gray-400">{period.label}</p>
+                                                                    <p className="mt-1 font-semibold text-gray-900">
+                                                                        {formatTariffPrice(estimatedHouseTariffPrices[period.key])}
+                                                                    </p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : null}
+
+                                        <div className="pt-4 border-t border-gray-200 space-y-4">
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                                <div>
+                                                    <Label className="mb-1 text-base font-bold">Localização e Rede Elétrica</Label>
+                                                    <p className="text-sm text-gray-500">Ajude-nos a identificar o perfil solar e compatibilidade da rede.</p>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                <div className="space-y-2">
+                                                    <Label>País</Label>
+                                                    <Input
+                                                        type="text"
+                                                        className="border-gray-300 focus-visible:ring-orange-600"
+                                                        value={formData.solar.country}
+                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, country: e.target.value } })}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Cidade</Label>
+                                                    <Input
+                                                        type="text"
+                                                        className="border-gray-300 focus-visible:ring-orange-600"
+                                                        value={formData.solar.city}
+                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, city: e.target.value } })}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Localidade</Label>
+                                                    <Input
+                                                        type="text"
+                                                        className="border-gray-300 focus-visible:ring-orange-600"
+                                                        value={formData.solar.location}
+                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, location: e.target.value } })}
+                                                        placeholder="Ex: Alfragide"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Tipo de Instalação Elétrica</Label>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-md">
+                                                    <Button
+                                                        className={`h-12 ${formData.solar.grid_type === 'single_phase' ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, grid_type: 'single_phase' } })}
+                                                    >
+                                                        Monofásica (1 fase)
+                                                    </Button>
+                                                    <Button
+                                                        className={`h-12 ${formData.solar.grid_type === 'three_phase' ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, grid_type: 'three_phase' } })}
+                                                    >
+                                                        Trifásica (3 fases)
+                                                    </Button>
+                                                </div>
+                                                {formData.solar.grid_type === 'single_phase' && (
+                                                    <p className="text-xs text-orange-600 font-medium">
+                                                        Apenas serão sugeridos inversores monofásicos compatíveis com a sua rede.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-4 border-t border-gray-200 space-y-4">
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                                <div>
+                                                    <Label className="mb-1">Tem painéis solares?</Label>
+                                                    <p className="text-sm text-gray-500">Se tiver, adicionamos perfil de produção mais preciso.</p>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2 sm:w-auto">
+                                                    <Button
+                                                        className={`h-12 ${formData.solar.has_solar ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
+                                                        onClick={() => setFormData({
+                                                            ...formData,
+                                                            solar: {
+                                                                ...formData.solar,
+                                                                has_solar: false,
+                                                                existing_inverter_brand: '',
+                                                                existing_inverter_model: '',
+                                                                existing_inverter_max_power_kw: 0,
+                                                                has_battery: false,
+                                                                battery_capacity_kwh: 0,
+                                                                existing_battery_brand: '',
+                                                                existing_battery_model: '',
+                                                                existing_battery_max_power_kw: 0,
+                                                            }
+                                                        })}
+                                                    >
+                                                        Não
+                                                    </Button>
+                                                    <Button
+                                                        className={`h-12 ${formData.solar.has_solar ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_solar: true } })}
+                                                    >
+                                                        Sim
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            {formData.solar.has_solar && (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div className="space-y-2">
+                                                        <Label>Potência de pico existente (kWp)</Label>
+                                                        <Input
+                                                            type="number"
+                                                            step="0.1"
+                                                            min="0"
+                                                            className="border-gray-300 focus-visible:ring-orange-600"
+                                                            value={formData.solar.peak_kw}
+                                                            onChange={(e) => handleNumericChange(e.target.value, 'Potência de pico existente', (val) => setFormData({ ...formData, solar: { ...formData.solar, peak_kw: val } }))}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label>Potência máxima do inversor atual (kW)</Label>
+                                                        <Input
+                                                            type="number"
+                                                            step="0.1"
+                                                            min="0"
+                                                            className="border-gray-300 focus-visible:ring-orange-600"
+                                                            value={formData.solar.existing_inverter_max_power_kw}
+                                                            onChange={(e) => handleNumericChange(e.target.value, 'Potência máxima do inversor', (val) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_max_power_kw: val } }))}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label>Marca do inversor atual</Label>
+                                                        <Input
+                                                            type="text"
+                                                            className="border-gray-300 focus-visible:ring-orange-600"
+                                                            value={formData.solar.existing_inverter_brand}
+                                                            onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_brand: e.target.value } })}
+                                                            placeholder="Ex: Huawei"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label>Modelo do inversor atual</Label>
+                                                        <Input
+                                                            type="text"
+                                                            className="border-gray-300 focus-visible:ring-orange-600"
+                                                            value={formData.solar.existing_inverter_model}
+                                                            onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_model: e.target.value } })}
+                                                            placeholder="Ex: SUN2000-5KTL"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2 md:col-span-2">
+                                                        <Label>Deseja adicionar mais painéis solares?</Label>
+                                                        <div className="grid grid-cols-2 gap-2 max-w-sm">
+                                                            <Button
+                                                                className={`h-12 ${formData.solar.expand_solar ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
+                                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, expand_solar: false } })}
+                                                            >
+                                                                Não
+                                                            </Button>
+                                                            <Button
+                                                                className={`h-12 ${formData.solar.expand_solar ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, expand_solar: true } })}
+                                                            >
+                                                                Sim
+                                                            </Button>
+                                                        </div>
+                                                        {!formData.solar.expand_solar && (
+                                                            <p className="mt-2 text-sm text-gray-500">
+                                                                As sugestões focar-se-ão apenas em baterias para o sistema existente.
+                                                            </p>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="space-y-2 md:col-span-2">
+                                                        <Label>Já tem bateria?</Label>
+                                                        <div className="grid grid-cols-2 gap-2 max-w-sm">
+                                                            <Button
+                                                                className={`h-12 ${formData.solar.has_battery ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
+                                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_battery: false, battery_capacity_kwh: 0, existing_battery_brand: '', existing_battery_model: '', existing_battery_max_power_kw: 0 } })}
+                                                            >
+                                                                Não
+                                                            </Button>
+                                                            <Button
+                                                                className={`h-12 ${formData.solar.has_battery ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_battery: true, battery_capacity_kwh: formData.solar.battery_capacity_kwh || 5 } })}
+                                                            >
+                                                                Sim
+                                                            </Button>
+                                                        </div>
+
+                                                        {formData.solar.has_battery && (
+                                                            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                <div className="space-y-2">
+                                                                    <Label>Capacidade da bateria atual (kWh)</Label>
+                                                                    <Input
+                                                                        type="number"
+                                                                        min="0"
+                                                                        step="0.1"
+                                                                        className="border-gray-300 focus-visible:ring-orange-600"
+                                                                        value={formData.solar.battery_capacity_kwh}
+                                                                        onChange={(e) => handleNumericChange(e.target.value, 'Capacidade da bateria atual', (val) => setFormData({ ...formData, solar: { ...formData.solar, battery_capacity_kwh: val } }))}
+                                                                    />
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <Label>Potência máxima da bateria atual (kW)</Label>
+                                                                    <Input
+                                                                        type="number"
+                                                                        min="0"
+                                                                        step="0.1"
+                                                                        className="border-gray-300 focus-visible:ring-orange-600"
+                                                                        value={formData.solar.existing_battery_max_power_kw}
+                                                                        onChange={(e) => handleNumericChange(e.target.value, 'Potência máxima da bateria atual', (val) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_max_power_kw: val } }))}
+                                                                    />
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <Label>Marca da bateria atual</Label>
+                                                                    <Input
+                                                                        type="text"
+                                                                        className="border-gray-300 focus-visible:ring-orange-600"
+                                                                        value={formData.solar.existing_battery_brand}
+                                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_brand: e.target.value } })}
+                                                                        placeholder="Ex: Huawei"
+                                                                    />
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <Label>Modelo do bateria atual</Label>
+                                                                    <Input
+                                                                        type="text"
+                                                                        className="border-gray-300 focus-visible:ring-orange-600"
+                                                                        value={formData.solar.existing_battery_model}
+                                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_model: e.target.value } })}
+                                                                        placeholder="Ex: Luna2000"
+                                                                    />
+                                                                </div>
+                                                                <p className="text-xs text-gray-500 md:col-span-2">
+                                                                    Estes dados serão considerados como equipamento já instalado no dimensionamento.
+                                                                </p>
                                                             </div>
                                                         )}
                                                     </div>
-                                                    {isAdminMode && (
-                                                        <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
-                                                            <div className="mb-3 flex items-center justify-between gap-3">
-                                                                <p className="text-sm font-semibold">Estimativa deste mês</p>
-                                                                <Badge variant="outline" className="border-gray-300 text-gray-600">
-                                                                    {formData.tariff.type === 'simple' ? 'Simples' : formData.tariff.type === 'bi' ? 'Bi-horário' : 'Tri-horário'}
-                                                                </Badge>
-                                                            </div>
-                                                            <div className="grid gap-3 sm:grid-cols-3">
-                                                                {activeTariffPeriods.map((period) => {
-                                                                    const monthPrices = getBillMonthTariffPrices(formData.tariff.type, entry);
-                                                                    return (
-                                                                        <div key={period.key} className="rounded-md bg-gray-50 border border-gray-200 px-3 py-2">
-                                                                            <p className="text-xs uppercase tracking-widest text-gray-400">{period.label}</p>
-                                                                            <p className="mt-1 font-semibold text-gray-900">
-                                                                                {formatTariffPrice(monthPrices[period.key])}
-                                                                            </p>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                    )}
                                                 </div>
-                                            ))}
+                                            )}
                                         </div>
-                                    </div>
+
+                                        <div className="pt-4 border-t border-gray-200 space-y-4">
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                                <div className="flex items-start gap-3">
+                                                    <Car className="w-5 h-5 mt-1 text-orange-600" />
+                                                    <div>
+                                                        <Label className="mb-1">Tem carro elétrico?</Label>
+                                                        <p className="text-sm text-gray-500">Adicionamos o consumo de carregamento à simulação energética.</p>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2 sm:w-auto">
+                                                    <Button
+                                                        className={`h-12 ${formData.electric_vehicles.has_electric_vehicle ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
+                                                        onClick={() => updateElectricVehicleCount(0)}
+                                                    >
+                                                        Não
+                                                    </Button>
+                                                    <Button
+                                                        className={`h-12 ${formData.electric_vehicles.has_electric_vehicle ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                        onClick={() => updateElectricVehicleCount(Math.max(1, formData.electric_vehicles.count || 1))}
+                                                    >
+                                                        Sim
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            {formData.electric_vehicles.has_electric_vehicle && (
+                                                <div className="space-y-4">
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <div>
+                                                            <p className="text-sm font-semibold">Carros elétricos</p>
+                                                            <p className="text-sm text-gray-500">{formData.electric_vehicles.vehicles.length} adicionados</p>
+                                                        </div>
+                                                        <Button
+                                                            type="button"
+                                                            className="h-10 bg-black text-white hover:bg-gray-800"
+                                                            onClick={addElectricVehicle}
+                                                            disabled={formData.electric_vehicles.vehicles.length >= 6}
+                                                        >
+                                                            <Plus className="w-4 h-4 mr-2" />
+                                                            Adicionar carro
+                                                        </Button>
+                                                    </div>
+
+                                                    <div className="space-y-4">
+                                                        {formData.electric_vehicles.vehicles.map((vehicle: any, index: number) => (
+                                                            <div key={index} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                                                                <div className="mb-3 flex items-center justify-between gap-3">
+                                                                    <div className="font-semibold">Carro {index + 1}</div>
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        className="h-9 border-gray-300 text-black hover:bg-gray-100"
+                                                                        onClick={() => removeElectricVehicle(index)}
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </Button>
+                                                                </div>
+                                                                <div className="grid gap-4 md:grid-cols-4">
+                                                                    <div className="space-y-2">
+                                                                        <Label>Km por dia</Label>
+                                                                        <Input
+                                                                            type="number"
+                                                                            min="0"
+                                                                            className="border-gray-300 focus-visible:ring-orange-600"
+                                                                            value={vehicle.daily_km}
+                                                                            onChange={(e) => handleNumericChange(e.target.value, 'Km por dia', (val) => updateElectricVehicle(index, 'daily_km', val))}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="space-y-2">
+                                                                        <Label>Consumo (kWh/km)</Label>
+                                                                        <Input
+                                                                            type="number"
+                                                                            step="0.01"
+                                                                            min="0"
+                                                                            className="border-gray-300 focus-visible:ring-orange-600"
+                                                                            value={vehicle.consumption_kwh_per_km}
+                                                                            onChange={(e) => handleNumericChange(e.target.value, 'Consumo (kWh/km)', (val) => updateElectricVehicle(index, 'consumption_kwh_per_km', val))}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="space-y-2">
+                                                                        <Label>Marca</Label>
+                                                                        <Input
+                                                                            type="text"
+                                                                            className="border-gray-300 focus-visible:ring-orange-600"
+                                                                            value={vehicle.brand}
+                                                                            onChange={(e) => updateElectricVehicle(index, 'brand', e.target.value)}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="space-y-2">
+                                                                        <Label>Modelo</Label>
+                                                                        <Input
+                                                                            type="text"
+                                                                            className="border-gray-300 focus-visible:ring-orange-600"
+                                                                            value={vehicle.model}
+                                                                            onChange={(e) => updateElectricVehicle(index, 'model', e.target.value)}
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                                <div className="mt-4 space-y-2">
+                                                                    <Label>Quando carrega normalmente?</Label>
+                                                                    <div className="grid gap-2 md:grid-cols-3">
+                                                                        {[
+                                                                            { key: 'night', label: 'Só à noite' },
+                                                                            { key: 'day', label: 'Durante o dia' },
+                                                                            { key: 'mixed', label: 'Dia e noite' },
+                                                                        ].map((option) => (
+                                                                            <Button
+                                                                                key={option.key}
+                                                                                className={`h-11 ${vehicle.charging_schedule === option.key ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                                                onClick={() => updateElectricVehicle(index, 'charging_schedule', option.key)}
+                                                                            >
+                                                                                {option.label}
+                                                                            </Button>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {mode === 'bill' && (
+                                            <div className="pt-4 border-t border-gray-200 space-y-4">
+                                                <div className="grid gap-4 md:grid-cols-2">
+                                                    <div className="space-y-2">
+                                                        <Label>Meses de histórico</Label>
+                                                        <Input
+                                                            type="number"
+                                                            min="1"
+                                                            max="12"
+                                                            className="border-gray-300 focus-visible:ring-orange-600"
+                                                            value={formData.bill.historyMonths}
+                                                            onChange={(e) => {
+                                                                const val = Number(e.target.value);
+                                                                if (val < 0) {
+                                                                    toast({
+                                                                        title: 'Valor Inválido',
+                                                                        description: 'O número de meses não pode ser negativo.',
+                                                                        variant: 'destructive',
+                                                                    });
+                                                                    return;
+                                                                }
+                                                                const months = Math.min(12, Math.max(1, val || 1));
+                                                                const history = [...formData.bill.history];
+                                                                if (history.length < months) {
+                                                                    history.push(...Array(months - history.length).fill(null).map(() => createHistoryEntry(formData.tariff.type)));
+                                                                } else {
+                                                                    history.length = months;
+                                                                }
+                                                                setFormData({ ...formData, bill: { ...formData.bill, historyMonths: months, history } });
+                                                            }}
+                                                        />
+                                                        <p className="text-sm text-gray-500">Até 12 meses de consumo anteriores para maior precisão.</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-4">
+                                                    {formData.bill.history.slice(0, formData.bill.historyMonths).map((entry: any, index: number) => (
+                                                        <div key={index} className="rounded-xl border border-gray-200 p-4 bg-gray-50">
+                                                            <div className="font-semibold mb-3">Mês {index + 1}</div>
+                                                            <div className={`grid gap-4 ${formData.tariff.type === 'tri' ? (formData.solar.has_solar ? 'md:grid-cols-5' : 'md:grid-cols-4') : formData.tariff.type === 'bi' ? (formData.solar.has_solar ? 'md:grid-cols-4' : 'md:grid-cols-3') : (formData.solar.has_solar ? 'md:grid-cols-3' : 'md:grid-cols-2')}`}>
+                                                                {formData.tariff.type === 'simple' && (
+                                                                    <div className="space-y-2">
+                                                                        <Label>Consumo (kWh)</Label>
+                                                                        <Input
+                                                                            type="number"
+                                                                            min="0"
+                                                                            className="border-gray-300 focus-visible:ring-orange-600"
+                                                                            value={entry.simple ?? ''}
+                                                                            onChange={(e) => handleNumericChange(e.target.value, 'Consumo', (val) => {
+                                                                                const history = [...formData.bill.history];
+                                                                                history[index] = { ...history[index], simple: val };
+                                                                                setFormData({ ...formData, bill: { ...formData.bill, history } });
+                                                                            })}
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                                {formData.tariff.type !== 'simple' && (
+                                                                    <>
+                                                                        <div className="space-y-2">
+                                                                            <Label>Vazio (kWh)</Label>
+                                                                            <Input
+                                                                                type="number"
+                                                                                min="0"
+                                                                                className="border-gray-300 focus-visible:ring-orange-600"
+                                                                                value={entry.offPeak ?? ''}
+                                                                                onChange={(e) => handleNumericChange(e.target.value, 'Vazio', (val) => {
+                                                                                    const history = [...formData.bill.history];
+                                                                                    history[index] = { ...history[index], offPeak: val };
+                                                                                    setFormData({ ...formData, bill: { ...formData.bill, history } });
+                                                                                })}
+                                                                            />
+                                                                        </div>
+                                                                        <div className="space-y-2">
+                                                                            <Label>Cheia (kWh)</Label>
+                                                                            <Input
+                                                                                type="number"
+                                                                                min="0"
+                                                                                className="border-gray-300 focus-visible:ring-orange-600"
+                                                                                value={entry.peak ?? ''}
+                                                                                onChange={(e) => handleNumericChange(e.target.value, 'Cheia', (val) => {
+                                                                                    const history = [...formData.bill.history];
+                                                                                    history[index] = { ...history[index], peak: val };
+                                                                                    setFormData({ ...formData, bill: { ...formData.bill, history } });
+                                                                                })}
+                                                                            />
+                                                                        </div>
+                                                                        {formData.tariff.type === 'tri' && (
+                                                                            <div className="space-y-2">
+                                                                                <Label>Ponta (kWh)</Label>
+                                                                                <Input
+                                                                                    type="number"
+                                                                                    min="0"
+                                                                                    className="border-gray-300 focus-visible:ring-orange-600"
+                                                                                    value={entry.ponta ?? ''}
+                                                                                    onChange={(e) => handleNumericChange(e.target.value, 'Ponta', (val) => {
+                                                                                        const history = [...formData.bill.history];
+                                                                                        history[index] = { ...history[index], ponta: val };
+                                                                                        setFormData({ ...formData, bill: { ...formData.bill, history } });
+                                                                                    })}
+                                                                                />
+                                                                            </div>
+                                                                        )}
+                                                                    </>
+                                                                )}
+                                                                <div className="space-y-2">
+                                                                    <Label>Valor da fatura</Label>
+                                                                    <div className="relative">
+                                                                        <Input
+                                                                            type="number"
+                                                                            min="0"
+                                                                            step="0.01"
+                                                                            className="border-gray-300 focus-visible:ring-orange-600 pr-8"
+                                                                            value={entry.bill_total ?? ''}
+                                                                            onChange={(e) => handleNumericChange(e.target.value, 'Valor da fatura', (val) => {
+                                                                                const history = [...formData.bill.history];
+                                                                                history[index] = { ...history[index], bill_total: val };
+                                                                                setFormData({ ...formData, bill: { ...formData.bill, history } });
+                                                                            })}
+                                                                        />
+                                                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
+                                                                    </div>
+                                                                </div>
+                                                                {formData.solar.has_solar && (
+                                                                    <div className="space-y-2">
+                                                                        <Label>Produção solar (kWh)</Label>
+                                                                        <Input
+                                                                            type="number"
+                                                                            min="0"
+                                                                            className="border-gray-300 focus-visible:ring-orange-600"
+                                                                            value={entry.production ?? ''}
+                                                                            onChange={(e) => handleNumericChange(e.target.value, 'Produção solar', (val) => {
+                                                                                const history = [...formData.bill.history];
+                                                                                history[index] = { ...history[index], production: val };
+                                                                                setFormData({ ...formData, bill: { ...formData.bill, history } });
+                                                                            })}
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            {isAdminMode && (
+                                                                <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+                                                                    <div className="mb-3 flex items-center justify-between gap-3">
+                                                                        <p className="text-sm font-semibold">Estimativa deste mês</p>
+                                                                        <Badge variant="outline" className="border-gray-300 text-gray-600">
+                                                                            {formData.tariff.type === 'simple' ? 'Simples' : formData.tariff.type === 'bi' ? 'Bi-horário' : 'Tri-horário'}
+                                                                        </Badge>
+                                                                    </div>
+                                                                    <div className="grid gap-3 sm:grid-cols-3">
+                                                                        {activeTariffPeriods.map((period) => {
+                                                                            const monthPrices = getBillMonthTariffPrices(formData.tariff.type, entry);
+                                                                            return (
+                                                                                <div key={period.key} className="rounded-md bg-gray-50 border border-gray-200 px-3 py-2">
+                                                                                    <p className="text-xs uppercase tracking-widest text-gray-400">{period.label}</p>
+                                                                                    <p className="mt-1 font-semibold text-gray-900">
+                                                                                        {formatTariffPrice(monthPrices[period.key])}
+                                                                                    </p>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
-                            </>
-                        )}
 
-                        <div className="pt-4 border-t border-gray-200">
-                            <Label>Qual o valor máximo de investimento que pretende? (Opcional)</Label>
-                            <div className="mt-2 relative max-w-sm">
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    placeholder="Ex: 5000"
-                                    className="border-gray-300 focus-visible:ring-orange-600 pr-8"
-                                    value={formData.max_investment}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
-                                        if (val !== '' && Number(val) < 0) {
-                                            toast({
-                                                title: 'Valor Inválido',
-                                                description: 'O valor para "Investimento Máximo" não pode ser negativo.',
-                                                variant: 'destructive',
-                                            });
-                                            return;
-                                        }
-                                        setFormData({ ...formData, max_investment: val });
-                                    }}
-                                />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
-                            </div>
-                            <p className="mt-1 text-xs text-gray-500">Se deixar em branco, mostraremos todas as opções disponíveis.</p>
-                        </div>
+                                <div className="pt-4 border-t border-gray-200">
+                                    <Label>Qual o valor máximo de investimento que pretende? (Opcional)</Label>
+                                    <div className="mt-2 relative max-w-sm">
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            placeholder="Ex: 5000"
+                                            className="border-gray-300 focus-visible:ring-orange-600 pr-8"
+                                            value={formData.max_investment}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val !== '' && Number(val) < 0) {
+                                                    toast({
+                                                        title: 'Valor Inválido',
+                                                        description: 'O valor para "Investimento Máximo" não pode ser negativo.',
+                                                        variant: 'destructive',
+                                                    });
+                                                    return;
+                                                }
+                                                setFormData({ ...formData, max_investment: val });
+                                            }}
+                                        />
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
+                                    </div>
+                                    <p className="mt-1 text-xs text-gray-500">Se deixar em branco, mostraremos todas as opções disponíveis.</p>
+                                </div>
 
-                        <div className="flex gap-3 pt-4">
-                            <Button variant="outline" className="border-gray-300 text-black hover:bg-gray-100" onClick={() => goToStep(1, null)}>
-                                <ChevronLeft className="mr-2 w-4 h-4" /> Voltar
-                            </Button>
-                            <Button className="flex-grow bg-orange-600 hover:bg-orange-700 text-white h-12 text-lg" onClick={runSimulation} disabled={loading}>
-                                {loading ? <Loader2 className="animate-spin mr-2" /> : "Gerar Recomendação"}
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
+                                <div className="flex gap-3 pt-4">
+                                    <Button variant="outline" className="border-gray-300 text-black hover:bg-gray-100" onClick={() => goToStep(1, null)}>
+                                        <ChevronLeft className="mr-2 w-4 h-4" /> Voltar
+                                    </Button>
+                                    <Button className="flex-grow bg-orange-600 hover:bg-orange-700 text-white h-12 text-lg" onClick={runSimulation} disabled={loading}>
+                                        {loading ? <Loader2 className="animate-spin mr-2" /> : "Gerar Recomendação"}
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* Step 3: Results */}
                     {step === 3 && results && (
@@ -2571,9 +2616,17 @@ export default function Simulator() {
                                     <h2 className="text-2xl font-bold">Análise de Resultados</h2>
                                     <p className="text-sm text-gray-500">Explore as melhores sugestões ou analise todas as soluções geradas.</p>
                                 </div>
-                                <Button onClick={downloadProposalsPdf} className="bg-black text-white hover:bg-gray-800" disabled={!results?.recommendations?.length}>
-                                    <FileText className="mr-2 h-4 w-4" />
-                                    Descarregar PDF
+                                <Button
+                                    onClick={handlePremiumInterest}
+                                    className="bg-gradient-to-r from-orange-600 to-orange-500 text-white hover:from-orange-700 hover:to-orange-600 shadow-lg border-b-4 border-orange-800 active:border-b-0 active:translate-y-1 transition-all"
+                                    disabled={isSubmittingPremium || !results?.recommendations?.length}
+                                >
+                                    {isSubmittingPremium ? (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <FileText className="mr-2 h-4 w-4" />
+                                    )}
+                                    Descarregar Relatório Técnico Detalhado - 9,90€
                                 </Button>
                             </div>
 
@@ -3172,6 +3225,30 @@ export default function Simulator() {
             </main >
 
             <Footer />
+
+            <Dialog open={isPremiumModalOpen} onOpenChange={setIsPremiumModalOpen}>
+                <DialogContent className="sm:max-w-md bg-white">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+                            <Sparkles className="w-5 h-5 text-orange-600" />
+                            Ups!
+                        </DialogTitle>
+                        <div className="pt-4 text-base text-gray-700 leading-relaxed space-y-4">
+                            <p>
+                                Esta funcionalidade premium ainda está em fase final de desenvolvimento.
+                            </p>
+                            <p>
+                                Registámos o seu interesse e iremos entrar em contacto assim que estiver disponivel!
+                            </p>
+                        </div>
+                    </DialogHeader>
+                    <div className="flex justify-center pt-6">
+                        <Button onClick={() => setIsPremiumModalOpen(false)} className="bg-orange-600 hover:bg-orange-700 text-white px-10 h-12 text-lg font-bold rounded-xl shadow-md transition-all active:scale-95">
+                            Perfeito, obrigado!
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div >
     );
 }

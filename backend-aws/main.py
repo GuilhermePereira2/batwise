@@ -165,6 +165,52 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 # --- NOVO ENDPOINT: Deduzir Créditos ---
 
 
+@app.post("/api/premium-report-interest")
+async def premium_report_interest(current_user: dict = Depends(get_current_user)):
+    try:
+        email = current_user.get("email")
+        
+        # Verificar se as credenciais de email estão configuradas
+        if not os.getenv("MAIL_USERNAME") or not os.getenv("MAIL_PASSWORD"):
+            print("⚠️ Aviso: MAIL_USERNAME ou MAIL_PASSWORD não configurados no .env")
+            # Continuamos para que o frontend mostre o modal, mesmo que o mail falhe internamente
+            # Ou podemos lançar erro se quisermos ser rigorosos
+        
+        email_body = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; color: #111827;">
+            <h2 style="color: #ea580c;">NOVA LEAD PREMIUM</h2>
+            <p>Um utilizador demonstrou interesse no <strong>Relatório Técnico Detalhado (9,90€)</strong>.</p>
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+            <p><strong>Email do Utilizador:</strong> {email}</p>
+            <p><strong>Data/Hora:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC</p>
+        </div>
+        """
+
+        message = MessageSchema(
+            subject="NOVA LEAD PREMIUM: Interesse no Relatório de 9,90€",
+            recipients=["general@watt-builder.com"],
+            body=email_body,
+            subtype=MessageType.html,
+        )
+
+        try:
+            fm = FastMail(conf)
+            await fm.send_message(message)
+        except Exception as mail_err:
+            print(f"❌ Erro ao enviar email de lead premium: {mail_err}")
+            # Não lançamos erro 500 para o utilizador não ver falha no modal
+            # Mas imprimimos no log para o admin ver
+
+        return {"status": "success"}
+
+    except Exception as e:
+        import traceback
+        error_msg = f"Erro ao registar interesse premium: {str(e)}"
+        print(error_msg)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=error_msg)
+
+
 @app.get("/")
 def read_root():
     """Endpoint de saúde para verificar se os dados carregaram bem."""
