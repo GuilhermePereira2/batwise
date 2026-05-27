@@ -18,6 +18,7 @@ from .simulation import (
 )
 from .tariffs import build_hourly_prices, should_allow_grid_arbitrage
 from .utils import clamp_float, discounted_value
+from .retrofit import match_existing_inverter
 
 
 def optimize_home_battery(
@@ -38,6 +39,35 @@ def optimize_home_battery(
 
     assumptions = assumptions or {}
     solar = solar or {}
+
+    # Retrofit Matching logic - Resilient retrieval
+    # Procura em solar, depois em input_data, depois em form_data
+    current_inv_brand = (
+        solar.get("existing_inverter_brand") or
+        solar.get("current_inverter_brand") or 
+        input_data.get("existing_inverter_brand") or
+        input_data.get("current_inverter_brand") or 
+        (input_data.get("form_data") or {}).get("existing_inverter_brand") or
+        (input_data.get("form_data") or {}).get("current_inverter_brand") or
+        (input_data.get("eredes") or {}).get("existing_inverter_brand") or
+        (input_data.get("eredes") or {}).get("current_inverter_brand")
+    )
+    current_inv_model = (
+        solar.get("existing_inverter_model") or
+        solar.get("current_inverter_model") or 
+        input_data.get("existing_inverter_model") or
+        input_data.get("current_inverter_model") or 
+        (input_data.get("form_data") or {}).get("existing_inverter_model") or
+        (input_data.get("form_data") or {}).get("current_inverter_model") or
+        (input_data.get("eredes") or {}).get("existing_inverter_model") or
+        (input_data.get("eredes") or {}).get("current_inverter_model")
+    )
+    
+    matched_inverter, match_confidence = match_existing_inverter(
+        current_inv_brand, 
+        current_inv_model, 
+        (catalog or {}).get("inverters", [])
+    )
 
     # Step 1: convert the user's form data into a synthetic hourly year.
     profile, profile_summary = build_hourly_profile(
@@ -164,6 +194,8 @@ def optimize_home_battery(
         estimate_roof_area_m2(input_data),
         project_years=project_years,
         max_investment=max_investment,
+        matched_inverter=matched_inverter,
+        match_confidence=match_confidence,
     )
 
     # Step 5: Tariff Optimization Insight (Calculate if other tariffs are better)
@@ -239,6 +271,13 @@ def optimize_home_battery(
             "optimized_annual_cost_eur": selected["annual_cost_eur"],
             "savings_annual_eur": selected["annual_savings_eur"],
             "payback_years": selected["payback_years"],
+            "retrofit_match": {
+                "brand": current_inv_brand,
+                "model": current_inv_model,
+                "matched_id": matched_inverter.get("id") if matched_inverter else None,
+                "confidence": round(match_confidence, 1),
+                "is_hybrid": (matched_inverter.get("specs") or {}).get("is_hybrid") if matched_inverter else False
+            } if current_inv_brand else None
         },
         "recommendations": ranked_results.get("best", []),
         "all_recommendations": ranked_results.get("all", []),
@@ -255,7 +294,7 @@ def optimize_home_battery(
             "component_margin": component_margin,
             "installation_margin": installation_margin,
         },
-        "notes": build_notes(mode, profile_summary, selected, selection_reason)
+        "notes": build_notes(mode, profile_summary, selected, selection_reason, matched_inverter, match_confidence)
         + [
             "O preço instalado estimado soma bateria, inversor e painéis.",
         ],
@@ -267,7 +306,14 @@ def optimize_home_battery(
     }
 
 
-def build_notes(mode: str, profile_summary: Dict[str, float], selected: Dict[str, Any], reason: str) -> List[str]:
+def build_notes(
+    mode: str, 
+    profile_summary: Dict[str, float], 
+    selected: Dict[str, Any], 
+    reason: str,
+    matched_inverter: Optional[Dict[str, Any]] = None,
+    match_confidence: float = 0.0
+) -> List[str]:
     """Build human-readable caveats shown next to the simulator results."""
 
     notes = [
@@ -287,6 +333,11 @@ def build_notes(mode: str, profile_summary: Dict[str, float], selected: Dict[str
     if selected["capacity_kwh"] == 0:
         notes.append(
             "Com estes dados, não há caso económico claro para instalar bateria.")
+
+    if match_confidence > 0 and match_confidence < 75.0:
+        notes.append("Inversor atual não reconhecido com certeza. Orçamentada substituição do equipamento para garantir compatibilidade.")
+    elif matched_inverter:
+        notes.append(f"Inversor atual reconhecido: {matched_inverter.get('brand')} {matched_inverter.get('model')}. Otimização de custos aplicada.")
 
     notes.append("As recomendações fornecidas pela Watt Builder são estimativas baseadas nos dados introduzidos pelo utilizador e em modelos de simulação. Não constituem aconselhamento financeiro, técnico ou contratual. A decisão final de compra é da responsabilidade do utilizador.")
     notes.append("Os valores de poupança apresentados são estimativas e podem variar consoante condições reais de instalação, uso e mercado energético.")

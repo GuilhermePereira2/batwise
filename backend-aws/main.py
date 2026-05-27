@@ -1170,6 +1170,21 @@ def parse_json_list(value):
 @app.post("/api/simulator/size")
 async def size_battery(req: SimulatorRequest, current_user: dict = Depends(get_current_user)):
     payload = req.model_dump(mode="json")
+    
+    # DEBUG TOTAL: Versão limpa para não inundar o terminal
+    def clean_payload(d):
+        if isinstance(d, dict):
+            return {k: clean_payload(v) for k, v in d.items()}
+        elif isinstance(d, list):
+            if len(d) > 20:
+                return f"[LISTA LONGA: {len(d)} itens]"
+            return [clean_payload(x) for x in d]
+        return d
+
+    print("--- DEBUG CLEAN PAYLOAD ---", flush=True)
+    print(json.dumps(clean_payload(payload), indent=2), flush=True)
+    print("---------------------------", flush=True)
+
     try:
         db_users.save_simulation_input(
             current_user,

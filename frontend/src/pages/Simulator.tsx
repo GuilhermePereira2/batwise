@@ -39,6 +39,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ChartTooltip } from "@/components/ui/chart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle } from 'lucide-react';
 
 type InputMode = 'house' | 'bill' | 'eredes';
 type TariffType = 'simple' | 'bi' | 'tri';
@@ -376,12 +378,13 @@ export default function Simulator() {
     const filteredRecommendations = React.useMemo(() => {
         const items = [...(results?.all_recommendations || [])];
         return items.filter(rec => {
-            const hasBattery = !!rec.battery;
-            const hasSolar = !!rec.solar_panels;
+            const isHybrid = rec.new_battery_added && rec.new_panels_added;
+            const isSolarOnly = !rec.new_battery_added && rec.new_panels_added;
+            const isBatteryOnly = rec.new_battery_added && !rec.new_panels_added;
 
-            if (filterType === 'battery_only') return hasBattery && !hasSolar;
-            if (filterType === 'solar_only') return hasSolar && !hasBattery;
-            if (filterType === 'hybrid') return hasBattery && hasSolar;
+            if (filterType === 'battery_only') return isBatteryOnly;
+            if (filterType === 'solar_only') return isSolarOnly;
+            if (filterType === 'hybrid') return isHybrid;
             return true;
         });
     }, [results?.all_recommendations, filterType]);
@@ -1066,6 +1069,14 @@ export default function Simulator() {
                 (simulationInput as any).csv_profile = formData.eredes.csv_profile;
             }
 
+            let cleanFormData = { ...formData };
+            if (mode !== 'eredes') {
+                cleanFormData.eredes = {
+                    ...cleanFormData.eredes,
+                    csv_profile: null // Don't send heavy profile if not in eredes mode
+                };
+            }
+
             const response = await fetch(getApiUrl('api/simulator/size'), {
                 method: 'POST',
                 headers: {
@@ -1079,7 +1090,7 @@ export default function Simulator() {
                     solar: mode === 'eredes' ? { ...formData.solar, has_solar: formData.eredes.has_solar_before } : formData.solar,
                     max_investment: formData.max_investment ? Number(formData.max_investment) : null,
                     assumptions: { battery_dod: 0.9, system_losses: 0.1, component_margin: 0.1, installation_margin: 0.25 },
-                    form_data: formData,
+                    form_data: cleanFormData,
                     client_timezone: clientTimezone,
                 }),
             });
@@ -2673,6 +2684,23 @@ export default function Simulator() {
                                 <DebugSimulationChart data={results.debug_series} />
                             )}
 
+                            {/* Retrofit Match Warning */}
+                            {results?.summary?.retrofit_match && !results.summary.retrofit_match.matched_id && (
+                                <Alert className="bg-amber-50 border-amber-200 text-amber-900 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
+                                    <AlertTriangle className="h-5 w-5 text-amber-600" />
+                                    <div className="ml-2">
+                                        <AlertTitle className="font-bold flex items-center gap-2">
+                                            Equipamento atual não reconhecido
+                                        </AlertTitle>
+                                        <AlertDescription className="mt-1 text-amber-800 leading-relaxed">
+                                            Não conseguimos identificar com total certeza o modelo <strong>{results.summary.retrofit_match.brand} {results.summary.retrofit_match.model}</strong> na nossa base de dados técnica.
+                                            <br />
+                                            Por segurança, as soluções abaixo incluem a <strong>substituição total do inversor</strong> para garantir compatibilidade a 100%. Se o seu equipamento atual for recente, contacte-nos para avaliarmos um orçamento personalizado reaproveitando o seu hardware.
+                                        </AlertDescription>
+                                    </div>
+                                </Alert>
+                            )}
+
                             <Tabs defaultValue="best" value={activeTab} onValueChange={setActiveTab} className="w-full">
                                 <TabsList className="grid w-full max-w-md grid-cols-2 mb-8 h-12 p-1 bg-gray-100 rounded-xl">
                                     <TabsTrigger value="best" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
@@ -2908,12 +2936,13 @@ export default function Simulator() {
                                                                     content={({ active, payload }) => {
                                                                         if (active && payload && payload.length) {
                                                                             const data = payload[0].payload;
-                                                                            const isHybrid = !!data.battery && !!data.solar_panels;
-                                                                            const isSolarOnly = !data.battery && !!data.solar_panels;
-                                                                            const isBatteryOnly = !!data.battery && !data.solar_panels;
+                                                                            // Novas flags vindas do backend para categorização precisa
+                                                                            const isHybrid = data.new_battery_added && data.new_panels_added;
+                                                                            const isSolarOnly = !data.new_battery_added && data.new_panels_added;
+                                                                            const isBatteryOnly = data.new_battery_added && !data.new_panels_added;
 
                                                                             return (
-                                                                                <div className="bg-white/95 backdrop-blur-sm p-5 border border-gray-200 shadow-2xl rounded-2xl min-w-[280px] animate-in fade-in zoom-in-95 duration-200">
+                                                                                <div className="bg-white/95 backdrop-blur-sm p-5 border border-gray-200 shadow-2xl rounded-2xl min-w-[280px]">
                                                                                     <div className="flex items-center justify-between mb-3">
                                                                                         <Badge className={isHybrid ? 'bg-orange-600' : isSolarOnly ? 'bg-blue-600' : 'bg-emerald-600'}>
                                                                                             {isHybrid ? 'Híbrido' : isSolarOnly ? 'Só Solar' : 'Só Bateria'}
@@ -2923,7 +2952,7 @@ export default function Simulator() {
 
                                                                                     <div className="space-y-3">
                                                                                         <div className="space-y-1.5 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                                                                            {data.battery && (
+                                                                                            {data.new_battery_added && data.battery && (
                                                                                                 <div className="flex items-center gap-2 text-xs">
                                                                                                     <Battery className="w-3.5 h-3.5 text-orange-600" />
                                                                                                     <span className="font-medium truncate">{getBatteryDescription(data)}</span>
@@ -2932,10 +2961,13 @@ export default function Simulator() {
                                                                                             {data.inverter && (
                                                                                                 <div className="flex items-center gap-2 text-xs">
                                                                                                     <Zap className="w-3.5 h-3.5 text-blue-600" />
-                                                                                                    <span className="font-medium truncate">{data.inverter.brand} {data.inverter.model}</span>
+                                                                                                    <span className="font-medium truncate">
+                                                                                                        {data.inverter.brand} {data.inverter.model}
+                                                                                                        {data.is_retrofit && <span className="ml-1 text-[10px] text-emerald-600 font-bold">(Inversor atual)</span>}
+                                                                                                    </span>
                                                                                                 </div>
                                                                                             )}
-                                                                                            {data.solar_panels && (
+                                                                                            {data.new_panels_added && data.solar_panels && (
                                                                                                 <div className="flex items-center gap-2 text-xs">
                                                                                                     <Sun className="w-3.5 h-3.5 text-amber-500" />
                                                                                                     <span className="font-medium truncate">{data.solar_panels.quantity}x {data.solar_panels.panel?.brand || 'Painéis'}</span>
@@ -2953,12 +2985,12 @@ export default function Simulator() {
                                                                                                 <span className="font-bold text-emerald-600">{formatPrice(data.savings_annual_eur)}</span>
                                                                                             </div>
                                                                                             <div className="flex flex-col">
-                                                                                                <span className="text-gray-500">Potência Solar</span>
-                                                                                                <span className="font-bold text-gray-900">{data.panel_power_kwp} kWp</span>
+                                                                                                <span className="text-gray-500">Novo Solar</span>
+                                                                                                <span className="font-bold text-gray-900">{data.new_panels_added ? data.solar_panels.added_power_kwp || data.panel_power_kwp : 0} kWp</span>
                                                                                             </div>
                                                                                             <div className="flex flex-col">
-                                                                                                <span className="text-gray-500">Capacidade Bat.</span>
-                                                                                                <span className="font-bold text-gray-900">{data.new_battery_capacity_kwh} kWh</span>
+                                                                                                <span className="text-gray-500">Nova Bat.</span>
+                                                                                                <span className="font-bold text-gray-900">{data.new_battery_added ? data.new_battery_capacity_kwh : 0} kWh</span>
                                                                                             </div>
                                                                                         </div>
                                                                                         <p className="text-[10px] text-orange-500 font-bold text-center mt-2 animate-pulse">CLIQUE PARA MAIS DETALHES</p>
@@ -2971,26 +3003,26 @@ export default function Simulator() {
                                                                 />
                                                                 <Scatter
                                                                     name="Híbridas"
-                                                                    data={filteredRecommendations.filter(r => !!r.battery && !!r.solar_panels)}
+                                                                    data={filteredRecommendations.filter(r => r.new_battery_added && r.new_panels_added)}
                                                                     fill="#ea580c"
                                                                     size={100}
-                                                                    className="cursor-pointer transition-all hover:scale-125"
+                                                                    className="cursor-pointer transition-transform"
                                                                     onClick={(data) => setSelectedRecommendation(data)}
                                                                 />
                                                                 <Scatter
                                                                     name="Só Bateria"
-                                                                    data={filteredRecommendations.filter(r => !!r.battery && !r.solar_panels)}
+                                                                    data={filteredRecommendations.filter(r => r.new_battery_added && !r.new_panels_added)}
                                                                     fill="#10b981"
                                                                     size={100}
-                                                                    className="cursor-pointer transition-all hover:scale-125"
+                                                                    className="cursor-pointer transition-transform"
                                                                     onClick={(data) => setSelectedRecommendation(data)}
                                                                 />
                                                                 <Scatter
                                                                     name="Só Solar"
-                                                                    data={filteredRecommendations.filter(r => !r.battery && !!r.solar_panels)}
+                                                                    data={filteredRecommendations.filter(r => !r.new_battery_added && r.new_panels_added)}
                                                                     fill="#2563eb"
                                                                     size={100}
-                                                                    className="cursor-pointer transition-all hover:scale-125"
+                                                                    className="cursor-pointer transition-transform"
                                                                     onClick={(data) => setSelectedRecommendation(data)}
                                                                 />
                                                             </ScatterChart>
