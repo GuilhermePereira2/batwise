@@ -338,7 +338,7 @@ export default function Simulator() {
 
             toast({
                 title: 'Ficheiro processado',
-                description: `O ficheiro "${file.name}" foi processado com sucesso (8760 horas geradas).`,
+                description: `O ficheiro "${file.name}" foi processado com sucesso.`,
             });
         } catch (error: any) {
             console.error('Erro no upload:', error);
@@ -555,10 +555,10 @@ export default function Simulator() {
 
     const downloadDebugCSV = () => {
         if (!results?.debug_series) return;
-        
+
         const { load, pv, soc } = results.debug_series;
         const rows = [['Hora', 'Consumo (kWh)', 'Producao Solar (kWh)', 'Estado Bateria (kWh)']];
-        
+
         for (let i = 0; i < load.length; i++) {
             rows.push([
                 i.toString(),
@@ -567,7 +567,7 @@ export default function Simulator() {
                 (soc[i] || 0).toString().replace('.', ',')
             ]);
         }
-        
+
         const csvContent = rows.map(e => e.join(";")).join("\n");
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
