@@ -32,6 +32,12 @@ write_frontend_env() {
   if [ -n "$google_client_id" ]; then
     echo "VITE_GOOGLE_CLIENT_ID=$google_client_id" >> "$FRONTEND_ENV_FILE"
   fi
+
+  local mapbox_token
+  mapbox_token="$(grep "^VITE_MAPBOX_TOKEN=" "$ENV_EXAMPLE" | head -n 1 | cut -d= -f2- || true)"
+  if [ -n "$mapbox_token" ]; then
+    echo "VITE_MAPBOX_TOKEN=$mapbox_token" >> "$FRONTEND_ENV_FILE"
+  fi
 }
 
 case $CHOICE in

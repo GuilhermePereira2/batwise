@@ -42,6 +42,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from 'lucide-react';
 
+const RoofMapPicker = React.lazy(() => import('@/components/RoofMapPicker'));
+
 type InputMode = 'house' | 'bill' | 'eredes';
 type TariffType = 'simple' | 'bi' | 'tri';
 type TariffPeriod = 'simple' | 'offPeak' | 'peak' | 'ponta';
@@ -271,7 +273,15 @@ const DEFAULT_STATE = {
         existing_battery_brand: '',
         existing_battery_model: '',
         existing_battery_max_power_kw: 0,
-        expand_solar: true
+        expand_solar: true,
+        roof_mapping: {
+            enabled: false,
+            address: '',
+            center: null,
+            polygon: null,
+            area_m2: 0,
+            provider: 'mapbox' as const,
+        },
     },
     max_investment: '',
     electric_vehicles: {
@@ -694,6 +704,9 @@ export default function Simulator() {
         lines.push(`Tarifa: ${formData.tariff.type}`);
         lines.push(`Localização: ${formData.solar.location ? formData.solar.location + ', ' : ''}${formData.solar.city}, ${formData.solar.country}`);
         lines.push(`Rede: ${formData.solar.grid_type === 'single_phase' ? 'Monofásica' : formData.solar.grid_type === 'three_phase' ? 'Trifásica' : 'Não indicada'}`);
+        if (formData.solar.roof_mapping?.enabled) {
+            lines.push(`Telhado no mapa: ${formData.solar.roof_mapping.polygon ? `Sim (${formData.solar.roof_mapping.area_m2} m2)` : 'Selecionado, sem polígono desenhado'}`);
+        }
 
         if (formData.solar.has_solar) {
             lines.push(`Solar: Sim (${formData.solar.peak_kw} kWp)`);
@@ -772,7 +785,14 @@ export default function Simulator() {
                         ...(parsed.tariff?.prices || {})
                     }
                 },
-                solar: { ...DEFAULT_STATE.solar, ...(parsed.solar || {}) },
+                solar: {
+                    ...DEFAULT_STATE.solar,
+                    ...(parsed.solar || {}),
+                    roof_mapping: {
+                        ...DEFAULT_STATE.solar.roof_mapping,
+                        ...(parsed.solar?.roof_mapping || {}),
+                    },
+                },
                 max_investment: parsed.max_investment ?? DEFAULT_STATE.max_investment,
                 electric_vehicles: normalizeElectricVehicles(parsed.electric_vehicles || DEFAULT_STATE.electric_vehicles),
                 eredes: parsed.eredes || DEFAULT_STATE.eredes
@@ -1016,6 +1036,15 @@ export default function Simulator() {
         // Investment Validation
         if (formData.max_investment !== '' && Number(formData.max_investment) < 0) {
             errors.push('Investimento Máximo');
+        }
+
+        if (formData.solar.roof_mapping?.enabled && !formData.solar.roof_mapping.polygon) {
+            toast({
+                title: 'Telhado em falta',
+                description: 'Desenhe o polígono do telhado no mapa ou selecione "Não" nesta opção.',
+                variant: 'destructive',
+            });
+            return;
         }
 
         if (errors.length > 0) {
@@ -1481,6 +1510,22 @@ export default function Simulator() {
     };
     const activeTariffPeriods = getTariffPeriods(formData.tariff.type);
     const estimatedHouseTariffPrices = getHouseTariffPrices(formData.tariff.type, formData.house);
+    const roofMapDefaultQuery = [formData.solar.location, formData.solar.city, formData.solar.country].filter(Boolean).join(', ');
+    const renderRoofMapPicker = () => (
+        <React.Suspense fallback={<div className="pt-4 border-t border-gray-200 text-sm text-gray-500">A carregar mapa...</div>}>
+            <RoofMapPicker
+                value={formData.solar.roof_mapping}
+                defaultQuery={roofMapDefaultQuery}
+                onChange={(roofMapping) => setFormData({
+                    ...formData,
+                    solar: {
+                        ...formData.solar,
+                        roof_mapping: roofMapping,
+                    },
+                })}
+            />
+        </React.Suspense>
+    );
 
     return (
         <div className="flex flex-col min-h-screen bg-white text-black">
@@ -1810,6 +1855,7 @@ export default function Simulator() {
                                                     </Button>
                                                 </div>
                                             </div>
+                                            {renderRoofMapPicker()}
                                         </div>
 
                                         <div className="space-y-4 pt-4 border-t border-gray-100">
@@ -2140,6 +2186,7 @@ export default function Simulator() {
                                                     </p>
                                                 )}
                                             </div>
+                                            {renderRoofMapPicker()}
                                         </div>
 
                                         <div className="pt-4 border-t border-gray-200 space-y-4">
