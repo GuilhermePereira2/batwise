@@ -1487,7 +1487,7 @@ export default function Simulator() {
             <Navigation />
 
             <main className="flex-grow py-12">
-                <div className="max-w-5xl mx-auto px-4">
+                <div className="max-w-7xl mx-auto px-4">
 
                     {/* Progress Header */}
                     <div className="text-center mb-10 mt-20">
@@ -1519,7 +1519,7 @@ export default function Simulator() {
 
                     {/* Step 1: Selection */}
                     {step === 1 && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-500">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-500">
                             <Card
                                 onClick={() => goToStep(2, 'house')}
                                 className={`cursor-pointer border-2 transition-all hover:shadow-lg ${mode === 'house' ? 'border-orange-600 bg-orange-50/50' : 'border-gray-200 hover:border-black'}`}
@@ -1563,7 +1563,7 @@ export default function Simulator() {
 
                     {/* Step 2: Form */}
                     {step === 2 && (
-                        <Card className="shadow-xl border-gray-200 animate-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
+                        <Card className="shadow-xl border-gray-200 animate-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto">
                             <CardHeader>
                                 <CardTitle>{mode === 'eredes' ? 'Ficheiro de Consumos E-Redes' : 'Configuração de Consumo'}</CardTitle>
                                 <CardDescription className="text-gray-500">
@@ -2650,7 +2650,7 @@ export default function Simulator() {
 
                     {/* Step 3: Results */}
                     {step === 3 && results && (
-                        <div className="space-y-8 animate-in zoom-in-95 duration-500 max-w-5xl mx-auto">
+                        <div className="space-y-8 animate-in zoom-in-95 duration-500 max-w-7xl mx-auto">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <h2 className="text-2xl font-bold">Análise de Resultados</h2>
@@ -3271,7 +3271,7 @@ export default function Simulator() {
                     )}
 
                     {/* Waiting List Section */}
-                    <section className="mt-24 p-10 bg-orange-50 rounded-3xl text-black relative overflow-hidden max-w-5xl mx-auto">
+                    <section className="mt-24 p-10 bg-orange-50 rounded-3xl text-black relative overflow-hidden max-w-7xl mx-auto">
                         <div className="relative z-10 max-w-xl">
                             <h2 className="text-2xl font-bold mb-4">Deseja um Relatório Técnico Completo?</h2>
                             <p className="text-gray-700 mb-6">A nossa equipa realiza um estudo detalhado e perfil de carga específico para a sua empresa ou habitação.</p>

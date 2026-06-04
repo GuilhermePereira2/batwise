@@ -101,6 +101,20 @@ const LocationTracker = () => {
   return null;
 };
 
+const ScrollToTop = () => {
+  const { pathname, search } = useLocation();
+
+  useEffect(() => {
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [pathname, search]);
+
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -108,6 +122,7 @@ const App = () => (
       <Sonner />
       <CookieConsent />
       <BrowserRouter>
+        <ScrollToTop />
         <LocationTracker />
         <AppModeProvider>
           <Routes>
