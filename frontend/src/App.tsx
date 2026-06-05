@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import ReactGA from "react-ga4";
 import { AppModeProvider } from "./context/AppModeContext";
 import { useAuth } from "./context/AuthContext";
 import Home from "./pages/Home";
@@ -30,6 +31,8 @@ import Privacy from "./pages/Privacy";
 import Cookies from "./pages/Cookies";
 import CookieConsent from "./components/CookieConsent";
 
+// Initialize GA4
+ReactGA.initialize("G-N019NNQ1PV");
 
 const queryClient = new QueryClient();
 
@@ -92,12 +95,17 @@ const renderRoutes = (prefix = "") => routes.map((route) => (
 
 const LocationTracker = () => {
   const location = useLocation();
+  
   useEffect(() => {
+    // Send GA4 pageview on route change
+    ReactGA.send({ hitType: "pageview", page: location.pathname + location.search });
+
     const authPaths = ["/login", "/signup", "/forgot-password", "/reset-password", "/verify-email", "/auth"];
     if (!authPaths.some(path => location.pathname.startsWith(path))) {
       localStorage.setItem("last_visited_page", location.pathname + location.search);
     }
   }, [location]);
+
   return null;
 };
 

@@ -1176,7 +1176,7 @@ export default function Simulator() {
             products.push(...recommendation.replacement_notes.map((note: string) => `Nota: ${note}`));
         }
 
-        const body = `Olá, \ngostaria de solicitar 20 orçamentos para a instalação dos seguintes produtos sugeridos pela simulação:\n\n${products.join('\n')}\n\nLocal da casa: ${formData.solar.city}, ${formData.house.area_m2} m²\n\nObrigado.`;
+        const body = `Olá, \ngostaria de solicitar orçamentos para a instalação dos seguintes produtos sugeridos pela simulação:\n\n${products.join('\n')}\n\nLocal da casa: ${formData.solar.city}, ${formData.house.area_m2} m²\n\nObrigado.`;
         const subject = 'Solicitação de Orçamento para instalação';
 
         // Removemos o localStorage e o window.location.href
@@ -2843,7 +2843,7 @@ export default function Simulator() {
                                                                             className="w-full bg-white border border-gray-300 text-black hover:bg-gray-50"
                                                                             size="sm"
                                                                         >
-                                                                            Solicitar 20 orçamentos (19,90€)
+                                                                            Solicitar orçamentos (4,90€)
                                                                         </Button>
                                                                     </div>
                                                                 </CardContent>

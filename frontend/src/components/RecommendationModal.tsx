@@ -472,7 +472,7 @@ export default function RecommendationModal({
                             <div>
                                 <h4 className="font-bold text-orange-900 text-lg">Dica de Poupança Extra</h4>
                                 <p className="text-gray-700 leading-relaxed mt-1">
-                                    Detetámos que pode maximizar a rentabilidade deste sistema mudando o seu tarifário para <strong>{recommendation.tariff_optimization.recommended_type === 'bi' ? 'Bi-horário' : recommendation.tariff_optimization.recommended_type === 'tri' ? 'Tri-horário' : 'Simples'}</strong>. 
+                                    Detetámos que pode maximizar a rentabilidade deste sistema mudando o seu tarifário para <strong>{recommendation.tariff_optimization.recommended_type === 'bi' ? 'Bi-horário' : recommendation.tariff_optimization.recommended_type === 'tri' ? 'Tri-horário' : 'Simples'}</strong>.
                                     Isto permitiria uma poupança adicional de <strong>{formatPrice(recommendation.tariff_optimization.extra_savings_eur)}/ano</strong>, totalizando <strong>{formatPrice(recommendation.tariff_optimization.total_savings_eur)}/ano</strong> de poupança direta.
                                 </p>
                             </div>
@@ -494,7 +494,7 @@ export default function RecommendationModal({
                                 onRequestQuote(recommendation);
                             }}
                         >
-                            Solicitar 20 orçamentos (19,90€)
+                            Solicitar orçamentos (4,90€)
                         </Button>
                     </div>
                 </div>
