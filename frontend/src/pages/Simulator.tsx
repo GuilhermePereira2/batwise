@@ -1725,7 +1725,7 @@ export default function Simulator() {
                                                                 <h4 className="font-bold text-gray-900">Dados do Mês {index + 1}</h4>
                                                                 <Badge variant="secondary" className="bg-gray-100">Fatura Mensal</Badge>
                                                             </div>
-                                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                                                                 <FriendlyNumericInput
                                                                     label="Valor Fatura"
                                                                     value={entry.bill_total}
@@ -2428,7 +2428,7 @@ export default function Simulator() {
                                                 <>
                                                     <div className="space-y-3">
                                                         <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">O que achou destas soluções?</h3>
-                                                        <p className="text-gray-500 font-medium">A sua avaliação ajuda-nos a melhorar o nosso algoritmo de inteligência artificial.</p>
+                                                        <p className="text-gray-500 font-medium">A sua avaliação ajuda-nos a melhorar o nosso algoritmo.</p>
                                                     </div>
 
                                                     <div className="flex flex-wrap justify-center gap-3">
