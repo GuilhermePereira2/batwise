@@ -44,9 +44,9 @@ def optimize_home_battery(
     # Procura em solar, depois em input_data, depois em form_data
     current_inv_brand = (
         solar.get("existing_inverter_brand") or
-        solar.get("current_inverter_brand") or 
+        solar.get("current_inverter_brand") or
         input_data.get("existing_inverter_brand") or
-        input_data.get("current_inverter_brand") or 
+        input_data.get("current_inverter_brand") or
         (input_data.get("form_data") or {}).get("existing_inverter_brand") or
         (input_data.get("form_data") or {}).get("current_inverter_brand") or
         (input_data.get("eredes") or {}).get("existing_inverter_brand") or
@@ -54,18 +54,18 @@ def optimize_home_battery(
     )
     current_inv_model = (
         solar.get("existing_inverter_model") or
-        solar.get("current_inverter_model") or 
+        solar.get("current_inverter_model") or
         input_data.get("existing_inverter_model") or
-        input_data.get("current_inverter_model") or 
+        input_data.get("current_inverter_model") or
         (input_data.get("form_data") or {}).get("existing_inverter_model") or
         (input_data.get("form_data") or {}).get("current_inverter_model") or
         (input_data.get("eredes") or {}).get("existing_inverter_model") or
         (input_data.get("eredes") or {}).get("current_inverter_model")
     )
-    
+
     matched_inverter, match_confidence = match_existing_inverter(
-        current_inv_brand, 
-        current_inv_model, 
+        current_inv_brand,
+        current_inv_model,
         (catalog or {}).get("inverters", [])
     )
 
@@ -191,7 +191,7 @@ def optimize_home_battery(
         component_margin,
         installation_margin,
         solar,
-        estimate_roof_area_m2(input_data),
+        estimate_roof_area_m2(input_data, solar),
         project_years=project_years,
         max_investment=max_investment,
         matched_inverter=matched_inverter,
@@ -200,7 +200,8 @@ def optimize_home_battery(
 
     # Step 5: Tariff Optimization Insight (Calculate if other tariffs are better)
     current_tariff_type = tariff.get("type", "simple")
-    alternative_types = [t for t in ["simple", "bi", "tri"] if t != current_tariff_type]
+    alternative_types = [t for t in [
+        "simple", "bi", "tri"] if t != current_tariff_type]
     has_existing_solar = bool((solar or {}).get("has_solar"))
 
     # Final Technical/Debug Simulation for the selected baseline system
@@ -219,19 +220,22 @@ def optimize_home_battery(
     for rec in ranked_results.get("best", []):
         best_alt = None
         current_savings = rec.get("savings_annual_eur", 0)
-        
+
         for alt_type in alternative_types:
             alt_tariff = {**tariff, "type": alt_type, "prices": {}}
             alt_prices = build_hourly_prices(alt_tariff)
             alt_arbitrage = should_allow_grid_arbitrage(alt_tariff)
-            
+
             # Baseline with alternative tariff
-            alt_no_system_base = simulate_capacity(0.0, profile["load_kwh"], [0.0]*8760, alt_prices, dod, roundtrip_efficiency, sell_price, False)
-            alt_base = simulate_capacity(0.0, profile["load_kwh"], profile["pv_kwh"], alt_prices, dod, roundtrip_efficiency, sell_price, False)
+            alt_no_system_base = simulate_capacity(0.0, profile["load_kwh"], [
+                                                   0.0]*8760, alt_prices, dod, roundtrip_efficiency, sell_price, False)
+            alt_base = simulate_capacity(
+                0.0, profile["load_kwh"], profile["pv_kwh"], alt_prices, dod, roundtrip_efficiency, sell_price, False)
             alt_current_bill = alt_base.annual_cost_eur if has_existing_solar else alt_no_system_base.annual_cost_eur
-            
+
             # Rec system with alternative tariff
-            variant_profile = profile_for_panel_set(profile, solar, rec.get("solar_panels"))
+            variant_profile = profile_for_panel_set(
+                profile, solar, rec.get("solar_panels"))
             alt_result = simulate_capacity(
                 rec.get("simulated_capacity_kwh", 0),
                 variant_profile["load_kwh"],
@@ -242,16 +246,16 @@ def optimize_home_battery(
                 sell_price,
                 alt_arbitrage
             )
-            
+
             alt_savings = alt_current_bill - alt_result.annual_cost_eur
-            if alt_savings > current_savings + 20: # No mínimo 20€ de diferença anual
+            if alt_savings > current_savings + 20:  # No mínimo 20€ de diferença anual
                 if not best_alt or alt_savings > best_alt["total_savings_eur"]:
                     best_alt = {
                         "recommended_type": alt_type,
                         "extra_savings_eur": round(alt_savings - current_savings, 2),
                         "total_savings_eur": round(alt_savings, 2)
                     }
-        
+
         if best_alt:
             rec["tariff_optimization"] = best_alt
 
@@ -307,9 +311,9 @@ def optimize_home_battery(
 
 
 def build_notes(
-    mode: str, 
-    profile_summary: Dict[str, float], 
-    selected: Dict[str, Any], 
+    mode: str,
+    profile_summary: Dict[str, float],
+    selected: Dict[str, Any],
     reason: str,
     matched_inverter: Optional[Dict[str, Any]] = None,
     match_confidence: float = 0.0
@@ -335,13 +339,15 @@ def build_notes(
             "Com estes dados, não há caso económico claro para instalar bateria.")
 
     if match_confidence > 0 and match_confidence < 75.0:
-        notes.append("Inversor atual não reconhecido com certeza. Orçamentada substituição do equipamento para garantir compatibilidade.")
+        notes.append(
+            "Inversor atual não reconhecido com certeza. Orçamentada substituição do equipamento para garantir compatibilidade.")
     elif matched_inverter:
-        notes.append(f"Inversor atual reconhecido: {matched_inverter.get('brand')} {matched_inverter.get('model')}. Otimização de custos aplicada.")
+        notes.append(
+            f"Inversor atual reconhecido: {matched_inverter.get('brand')} {matched_inverter.get('model')}. Otimização de custos aplicada.")
 
-    notes.append("As recomendações fornecidas pela Watt Builder são estimativas baseadas nos dados introduzidos pelo utilizador e em modelos de simulação. Não constituem aconselhamento financeiro, técnico ou contratual. A decisão final de compra é da responsabilidade do utilizador.")
     notes.append("Os valores de poupança apresentados são estimativas e podem variar consoante condições reais de instalação, uso e mercado energético.")
     notes.append(
         "A compatibilidade técnica deve ser sempre validada por um instalador certificado.")
+    notes.append("As recomendações fornecidas pela Watt Builder são estimativas baseadas nos dados introduzidos pelo utilizador e em modelos de simulação. Não constituem aconselhamento financeiro, técnico ou contratual. A decisão final de compra é da responsabilidade do utilizador.")
 
     return notes

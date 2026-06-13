@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
 
+import json
+import os
 from .constants import (
     DEFAULT_EV_CONSUMPTION_KWH_PER_KM,
     MONTH_DAYS,
@@ -12,6 +14,70 @@ from .constants import (
 )
 from .tariffs import tariff_period
 
+# Load realistic consumption coefficients
+PROFILE_DATA = None
+try:
+    _json_path = os.path.join(os.path.dirname(__file__), "..", "data", "consumption_profiles.json")
+    if os.path.exists(_json_path):
+        with open(_json_path, "r") as f:
+            PROFILE_DATA = json.load(f)
+except Exception as e:
+    print(f"Warning: Could not load consumption profiles: {e}")
+
+def generate_estimated_profile(area: float, people: int, floors: int, ev_count: int = 0, daily_kms: float = 0.0, charge_time: str = "night") -> List[float]:
+    """Generate a realistic 8760h hourly profile based on house characteristics."""
+    if not PROFILE_DATA:
+        # Fallback to a synthetic but reasonable profile if data is missing
+        annual_total = 1200 + people * 850 + max(0.0, area - 60) * 6 + (floors - 1) * 250
+        hourly = []
+        for i in range(8760):
+            month_idx = (datetime(2023, 1, 1) + timedelta(hours=i)).month - 1
+            hour = i % 24
+            val = (annual_total / 8760) * RESIDENTIAL_HOURLY_SHAPE[hour] * MONTH_LOAD_FACTORS[month_idx]
+            hourly.append(val)
+    else:
+        slopes = PROFILE_DATA["slopes"]
+        intercepts = PROFILE_DATA["intercepts_0p"]
+        person_factor = PROFILE_DATA["person_hourly_factor"]
+        floor_factor = PROFILE_DATA.get("floor_factor_kw", 0.028)
+        
+        hourly = []
+        dt = datetime(2023, 1, 1)
+        for i in range(8760):
+            m = dt.month - 1
+            h = dt.hour
+            # House base + area scaling
+            load = slopes[m][h] * area + intercepts[m][h]
+            # People scaling
+            load += people * person_factor[h]
+            # Floor scaling
+            if floors > 1:
+                load += (floors - 1) * floor_factor
+            
+            hourly.append(max(0.05, load))
+            dt += timedelta(hours=1)
+
+    # Add EV load if present
+    if ev_count > 0 and daily_kms > 0:
+        ev_daily_kwh = ev_count * daily_kms * 0.18
+        if charge_time == "varying":
+            ev_hourly = ev_daily_kwh / 12.0 # Distributed over 12 hours
+            for i in range(8760):
+                hour = i % 24
+                if 8 <= hour < 20:
+                    hourly[i] += ev_hourly
+        else:
+            ev_hourly = ev_daily_kwh / 7.0 # Distributed over 7 hours
+            for i in range(8760):
+                hour = i % 24
+                if charge_time == "night":
+                    if 0 <= hour < 7:
+                        hourly[i] += ev_hourly
+                elif charge_time == "day":
+                    if 10 <= hour < 17:
+                        hourly[i] += ev_hourly
+                    
+    return hourly
 
 def build_hourly_profile(
     mode: str,
@@ -19,135 +85,110 @@ def build_hourly_profile(
     tariff: Dict[str, Any],
     solar: Dict[str, Any],
 ) -> Tuple[Dict[str, List[float]], Dict[str, float]]:
-    """Create one synthetic hourly year of load and PV production.
-
-    The simulator does not receive meter data hour by hour. This function turns
-    house/bill inputs into representative monthly totals, then distributes those
-    totals with residential hourly shapes and seasonal solar factors.
-    """
+    """Create one synthetic hourly year of load and PV production."""
 
     if mode == "eredes" and "csv_profile" in input_data:
+        # ... (keep existing eredes logic)
         csv_profile = input_data["csv_profile"]
         import_kwh = csv_profile.get("load_kwh", [0.0] * 8760)
         export_kwh = csv_profile.get("pv_kwh", [0.0] * 8760)
-        
-        # Ensure we have exactly 8760 points
         import_kwh = (import_kwh + [0.0] * 8760)[:8760]
         export_kwh = (export_kwh + [0.0] * 8760)[:8760]
-
         existing_peak = get_existing_solar_peak_kwp(solar)
-        
-        # To reconstruct total load, we need a production estimate.
-        # If no solar existed, total load is just the import.
-        # If solar existed, Load = Import + Production - Export.
-        
         load = []
         pv = []
-        
         if solar.get("has_solar") and existing_peak > 0:
             annual_yield = existing_peak * solar_yield_kwh_per_kwp(solar)
             factor_sum = sum(MONTH_SOLAR_FACTORS)
             monthly_production = [annual_yield * f / factor_sum for f in MONTH_SOLAR_FACTORS]
             solar_shape_sum = sum(solar_hour_weight(h) for h in range(24))
-            
-            load = []
-            pv = []
             for i in range(8760):
                 month_idx = (datetime(2023, 1, 1) + timedelta(hours=i)).month - 1
                 hour = i % 24
-                # Produção sintética (o que o painel gera no telhado)
                 prod_hour = (monthly_production[month_idx] * solar_hour_weight(hour) / 
                              (solar_shape_sum or 1.0) / 30.4)
-                
-                # O que o Excel reporta como injeção (excesso)
                 real_export = export_kwh[i]
-                
-                # Garantir que a produção sintética não é menor que a injeção real
-                # (Se o Excel diz que injetou 2kW, o painel tem de ter produzido pelo menos 2kW)
                 pv_hour = max(prod_hour, real_export)
-                
-                # Autoconsumo Estimado = Produção Total - Injeção na Rede
-                # (Isto é a energia solar que ficou dentro de casa)
                 self_consumption = max(0.0, pv_hour - real_export)
-                
-                # Carga Total da Casa = Importação da Rede + Autoconsumo do Painel
-                # (Isto é a 'curva vermelha' real da casa, independente do sol)
                 load_hour = import_kwh[i] + self_consumption
-                
                 load.append(round(load_hour, 4))
                 pv.append(round(pv_hour, 4))
         else:
             load = import_kwh
             pv = [0.0] * 8760
+        return ({"load_kwh": load, "pv_kwh": pv}, {"annual_consumption_kwh": sum(load), "annual_solar_kwh": sum(pv), "annual_ev_consumption_kwh": estimate_monthly_ev_consumption(input_data) * 12})
 
-        return (
-            {"load_kwh": load, "pv_kwh": pv},
-            {
-                "annual_consumption_kwh": sum(load),
-                "annual_solar_kwh": sum(pv),
-                "annual_ev_consumption_kwh": estimate_monthly_ev_consumption(input_data) * 12,
-            },
-        )
+    # Mode house or bill
+    site = input_data.get("site") or {}
+    area = float(input_data.get("area_m2", site.get("area_m2", 100)))
+    people = int(input_data.get("occupants", site.get("occupants", 3)))
+    floors = int(input_data.get("floors", site.get("floors", 1)))
+    
+    ev_data = input_data.get("electric_vehicles") or {}
+    ev_count = int(ev_data.get("count", 0))
+    # Get daily kms from the first vehicle as a representative value
+    vehicles = ev_data.get("vehicles") or []
+    daily_kms = 0.0
+    charge_time = "night"
+    if vehicles and isinstance(vehicles[0], dict):
+        daily_kms = float(vehicles[0].get("daily_km", 0))
+        charge_time = str(vehicles[0].get("charging_schedule", "night"))
 
-    monthly_consumption = estimate_monthly_consumption(
-        mode, input_data, tariff, include_ev=False)
+    if mode == "house":
+        load = generate_estimated_profile(area, people, floors, ev_count, daily_kms, charge_time)
+        # PV part
+        monthly_solar = estimate_monthly_solar(input_data, solar)
+        pv = []
+        for month_index, days in enumerate(MONTH_DAYS):
+            solar_weights = [solar_hour_weight(h % 24) for h in range(days * 24)]
+            solar_total = monthly_solar[month_index]
+            solar_divisor = sum(solar_weights) or 1.0
+            pv.extend([solar_total * w / solar_divisor for w in solar_weights])
+        
+        return ({"load_kwh": load, "pv_kwh": pv}, {"annual_consumption_kwh": sum(load), "annual_solar_kwh": sum(pv), "annual_ev_consumption_kwh": ev_count * daily_kms * 0.18 * 365})
+
+    # Mode Bill: respects monthly totals but uses realistic shape
+    monthly_consumption = estimate_monthly_consumption(mode, input_data, tariff, include_ev=False)
     monthly_solar = estimate_monthly_solar(input_data, solar)
-
-    load: List[float] = []
-    pv: List[float] = []
+    realistic_base = generate_estimated_profile(area, people, floors, 0, 0) # Base shape only
+    
+    load = []
+    pv = []
     tariff_type = tariff.get("type", "simple")
-
+    
+    cursor = 0
     for month_index, days in enumerate(MONTH_DAYS):
-        period_weights = {"simple": 0.0,
-                          "offPeak": 0.0, "peak": 0.0, "ponta": 0.0}
-        solar_weights = [0.0 for _ in range(days * 24)]
-
-        for day in range(days):
-            for hour in range(24):
-                period = tariff_period(hour, tariff_type)
-                weight = RESIDENTIAL_HOURLY_SHAPE[hour] * \
-                    MONTH_LOAD_FACTORS[month_index]
-                period_weights[period] += weight
-
-                solar_shape = solar_hour_weight(hour)
-                solar_weights[day * 24 + hour] = solar_shape
-
-        month_load: List[float] = []
-        for day in range(days):
-            for hour in range(24):
-                period = tariff_period(hour, tariff_type)
-                target_kwh = monthly_consumption.get(period, 0.0)
-                if tariff_type == "simple":
-                    target_kwh = monthly_consumption.get("simple", 0.0)
-                weight = RESIDENTIAL_HOURLY_SHAPE[hour] * \
-                    MONTH_LOAD_FACTORS[month_index]
-                divisor = period_weights[period] or 1.0
-                month_load.append(target_kwh * weight / divisor)
-
-        month_ev_load = estimate_monthly_ev_hourly_load(input_data, days)
-        if month_ev_load:
-            month_load = [base + ev for base,
-                          ev in zip(month_load, month_ev_load)]
-
-        month_solar_total = monthly_solar[month_index]
+        month_realistic = realistic_base[cursor:cursor + days*24]
+        cursor += days * 24
+        
+        # Split monthly target into periods
+        period_weights = {"simple": 0.0, "offPeak": 0.0, "peak": 0.0, "ponta": 0.0}
+        for i, val in enumerate(month_realistic):
+            period = tariff_period(i % 24, tariff_type)
+            period_weights[period] += val
+            
+        month_load = []
+        for i, val in enumerate(month_realistic):
+            period = tariff_period(i % 24, tariff_type)
+            target_kwh = monthly_consumption.get(period, 0.0)
+            divisor = period_weights[period] or 1.0
+            month_load.append(target_kwh * val / divisor)
+            
+        # Add EV load
+        ev_load = estimate_monthly_ev_hourly_load(input_data, days)
+        month_load = [l + ev for l, ev in zip(month_load, ev_load)]
+        
+        # PV
+        solar_weights = [solar_hour_weight(h % 24) for h in range(days * 24)]
+        solar_total = monthly_solar[month_index]
         solar_divisor = sum(solar_weights) or 1.0
-        month_pv = [month_solar_total * weight /
-                    solar_divisor for weight in solar_weights]
-
+        month_pv = [solar_total * w / solar_divisor for w in solar_weights]
+        
         load.extend(month_load)
         pv.extend(month_pv)
 
-    annual_consumption = sum(load)
-    annual_solar = sum(pv)
-    annual_ev_consumption = estimate_monthly_ev_consumption(input_data) * 12
-    return (
-        {"load_kwh": load, "pv_kwh": pv},
-        {
-            "annual_consumption_kwh": annual_consumption,
-            "annual_solar_kwh": annual_solar,
-            "annual_ev_consumption_kwh": annual_ev_consumption,
-        },
-    )
+    return ({"load_kwh": load, "pv_kwh": pv}, {"annual_consumption_kwh": sum(load), "annual_solar_kwh": sum(pv), "annual_ev_consumption_kwh": estimate_monthly_ev_consumption(input_data) * 12})
+
 
 def estimate_monthly_consumption(
     mode: str,
@@ -155,32 +196,36 @@ def estimate_monthly_consumption(
     tariff: Dict[str, Any],
     include_ev: bool = True,
 ) -> Dict[str, float]:
-    """Estimate monthly kWh by tariff period from house details or bill history.
-    
-    If mode is 'bill' but no history is provided, it falls back to house characteristics.
-    """
+    """Estimate monthly kWh by tariff period from house details or bill history."""
 
     tariff_type = tariff.get("type", "simple")
-    monthly_ev_by_period = estimate_monthly_ev_consumption_by_period(
-        input_data, tariff_type) if include_ev else {}
-
-    # Calculate house-based estimate as a fallback or primary
-    site = input_data.get("site") or {}
-    occupants = max(1, int(float(input_data.get("occupants", site.get("occupants", 1)))))
-    area_m2 = max(20.0, float(input_data.get("area_m2", site.get("area_m2", 80))))
-    floors = max(1, int(float(input_data.get("floors", site.get("floors", 1)))))
     
-    annual_house = 1200 + occupants * 850 + \
-        max(0.0, area_m2 - 60) * 6 + (floors - 1) * 250
-    monthly_house = annual_house / 12
+    site = input_data.get("site") or {}
+    area = float(input_data.get("area_m2", site.get("area_m2", 100)))
+    people = int(input_data.get("occupants", site.get("occupants", 3)))
+    floors = int(input_data.get("floors", site.get("floors", 1)))
+    
+    ev_data = input_data.get("electric_vehicles") or {}
+    ev_count = int(ev_data.get("count", 0)) if include_ev else 0
+    vehicles = ev_data.get("vehicles") or []
+    daily_kms = 0.0
+    charge_time = "night"
+    if vehicles and isinstance(vehicles[0], dict):
+        daily_kms = float(vehicles[0].get("daily_km", 0))
+        charge_time = str(vehicles[0].get("charging_schedule", "night"))
 
     if mode == "house":
-        return add_ev_to_monthly_consumption(split_monthly_total(monthly_house, tariff_type), monthly_ev_by_period)
+        profile = generate_estimated_profile(area, people, floors, ev_count, daily_kms, charge_time)
+        # Sum by month and period (approximate monthly by dividing annual by 12)
+        annual_by_period = {"simple": 0.0, "offPeak": 0.0, "peak": 0.0, "ponta": 0.0}
+        for i, val in enumerate(profile):
+            period = tariff_period(i % 24, tariff_type)
+            annual_by_period[period] += val
+        return {k: v / 12 for k, v in annual_by_period.items()}
 
     # Bill mode: prioritize history, then monthly_avg, then house estimate
     history = input_data.get("history") or []
-    months = max(
-        1, int(float(input_data.get("historyMonths", len(history) or 1))))
+    months = max(1, int(float(input_data.get("historyMonths", len(history) or 1))))
     period_totals = {"simple": 0.0, "offPeak": 0.0, "peak": 0.0, "ponta": 0.0}
 
     has_history_data = False
@@ -202,16 +247,17 @@ def estimate_monthly_consumption(
         monthly_avg = float(input_data.get("monthly_avg", 0) or 0)
         if monthly_avg <= 0:
             consumption = input_data.get("consumption") or {}
-            monthly_avg = sum(float(value or 0)
-                              for value in consumption.values())
+            monthly_avg = sum(float(value or 0) for value in consumption.values())
         
-        # If still no data from bill fields, fallback to house estimate
         if monthly_avg <= 0:
-            monthly_avg = monthly_house
+            # Fallback to the new realistic house estimate
+            return estimate_monthly_consumption("house", input_data, tariff, include_ev)
             
-        return add_ev_to_monthly_consumption(split_monthly_total(monthly_avg, tariff_type), monthly_ev_by_period)
+        return add_ev_to_monthly_consumption(split_monthly_total(monthly_avg, tariff_type), 
+                                           estimate_monthly_ev_consumption_by_period(input_data, tariff_type) if include_ev else {})
 
-    return add_ev_to_monthly_consumption({key: value / months for key, value in period_totals.items()}, monthly_ev_by_period)
+    return add_ev_to_monthly_consumption({key: value / months for key, value in period_totals.items()}, 
+                                       estimate_monthly_ev_consumption_by_period(input_data, tariff_type) if include_ev else {})
 
 def estimate_monthly_ev_consumption(input_data: Dict[str, Any]) -> float:
     return sum(estimate_monthly_ev_consumption_by_period(input_data, "simple").values())
@@ -244,9 +290,12 @@ def estimate_monthly_ev_hourly_load(input_data: Dict[str, Any], days: int) -> Li
 def ev_charging_hour_shares(schedule: str) -> Dict[int, float]:
     night_hours = [0, 1, 2, 3, 4, 5]
     day_hours = [10, 11, 12, 13, 14, 15]
+    varying_hours = list(range(8, 20)) # 8:00 to 20:00
 
     if schedule == "day":
         return {hour: 1 / len(day_hours) for hour in day_hours}
+    if schedule == "varying":
+        return {hour: 1 / len(varying_hours) for hour in varying_hours}
     if schedule == "mixed":
         shares: Dict[int, float] = {}
         for hour in night_hours:
@@ -285,6 +334,9 @@ def ev_charging_period_shares(schedule: str, tariff_type: str) -> Dict[str, floa
 
     if schedule == "day":
         return {"peak": 1.0}
+    if schedule == "varying":
+        # Approximate for bi-horário (peak is usually 8-22 or similar)
+        return {"peak": 0.8, "offPeak": 0.2}
     if schedule == "mixed":
         return {"offPeak": 0.5, "peak": 0.5}
     return {"offPeak": 1.0}
@@ -298,7 +350,22 @@ def add_ev_to_monthly_consumption(monthly: Dict[str, float], monthly_ev_by_perio
         updated[period] = updated.get(period, 0.0) + value
     return updated
 
-def estimate_roof_area_m2(input_data: Dict[str, Any]) -> Optional[float]:
+def estimate_roof_area_m2(input_data: Dict[str, Any], solar: Optional[Dict[str, Any]] = None) -> Optional[float]:
+    """Determine the usable roof area for panels.
+    
+    Priority:
+    1. If map is enabled and has a polygon/area, use it.
+    2. If panel_area is explicitly provided in solar, use it.
+    3. Fallback to house area (area_m2).
+    """
+    if solar:
+        roof_mapping = solar.get("roof_mapping") or {}
+        if roof_mapping.get("enabled") and roof_mapping.get("area_m2", 0) > 0:
+            return float(roof_mapping["area_m2"])
+            
+        if solar.get("panel_area"):
+            return max(0.0, float(solar.get("panel_area") or 0))
+
     if input_data.get("roof_area_m2") is not None:
         return max(0.0, float(input_data.get("roof_area_m2") or 0))
 

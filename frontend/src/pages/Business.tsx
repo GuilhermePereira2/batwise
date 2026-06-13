@@ -1,4 +1,5 @@
 import Navigation from "@/components/Navigation";
+import { SeoHead } from "@/components/SeoHead";
 import HeroSection from "@/components/HeroSection";
 import ProductSection from "@/components/ProductSection";
 import UsageOptionsSection from "@/components/UsageOptionsSection";
@@ -14,6 +15,10 @@ const Business = () => {
 
   return (
     <div className="min-h-screen">
+      <SeoHead 
+        title="Watt Builder para Empresas e Instaladores"
+        description="Software profissional para dimensionamento de sistemas fotovoltaicos. Aumente a produtividade dos seus instaladores e a precisão técnica dos seus projetos."
+      />
       <Navigation />
       <div className="mt-16">
 

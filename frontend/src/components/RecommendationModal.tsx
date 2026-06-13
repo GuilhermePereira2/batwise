@@ -494,7 +494,7 @@ export default function RecommendationModal({
                                 onRequestQuote(recommendation);
                             }}
                         >
-                            Solicitar orçamentos (4,90€)
+                            Solicitar orçamentos
                         </Button>
                     </div>
                 </div>

@@ -76,6 +76,22 @@ def rank_catalog(
         total_solar_peak_kwp = max(solar_peak_kwp, existing_solar_peak_kwp)
         inverter_sizing_pv_peak = total_solar_peak_kwp
 
+    # Define multiple solar targets to vary panel quantities
+    # 1. Base target (from optimizer)
+    # 2. Existing only (if has_existing_solar)
+    # 3. Aggressive expansion (125% of target)
+    solar_targets = [total_solar_peak_kwp]
+    if total_solar_peak_kwp > 0:
+        solar_targets.append(total_solar_peak_kwp * 1.25)
+    if has_existing_solar:
+        solar_targets.append(existing_solar_peak_kwp)
+    
+    # Remove duplicates and small variations
+    unique_targets = []
+    for t in sorted(list(set(solar_targets))):
+        if not any(abs(t - existing) < 0.5 for existing in unique_targets):
+            unique_targets.append(t)
+
     auto_expansion_target_kwp = estimate_auto_solar_expansion_target_kwp(
         profile, solar)
 
@@ -249,63 +265,66 @@ def rank_catalog(
                     continue
                 simulated_capacity = capacity + existing_battery_capacity
                 
-                if is_retrofit_hybrid:
-                    inverter = matched_inverter
-                elif is_retrofit_string:
-                    ac_chargers = [inv for inv in inverters if (inv.get("specs") or {}).get("is_hybrid") is False 
-                                and (inv.get("specs") or {}).get("max_battery_charge_discharge_kw", 0) > 0]
-                    inverter = select_inverter_for_battery(
-                        battery,
-                        ac_chargers,
-                        catalog.get("compatibility"),
-                        0.0,
-                        requires_pv_input=False,
-                        grid_type_pref=grid_type_pref,
-                    )
-                else:
-                    inverter = select_inverter_for_battery(
-                        battery,
-                        inverters,
-                        catalog.get("compatibility"),
-                        inverter_sizing_pv_peak,
-                        requires_pv_input=requires_pv_input,
-                        grid_type_pref=grid_type_pref,
-                    )
+                # Iteramos sobre os diferentes targets solares para cada bateria
+                for current_solar_target in unique_targets:
+                    if is_retrofit_hybrid:
+                        inverter = matched_inverter
+                    elif is_retrofit_string:
+                        ac_chargers = [inv for inv in inverters if (inv.get("specs") or {}).get("is_hybrid") is False 
+                                    and (inv.get("specs") or {}).get("max_battery_charge_discharge_kw", 0) > 0]
+                        inverter = select_inverter_for_battery(
+                            battery,
+                            ac_chargers,
+                            catalog.get("compatibility"),
+                            0.0,
+                            requires_pv_input=False,
+                            grid_type_pref=grid_type_pref,
+                        )
+                    else:
+                        inverter = select_inverter_for_battery(
+                            battery,
+                            inverters,
+                            catalog.get("compatibility"),
+                            max(inverter_sizing_pv_peak, current_solar_target),
+                            requires_pv_input=requires_pv_input,
+                            grid_type_pref=grid_type_pref,
+                        )
 
-                if has_existing_solar:
-                    existing_only_panel_set = build_existing_solar_panel_set(solar, roof_area_m2)
-                    panel_set = existing_only_panel_set
-                    if expand_existing_solar:
-                        additional_target_kwp = max(
-                            0.0, total_solar_peak_kwp - existing_solar_peak_kwp)
-                        existing_panel_area = float(
-                            panel_set.get("total_panel_area_m2", 0) or 0)
-                        additional_panel_set = select_solar_panel_set(
+                    if has_existing_solar:
+                        existing_only_panel_set = build_existing_solar_panel_set(solar, roof_area_m2)
+                        panel_set = existing_only_panel_set
+                        if expand_existing_solar:
+                            additional_target_kwp = max(
+                                0.0, current_solar_target - existing_solar_peak_kwp)
+                            existing_panel_area = float(
+                                panel_set.get("total_panel_area_m2", 0) or 0)
+                            additional_panel_set = select_solar_panel_set(
+                                panels,
+                                battery,
+                                inverter,
+                                additional_target_kwp,
+                                catalog.get("compatibility"),
+                                roof_area_m2,
+                                existing_peak_kwp=existing_solar_peak_kwp,
+                                reserved_roof_area_m2=existing_panel_area,
+                            )
+                            if additional_panel_set:
+                                panel_set = build_expanded_solar_panel_set(
+                                    solar, additional_panel_set, roof_area_m2)
+                    else:
+                        existing_only_panel_set = None
+                        panel_set = select_solar_panel_set(
                             panels,
                             battery,
                             inverter,
-                            additional_target_kwp,
+                            current_solar_target,
                             catalog.get("compatibility"),
                             roof_area_m2,
-                            existing_peak_kwp=existing_solar_peak_kwp,
-                            reserved_roof_area_m2=existing_panel_area,
                         )
-                        if additional_panel_set:
-                            panel_set = build_expanded_solar_panel_set(
-                                solar, additional_panel_set, roof_area_m2)
-                else:
-                    existing_only_panel_set = None
-                    panel_set = select_solar_panel_set(
-                        panels,
-                        battery,
-                        inverter,
-                        solar_peak_kwp,
-                        catalog.get("compatibility"),
-                        roof_area_m2,
-                    )
-                append_recommendation(
-                    battery, capacity, simulated_capacity, inverter, panel_set, is_retrofit_branch)
+                    append_recommendation(
+                        battery, capacity, simulated_capacity, inverter, panel_set, is_retrofit_branch)
 
+                # Opção especial: Bateria apenas (se não incluída nos targets)
                 if panel_set != existing_only_panel_set:
                     if is_retrofit_hybrid:
                         inverter_no_new_pv = matched_inverter

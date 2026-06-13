@@ -1,5 +1,6 @@
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import { SeoHead } from "@/components/SeoHead";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, Wrench, Briefcase, Zap, Search, Home as HomeIcon, TrendingUp, BatteryCharging } from "lucide-react";
@@ -53,6 +54,11 @@ const Home = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <SeoHead 
+        title="Watt Builder | Simulador de Baterias e Inversores Solares"
+        description="O simulador de baterias solares mais avançado de Portugal e Espanha. Calcule a sua independência energética, ROI e poupança solar com precisão técnica."
+        keywords="simulador solar, baterias litio, inversor solar, independencia energetica, Watt Builder, Portugal, Espanha"
+      />
       <Navigation />
 
       {/* B2C Hero Section - Focused on Conversion and ROI */}

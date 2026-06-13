@@ -11,7 +11,7 @@
         "batteryBuilderDesc": "Design customizado de packs",
         "cellExplorer": "Cell Explorer",
         "cellExplorerDesc": "Database de células e testes",
-        "tryForFree": "Testar Grátis",
+        "tryForFree": "Simular Poupança Solar",
         "logIn": "Login",
         "logOut": "Logout",
         "profile": "Perfil",
@@ -735,7 +735,7 @@
         "title1": "Menos protótipos,",
         "title2": "mais resultados.",
         "subtitle": "Ajudamos a desenhar baterias melhores, a acelerar o desenvolvimento e a reduzir custos.",
-        "learnMore": "Saber Mais"
+        "learnMore": "Explorar Soluções Profissionais"
     },
     "businessProduct": {
         "title": "Design de Baterias Mais Inteligente, Menores Custos de Desenvolvimento",

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import { PDFDocument } from 'pdf-lib';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -11,11 +11,21 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { getApiUrl } from '@/lib/config';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useAppMode } from '@/context/AppModeContext';
 import { useToast } from '@/hooks/use-toast';
 import RecommendationModal from '@/components/RecommendationModal';
 import DebugSimulationChart from '@/components/DebugSimulationChart';
+import { LocationCombobox } from '@/components/LocationCombobox';
+import { SeoHead } from '@/components/SeoHead';
+import { Stepper } from './simulator/components/Stepper';
+import { ResultsSkeleton } from './simulator/components/ResultsSkeleton';
+import { FriendlyNumericInput } from './simulator/components/FriendlyNumericInput';
+import { StepModeSelection } from './simulator/components/StepModeSelection';
+import { StepHouseData } from './simulator/components/StepHouseData';
+import { StepConsumptionData } from './simulator/components/StepConsumptionData';
+import { StepSolarData } from './simulator/components/StepSolarData';
 // @ts-ignore
 import coverPdfAsset from '@/assets/Watt Builder_Cover.pdf';
 import {
@@ -211,8 +221,12 @@ const FEEDBACK_FORM_QUESTIONS = [
 const formatTariffPrice = (value: number) => `${Number(value || 0).toFixed(3)} €/kWh`;
 
 const parseStepParam = (value: string | null) => {
+    if (value === 'house') return 2;
+    if (value === 'solar') return 3;
+    if (value === 'consumption') return 4;
+    if (value === 'results') return 5;
+    // Compatibility with old or default mappings
     if (value === 'input') return 2;
-    if (value === 'results') return 3;
     return 1;
 };
 
@@ -228,6 +242,7 @@ const DEFAULT_STATE = {
         use_last_bill: false,
         last_bill: {
             total: 0,
+            production: 0,
             consumption: {
                 simple: 350,
                 offPeak: 220,
@@ -320,7 +335,7 @@ export default function Simulator() {
         setIsUploading(true);
         const formDataUpload = new FormData();
         formDataUpload.append('file', file);
-        formDataUpload.append('has_solar', String(formData.eredes.has_solar_before));
+        formDataUpload.append('has_solar', String(formData.solar.has_solar));
 
         try {
             const response = await fetch(getApiUrl('api/simulator/upload-csv'), {
@@ -362,6 +377,7 @@ export default function Simulator() {
         }
     };
 
+
     const [results, setResults] = useState<any>(null);
     const [selectedRecommendation, setSelectedRecommendation] = useState<any>(null);
     const [reportEmail, setReportEmail] = useState('');
@@ -386,7 +402,7 @@ export default function Simulator() {
     const [filterType, setFilterType] = useState<'all' | 'battery_only' | 'solar_only' | 'hybrid'>('all');
 
     const filteredRecommendations = React.useMemo(() => {
-        const items = [...(results?.all_recommendations || [])];
+        const items = (results?.all_recommendations || []).filter((rec: any) => rec !== null && typeof rec === 'object');
         return items.filter(rec => {
             const isHybrid = rec.new_battery_added && rec.new_panels_added;
             const isSolarOnly = !rec.new_battery_added && rec.new_panels_added;
@@ -819,7 +835,13 @@ export default function Simulator() {
             params.delete('step');
             params.delete('mode');
         } else {
-            params.set('step', nextStep === 3 ? 'results' : 'input');
+            const stepMap: Record<number, string> = {
+                2: 'house',
+                3: 'solar',
+                4: 'consumption',
+                5: 'results'
+            };
+            params.set('step', stepMap[nextStep] || 'input');
             if (nextMode) params.set('mode', nextMode);
             else params.delete('mode');
         }
@@ -830,11 +852,13 @@ export default function Simulator() {
     const canOpenStep = (targetStep: number) => {
         if (targetStep === 1) return true;
         if (targetStep === 2) return Boolean(mode);
+        if (targetStep === 3) return Boolean(mode);
+        if (targetStep === 4) return Boolean(mode);
         return Boolean(results);
     };
 
     const handleStepperClick = (targetStep: number) => {
-        if (!canOpenStep(targetStep)) return;
+        if (targetStep >= step) return;
         goToStep(targetStep, mode);
     };
 
@@ -842,8 +866,8 @@ export default function Simulator() {
         const urlStep = parseStepParam(searchParams.get('step'));
         const urlMode = parseModeParam(searchParams.get('mode'));
 
-        if (urlStep === 3 && !results) {
-            goToStep(urlMode ? 2 : 1, urlMode, { replace: true });
+        if (urlStep === 5 && !results) {
+            goToStep(4, urlMode, { replace: true });
             return;
         }
 
@@ -1116,7 +1140,7 @@ export default function Simulator() {
                     mode,
                     input: simulationInput,
                     tariff: tariffPayload,
-                    solar: mode === 'eredes' ? { ...formData.solar, has_solar: formData.eredes.has_solar_before } : formData.solar,
+                    solar: formData.solar,
                     max_investment: formData.max_investment ? Number(formData.max_investment) : null,
                     assumptions: { battery_dod: 0.9, system_losses: 0.1, component_margin: 0.1, installation_margin: 0.25 },
                     form_data: cleanFormData,
@@ -1134,7 +1158,7 @@ export default function Simulator() {
 
             const data = await response.json();
             setResults(data);
-            goToStep(3, mode);
+            goToStep(5, mode);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (error) {
             console.error("Erro na simulação:", error);
@@ -1211,10 +1235,14 @@ export default function Simulator() {
 
     const recommendationGroups = budgetSections.map((section) => ({
         ...section,
-        items: (results?.recommendations || []).filter((rec: any) => rec.budget_tier === section.tier),
+        items: (results?.recommendations || []).filter((rec: any) => rec !== null && typeof rec === 'object' && rec.budget_tier === section.tier),
     }));
 
-    const formatPrice = (value: any) => `${Math.round(Number(value || 0)).toLocaleString()}€`;
+    const formatPrice = (value: any) => {
+        const num = Number(String(value || 0).replace(',', '.'));
+        if (isNaN(num)) return '0€';
+        return `${Math.round(num).toLocaleString()}€`;
+    };
 
     const getPriceBreakdown = (recommendation: any) => {
         const componentPrices = recommendation?.component_prices_eur || {};
@@ -1529,6 +1557,11 @@ export default function Simulator() {
 
     return (
         <div className="flex flex-col min-h-screen bg-white text-black">
+            <SeoHead
+                title="Simulador de Independência Energética | Watt Builder"
+                description="Calcule a sua independência energética em menos de 2 minutos. Descubra o sistema ideal de baterias e painéis solares para a sua casa em Portugal ou Espanha."
+                type="software"
+            />
             <Navigation />
 
             <main className="flex-grow py-12">
@@ -1536,7 +1569,7 @@ export default function Simulator() {
 
                     {/* Progress Header */}
                     <div className="text-center mb-10 mt-20">
-                        <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+                        <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-gray-900">
                             Simulador de Independência Energética
                         </h1>
                         <p className="mt-3 text-lg text-gray-500">
@@ -1545,1835 +1578,1077 @@ export default function Simulator() {
                     </div>
 
                     {/* Stepper Visual */}
-                    <div className="flex items-center justify-center mb-12 space-x-4">
-                        {[1, 2, 3].map((i) => (
-                            <React.Fragment key={i}>
-                                <button
-                                    type="button"
-                                    onClick={() => handleStepperClick(i)}
-                                    disabled={!canOpenStep(i)}
-                                    aria-label={`Ir para o passo ${i}`}
-                                    className={`flex items-center justify-center w-10 h-10 rounded-full font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${step >= i ? 'bg-orange-600 text-white' : 'bg-white text-gray-300 border-2 border-gray-200'} ${canOpenStep(i) ? 'cursor-pointer hover:scale-105 hover:shadow-md' : 'cursor-not-allowed opacity-50'}`}
-                                >
-                                    {step > i ? <CheckCircle2 className="w-6 h-6" /> : i}
-                                </button>
-                                {i < 3 && <div className={`w-12 h-1 ${step > i ? 'bg-orange-600' : 'bg-gray-200'}`} />}
-                            </React.Fragment>
-                        ))}
+                    <div className="max-w-4xl mx-auto mb-12">
+                        <Stepper
+                            currentStep={step}
+                            onStepClick={handleStepperClick}
+                            steps={[
+                                { title: 'Modo', description: 'Tipo de Simulação' },
+                                { title: 'Habitação', description: 'Localização e Casa' },
+                                { title: 'Solar', description: 'Telhado e Painéis' },
+                                { title: 'Consumo', description: 'Perfil de Energia' },
+                                { title: 'Resultado', description: 'As suas soluções' }
+                            ]}
+                        />
                     </div>
 
-                    {/* Step 1: Selection */}
-                    {step === 1 && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-500">
-                            <Card
-                                onClick={() => goToStep(2, 'house')}
-                                className={`cursor-pointer border-2 transition-all hover:shadow-lg ${mode === 'house' ? 'border-orange-600 bg-orange-50/50' : 'border-gray-200 hover:border-black'}`}
-                            >
-                                <CardContent className="p-8 text-center">
-                                    <div className="bg-orange-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <Home className="text-white w-8 h-8" />
-                                    </div>
-                                    <h3 className="text-xl font-bold mb-2">Pelas características da casa</h3>
-                                    <p className="text-gray-500 text-sm">Quero estimar pelo número de pessoas e características da casa, com fatura opcional.</p>
-                                </CardContent>
-                            </Card>
+                    <div className="max-w-5xl mx-auto">
+                        {/* Step 1: Selection */}
+                        {step === 1 && (
+                            <StepModeSelection
+                                onSelect={(m) => goToStep(2, m)}
+                                selectedMode={mode || undefined}
+                            />
+                        )}
 
-                            <Card
-                                onClick={() => goToStep(2, 'bill')}
-                                className={`cursor-pointer border-2 transition-all hover:shadow-lg ${mode === 'bill' ? 'border-orange-600 bg-orange-50/50' : 'border-gray-200 hover:border-black'}`}
-                            >
-                                <CardContent className="p-8 text-center">
-                                    <div className="bg-orange-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <FileText className="text-white w-8 h-8" />
-                                    </div>
-                                    <h3 className="text-xl font-bold mb-2">Pelo valor da fatura</h3>
-                                    <p className="text-gray-500 text-sm">Tenho consumos mensais em kWh e quero usar histórico por tarifário.</p>
-                                </CardContent>
-                            </Card>
+                        {/* Step 2: House Data */}
+                        {step === 2 && (
+                            <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+                                <StepHouseData
+                                    formData={formData}
+                                    setFormData={setFormData}
+                                />
+                                <div className="flex gap-3 pt-6 border-t border-gray-100">
+                                    <Button variant="outline" className="h-12 px-8 border-gray-300 rounded-xl" onClick={() => goToStep(1, null)}>
+                                        <ChevronLeft className="mr-2 w-4 h-4" /> Voltar
+                                    </Button>
+                                    <Button className="flex-1 bg-orange-600 hover:bg-orange-700 text-white h-12 text-lg font-bold rounded-xl shadow-lg shadow-orange-100" onClick={() => goToStep(3)}>
+                                        Continuar <ChevronRight className="ml-2 w-4 h-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
 
-                            <Card
-                                onClick={() => goToStep(2, 'eredes')}
-                                className={`cursor-pointer border-2 transition-all hover:shadow-lg ${mode === 'eredes' ? 'border-orange-600 bg-orange-50/50' : 'border-gray-200 hover:border-black'}`}
-                            >
-                                <CardContent className="p-8 text-center">
-                                    <div className="bg-orange-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <Zap className="text-white w-8 h-8" />
-                                    </div>
-                                    <h3 className="text-xl font-bold mb-2">Ficheiro E-Redes</h3>
-                                    <p className="text-gray-500 text-sm">Upload do ficheiro de consumos da E-Redes (.csv ou .xlsx) para simulação real.</p>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    )}
+                        {/* Step 3: Solar & Map (Swapped) */}
+                        {step === 3 && (
+                            <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+                                <StepSolarData
+                                    formData={formData}
+                                    setFormData={setFormData}
+                                    renderRoofMapPicker={renderRoofMapPicker}
+                                    mode={mode || undefined}
+                                />
+                                <div className="flex gap-3 pt-8 border-t border-gray-100">
+                                    <Button variant="outline" className="h-12 px-8 border-gray-300 rounded-xl" onClick={() => goToStep(2)}>
+                                        <ChevronLeft className="mr-2 w-4 h-4" /> Voltar
+                                    </Button>
+                                    <Button className="flex-1 bg-orange-600 hover:bg-orange-700 text-white h-12 text-lg font-bold rounded-xl shadow-lg shadow-orange-100" onClick={() => goToStep(4)}>
+                                        Continuar <ChevronRight className="ml-2 w-4 h-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
 
-                    {/* Step 2: Form */}
-                    {step === 2 && (
-                        <Card className="shadow-xl border-gray-200 animate-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto">
-                            <CardHeader>
-                                <CardTitle>{mode === 'eredes' ? 'Ficheiro de Consumos E-Redes' : 'Configuração de Consumo'}</CardTitle>
-                                <CardDescription className="text-gray-500">
-                                    {mode === 'eredes' ? 'Faça o upload do seu ficheiro .csv ou .xlsx para uma simulação com base em dados reais.' : 'Ajuste os valores para uma simulação precisa.'}
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                {mode === 'eredes' ? (
-                                    <div className="space-y-8 animate-in fade-in duration-500">
-                                        <div className="p-8 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50 text-center space-y-4">
-                                            <div className="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
-                                                <Zap className="text-orange-600 w-8 h-8" />
-                                            </div>
-                                            <div>
-                                                <h3 className="text-lg font-bold">Upload do Ficheiro</h3>
-                                                <p className="text-sm text-gray-500 max-w-xs mx-auto">Selecione o ficheiro exportado do portal E-Redes (.csv ou .xlsx).</p>
-                                            </div>
-                                            <div className="flex flex-col items-center gap-2">
-                                                <Input
-                                                    type="file"
-                                                    accept=".csv, .xlsx, .xls"
-                                                    onChange={handleFileUpload}
-                                                    className="max-w-xs bg-white cursor-pointer"
-                                                    disabled={isUploading}
-                                                />
-                                                {formData.eredes.file_name && (
-                                                    <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200">
-                                                        <CheckCircle2 className="w-3 h-3 mr-1" />
-                                                        {formData.eredes.file_name}
-                                                    </Badge>
-                                                )}
-                                                {isUploading && <div className="flex items-center text-orange-600 text-sm font-medium"><Loader2 className="animate-spin w-4 h-4 mr-2" /> Processando ficheiro...</div>}
-                                            </div>
+                        {/* Step 4: Consumption & Specifics (Swapped) */}
+                        {step === 4 && (
+                            <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+                                <div className="space-y-6 pt-8 border-t border-gray-100">
+                                    <h3 className="text-xl font-bold text-gray-900">Configuração de Fatura / Tarifário</h3>
+
+                                    <div className="space-y-4">
+                                        <Label className="text-gray-900 font-bold uppercase tracking-tight">Tarifário</Label>
+                                        <div className="grid grid-cols-3 gap-3 h-[52px]">
+                                            {[
+                                                { key: 'simple', label: 'Simples' },
+                                                { key: 'bi', label: 'Bi-horário' },
+                                                { key: 'tri', label: 'Tri-horário' }
+                                            ].map((option) => (
+                                                <Button
+                                                    key={option.key}
+                                                    variant={formData.tariff.type === option.key ? "default" : "outline"}
+                                                    className={formData.tariff.type === option.key ? "bg-orange-600 hover:bg-orange-700" : "border-gray-200 text-gray-600"}
+                                                    onClick={() => setFormData({
+                                                        ...formData,
+                                                        tariff: { ...formData.tariff, type: option.key as 'simple' | 'bi' | 'tri' },
+                                                        bill: { ...formData.bill, history: formData.bill.history.map((entry: any) => normalizeHistoryEntry(entry, option.key)) }
+                                                    })}
+                                                >
+                                                    {option.label}
+                                                </Button>
+                                            ))}
                                         </div>
+                                    </div>
 
-                                        <div className="pt-4 border-t border-gray-200">
-                                            <Label className="text-gray-400 text-xs uppercase tracking-widest">Características da Habitação</Label>
-                                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
-                                                <div className="space-y-2">
-                                                    <Label>Nº de pessoas na habitação</Label>
-                                                    <Input
-                                                        type="number"
-                                                        min="1"
-                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                        value={formData.house.occupants}
-                                                        onChange={(e) => handleNumericChange(e.target.value, 'Nº de pessoas', (val) => setFormData({ ...formData, house: { ...formData.house, occupants: val } }))}
-                                                    />
+                                    {mode === 'eredes' && (
+                                        <div className="space-y-6">
+                                            <div className="p-8 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50 text-center space-y-4">
+                                                <div className="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                                                    <Zap className="text-orange-600 w-8 h-8" />
                                                 </div>
-                                                <div className="space-y-2">
-                                                    <Label>Área aproximada (m²)</Label>
-                                                    <Input
-                                                        type="number"
-                                                        min="10"
-                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                        value={formData.house.area_m2}
-                                                        onChange={(e) => handleNumericChange(e.target.value, 'Área aproximada', (val) => setFormData({ ...formData, house: { ...formData.house, area_m2: val } }))}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label>Nº de pisos</Label>
-                                                    <Input
-                                                        type="number"
-                                                        min="1"
-                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                        value={formData.house.floors}
-                                                        onChange={(e) => handleNumericChange(e.target.value, 'Nº de pisos', (val) => setFormData({ ...formData, house: { ...formData.house, floors: val } }))}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="pt-4 border-t border-gray-200">
-                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                                                 <div>
-                                                    <Label className="mb-1">Pretende inserir os dados da última fatura?</Label>
-                                                    <p className="text-sm text-gray-500">Usamos esses dados apenas para estimar o preço por kWh.</p>
+                                                    <h3 className="text-lg font-bold">Upload E-Redes</h3>
+                                                    <p className="text-sm text-gray-500 max-w-xs mx-auto">Selecione o ficheiro exportado do portal E-Redes (.csv ou .xlsx).</p>
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-2 sm:w-auto">
+                                                <div className="flex flex-col items-center gap-2">
+                                                    <Input
+                                                        type="file"
+                                                        accept=".csv, .xlsx, .xls"
+                                                        onChange={handleFileUpload}
+                                                        className="max-w-xs bg-white cursor-pointer h-[48px] file:h-full"
+                                                        disabled={isUploading}
+                                                    />
+                                                    {formData.eredes.file_name && (
+                                                        <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200 py-1.5 px-3">
+                                                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                                                            {formData.eredes.file_name}
+                                                        </Badge>
+                                                    )}
+                                                    {isUploading && <div className="flex items-center text-orange-600 text-sm font-medium"><Loader2 className="animate-spin w-4 h-4 mr-2" /> Processando...</div>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {mode === 'bill' && (
+                                        <div className="space-y-6">
+                                            <FriendlyNumericInput
+                                                label="Meses de Histórico"
+                                                value={formData.bill.historyMonths}
+                                                onChange={(val) => {
+                                                    const months = Math.min(12, Math.max(1, val || 1));
+                                                    const history = [...formData.bill.history];
+                                                    if (history.length < months) {
+                                                        history.push(...Array(months - history.length).fill(null).map(() => createHistoryEntry(formData.tariff.type)));
+                                                    } else {
+                                                        history.length = months;
+                                                    }
+                                                    setFormData({ ...formData, bill: { ...formData.bill, historyMonths: months, history } });
+                                                }}
+                                                min={1}
+                                                max={12}
+                                            />
+                                            <div className="space-y-4">
+                                                {formData.bill.history.slice(0, formData.bill.historyMonths).map((entry: any, index: number) => (
+                                                    <Card key={index} className="border-gray-200 overflow-hidden shadow-sm">
+                                                        <CardContent className="p-6">
+                                                            <div className="flex justify-between items-center mb-6">
+                                                                <h4 className="font-bold text-gray-900">Dados do Mês {index + 1}</h4>
+                                                                <Badge variant="secondary" className="bg-gray-100">Fatura Mensal</Badge>
+                                                            </div>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                                                                <FriendlyNumericInput
+                                                                    label="Valor Fatura"
+                                                                    value={entry.bill_total}
+                                                                    onChange={(val) => {
+                                                                        const history = [...formData.bill.history];
+                                                                        history[index] = { ...history[index], bill_total: val };
+                                                                        setFormData({ ...formData, bill: { ...formData.bill, history } });
+                                                                    }}
+                                                                    unit="€"
+                                                                />
+                                                                <FriendlyNumericInput
+                                                                    label="Consumo"
+                                                                    value={entry.simple || entry.offPeak || 0}
+                                                                    onChange={(val) => {
+                                                                        const history = [...formData.bill.history];
+                                                                        if (formData.tariff.type === 'simple') history[index] = { ...history[index], simple: val };
+                                                                        else history[index] = { ...history[index], offPeak: val };
+                                                                        setFormData({ ...formData, bill: { ...formData.bill, history } });
+                                                                    }}
+                                                                    unit="kWh"
+                                                                />
+                                                                {formData.solar.has_solar && (
+                                                                    <FriendlyNumericInput
+                                                                        label="Produção Solar"
+                                                                        value={entry.production || 0}
+                                                                        onChange={(val) => {
+                                                                            const history = [...formData.bill.history];
+                                                                            history[index] = { ...history[index], production: val };
+                                                                            setFormData({ ...formData, bill: { ...formData.bill, history } });
+                                                                        }}
+                                                                        unit="kWh"
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {mode === 'house' && (
+                                        <div className="space-y-6">
+                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                <div>
+                                                    <Label className="text-lg font-bold text-gray-900">Pretende inserir os dados da última fatura?</Label>
+                                                    <p className="text-sm text-gray-500">Usamos esses dados para estimar o preço por kWh.</p>
+                                                </div>
+                                                <div className="flex gap-2 h-[48px] md:w-48">
                                                     <Button
-                                                        className={`h-12 ${formData.house.use_last_bill ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
+                                                        variant={formData.house.use_last_bill ? "outline" : "default"}
+                                                        className={formData.house.use_last_bill ? "flex-1 border-gray-200" : "flex-1 bg-orange-600 hover:bg-orange-700"}
                                                         onClick={() => setFormData({ ...formData, house: { ...formData.house, use_last_bill: false } })}
                                                     >
                                                         Não
                                                     </Button>
                                                     <Button
-                                                        className={`h-12 ${formData.house.use_last_bill ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
+                                                        variant={formData.house.use_last_bill ? "default" : "outline"}
+                                                        className={formData.house.use_last_bill ? "flex-1 bg-orange-600 hover:bg-orange-700" : "flex-1 border-gray-200"}
                                                         onClick={() => setFormData({ ...formData, house: { ...formData.house, use_last_bill: true } })}
                                                     >
                                                         Sim
                                                     </Button>
                                                 </div>
                                             </div>
-                                        </div>
 
-                                        {(formData.house.use_last_bill || isAdminMode) && (
-                                            <div className="pt-4 border-t border-gray-100 space-y-4 animate-in slide-in-from-top-2 duration-300">
-                                                {formData.house.use_last_bill && (
-                                                    <div className="grid gap-4 md:grid-cols-4">
-                                                        {activeTariffPeriods.map((period) => (
-                                                            <div key={period.key} className="space-y-2">
-                                                                <Label>{period.label} (kWh)</Label>
-                                                                <Input
-                                                                    type="number"
-                                                                    min="0"
-                                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                                    value={formData.house.last_bill.consumption[period.key] ?? ''}
-                                                                    onChange={(e) => handleNumericChange(e.target.value, period.label, (val) => setFormData({
-                                                                        ...formData,
-                                                                        house: {
-                                                                            ...formData.house,
-                                                                            last_bill: {
-                                                                                ...formData.house.last_bill,
-                                                                                consumption: {
-                                                                                    ...formData.house.last_bill.consumption,
-                                                                                    [period.key]: val,
-                                                                                },
-                                                                            },
-                                                                        },
-                                                                    }))}
-                                                                />
-                                                            </div>
-                                                        ))}
-                                                        <div className="space-y-2">
-                                                            <Label>Valor total da fatura</Label>
-                                                            <div className="relative">
-                                                                <Input
-                                                                    type="number"
-                                                                    min="0"
-                                                                    step="0.01"
-                                                                    className="border-gray-300 focus-visible:ring-orange-600 pr-8"
-                                                                    value={formData.house.last_bill.total}
-                                                                    onChange={(e) => handleNumericChange(e.target.value, 'Valor total da fatura', (val) => setFormData({
-                                                                        ...formData,
-                                                                        house: {
-                                                                            ...formData.house,
-                                                                            last_bill: {
-                                                                                ...formData.house.last_bill,
-                                                                                total: val,
-                                                                            },
-                                                                        },
-                                                                    }))}
-                                                                />
-                                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {isAdminMode && (
-                                                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                                                        <div className="mb-3 flex items-center justify-between gap-3">
-                                                            <p className="text-sm font-semibold">
-                                                                {formData.house.use_last_bill ? 'Preço estimado' : 'Preços padrão'}
-                                                            </p>
-                                                            <Badge variant="outline" className="border-gray-300 text-gray-600">
-                                                                {formData.tariff.type === 'simple' ? 'Simples' : formData.tariff.type === 'bi' ? 'Bi-horário' : 'Tri-horário'}
-                                                            </Badge>
-                                                        </div>
-                                                        <div className="grid gap-3 sm:grid-cols-3">
-                                                            {activeTariffPeriods.map((period) => (
-                                                                <div key={period.key} className="rounded-md bg-white border border-gray-200 px-3 py-2">
-                                                                    <p className="text-xs uppercase tracking-widest text-gray-400">{period.label}</p>
-                                                                    <p className="mt-1 font-semibold text-gray-900">
-                                                                        {formatTariffPrice(estimatedHouseTariffPrices[period.key])}
-                                                                    </p>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        <div className="pt-4 border-t border-gray-200">
-                                            <Label className="text-gray-400 text-xs uppercase tracking-widest">Tarifário</Label>
-                                            <div className="mt-4">
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    {[
-                                                        { key: 'simple', label: 'Simples' },
-                                                        { key: 'bi', label: 'Bi-horário' },
-                                                        { key: 'tri', label: 'Tri-horário' }
-                                                    ].map((option) => (
-                                                        <Button
-                                                            key={option.key}
-                                                            className={`text-sm h-12 ${formData.tariff.type === option.key ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                            onClick={() => setFormData({
+                                            {formData.house.use_last_bill && (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-in slide-in-from-top-4 duration-300">
+                                                    {activeTariffPeriods.map((period) => (
+                                                        <FriendlyNumericInput
+                                                            key={period.key}
+                                                            label={period.label}
+                                                            value={formData.house.last_bill.consumption[period.key] ?? 0}
+                                                            onChange={(val) => setFormData({
                                                                 ...formData,
-                                                                tariff: { ...formData.tariff, type: option.key as 'simple' | 'bi' | 'tri' }
+                                                                house: {
+                                                                    ...formData.house,
+                                                                    last_bill: {
+                                                                        ...formData.house.last_bill,
+                                                                        consumption: {
+                                                                            ...formData.house.last_bill.consumption,
+                                                                            [period.key]: val,
+                                                                        },
+                                                                    },
+                                                                },
                                                             })}
-                                                        >
-                                                            {option.label}
-                                                        </Button>
+                                                            unit="kWh"
+                                                        />
                                                     ))}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="pt-4 border-t border-gray-100 space-y-4">
-                                            <Label className="text-gray-400 text-xs uppercase tracking-widest">Localização e Rede Elétrica</Label>
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                                <div className="space-y-2">
-                                                    <Label>País</Label>
-                                                    <Input
-                                                        type="text"
-                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                        value={formData.solar.country}
-                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, country: e.target.value } })}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label>Cidade</Label>
-                                                    <Input
-                                                        type="text"
-                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                        value={formData.solar.city}
-                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, city: e.target.value } })}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label>Localidade</Label>
-                                                    <Input
-                                                        type="text"
-                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                        value={formData.solar.location}
-                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, location: e.target.value } })}
-                                                        placeholder="Ex: Alfragide"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Tipo de Instalação Elétrica</Label>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-md">
-                                                    <Button
-                                                        className={`h-12 ${formData.solar.grid_type === 'single_phase' ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, grid_type: 'single_phase' } })}
-                                                    >
-                                                        Monofásica (1 fase)
-                                                    </Button>
-                                                    <Button
-                                                        className={`h-12 ${formData.solar.grid_type === 'three_phase' ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, grid_type: 'three_phase' } })}
-                                                    >
-                                                        Trifásica (3 fases)
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                            {renderRoofMapPicker()}
-                                        </div>
-
-                                        <div className="space-y-4 pt-4 border-t border-gray-100">
-                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                                <div>
-                                                    <Label className="mb-1 text-base font-bold">Já tem painéis solares instalados na sua casa?</Label>
-                                                    <p className="text-sm text-gray-500">O algoritmo analisará o excedente para dimensionar a bateria.</p>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-2 sm:w-auto">
-                                                    <Button
-                                                        className={`h-12 ${!formData.eredes.has_solar_before ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                        onClick={() => {
-                                                            setFormData({
-                                                                ...formData,
-                                                                eredes: { ...formData.eredes, has_solar_before: false },
-                                                                solar: { ...formData.solar, has_solar: false }
-                                                            });
-                                                        }}
-                                                    >
-                                                        Não
-                                                    </Button>
-                                                    <Button
-                                                        className={`h-12 ${formData.eredes.has_solar_before ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                        onClick={() => {
-                                                            setFormData({
-                                                                ...formData,
-                                                                eredes: { ...formData.eredes, has_solar_before: true },
-                                                                solar: { ...formData.solar, has_solar: true }
-                                                            });
-                                                        }}
-                                                    >
-                                                        Sim
-                                                    </Button>
-                                                </div>
-                                            </div>
-
-                                            {formData.eredes.has_solar_before && (
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-300">
-                                                    <div className="space-y-2">
-                                                        <Label>Potência de pico existente (kWp)</Label>
-                                                        <Input
-                                                            type="number"
-                                                            step="0.1"
-                                                            min="0"
-                                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                                            value={formData.solar.peak_kw}
-                                                            onChange={(e) => handleNumericChange(e.target.value, 'Potência de pico existente', (val) => setFormData({ ...formData, solar: { ...formData.solar, peak_kw: val } }))}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label>Potência máxima do inversor atual (kW)</Label>
-                                                        <Input
-                                                            type="number"
-                                                            step="0.1"
-                                                            min="0"
-                                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                                            value={formData.solar.existing_inverter_max_power_kw}
-                                                            onChange={(e) => handleNumericChange(e.target.value, 'Potência máxima do inversor', (val) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_max_power_kw: val } }))}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label>Marca do inversor atual</Label>
-                                                        <Input
-                                                            type="text"
-                                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                                            value={formData.solar.existing_inverter_brand}
-                                                            onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_brand: e.target.value } })}
-                                                            placeholder="Ex: Huawei"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label>Modelo do inversor atual</Label>
-                                                        <Input
-                                                            type="text"
-                                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                                            value={formData.solar.existing_inverter_model}
-                                                            onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_model: e.target.value } })}
-                                                            placeholder="Ex: SUN2000-5KTL"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2 md:col-span-2">
-                                                        <Label>Deseja adicionar mais painéis solares?</Label>
-                                                        <div className="grid grid-cols-2 gap-2 max-w-sm">
-                                                            <Button
-                                                                className={`h-12 ${formData.solar.expand_solar ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
-                                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, expand_solar: false } })}
-                                                            >
-                                                                Não
-                                                            </Button>
-                                                            <Button
-                                                                className={`h-12 ${formData.solar.expand_solar ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, expand_solar: true } })}
-                                                            >
-                                                                Sim
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                            <div className="space-y-2">
-                                                <Label>Nº de pessoas na habitação</Label>
-                                                <Input
-                                                    type="number"
-                                                    min="1"
-                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                    value={formData.house.occupants}
-                                                    onChange={(e) => handleNumericChange(e.target.value, 'Nº de pessoas', (val) => setFormData({ ...formData, house: { ...formData.house, occupants: val } }))}
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Área aproximada (m²)</Label>
-                                                <Input
-                                                    type="number"
-                                                    min="10"
-                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                    value={formData.house.area_m2}
-                                                    onChange={(e) => handleNumericChange(e.target.value, 'Área aproximada', (val) => setFormData({ ...formData, house: { ...formData.house, area_m2: val } }))}
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Nº de pisos</Label>
-                                                <Input
-                                                    type="number"
-                                                    min="1"
-                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                    value={formData.house.floors}
-                                                    onChange={(e) => handleNumericChange(e.target.value, 'Nº de pisos', (val) => setFormData({ ...formData, house: { ...formData.house, floors: val } }))}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {mode === 'house' ? (
-                                            <>
-                                                <div className="pt-4 border-t border-gray-200">
-                                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                                        <div>
-                                                            <Label className="mb-1">Pretende inserir os dados da última fatura?</Label>
-                                                            <p className="text-sm text-gray-500">Usamos esses dados apenas para estimar o preço por kWh.</p>
-                                                        </div>
-                                                        <div className="grid grid-cols-2 gap-2 sm:w-auto">
-                                                            <Button
-                                                                className={`h-12 ${formData.house.use_last_bill ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
-                                                                onClick={() => setFormData({ ...formData, house: { ...formData.house, use_last_bill: false } })}
-                                                            >
-                                                                Não
-                                                            </Button>
-                                                            <Button
-                                                                className={`h-12 ${formData.house.use_last_bill ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                                onClick={() => setFormData({ ...formData, house: { ...formData.house, use_last_bill: true } })}
-                                                            >
-                                                                Sim
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <div className="space-y-0">
-                                            </div>
-                                        )}
-
-                                        <div className="pt-4 border-t border-gray-200">
-                                            <Label className="text-gray-400 text-xs uppercase tracking-widest">Tarifário</Label>
-                                            <div className="mt-4 space-y-4">
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    {[
-                                                        { key: 'simple', label: 'Simples' },
-                                                        { key: 'bi', label: 'Bi-horário' },
-                                                        { key: 'tri', label: 'Tri-horário' }
-                                                    ].map((option) => (
-                                                        <Button
-                                                            key={option.key}
-                                                            className={`text-sm h-12 ${formData.tariff.type === option.key ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                            onClick={() => setFormData({
-                                                                ...formData,
-                                                                tariff: { ...formData.tariff, type: option.key as 'simple' | 'bi' | 'tri' },
-                                                                bill: { ...formData.bill, history: formData.bill.history.map((entry: any) => normalizeHistoryEntry(entry, option.key)) }
-                                                            })}
-                                                        >
-                                                            {option.label}
-                                                        </Button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-
-
-                                        {mode === 'house' && (formData.house.use_last_bill || isAdminMode) ? (
-                                            <div className="pt-4 border-t border-gray-200 space-y-4">
-                                                {formData.house.use_last_bill && (
-                                                    <div className="grid gap-4 md:grid-cols-4">
-                                                        {activeTariffPeriods.map((period) => (
-                                                            <div key={period.key} className="space-y-2">
-                                                                <Label>{period.label} (kWh)</Label>
-                                                                <Input
-                                                                    type="number"
-                                                                    min="0"
-                                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                                    value={formData.house.last_bill.consumption[period.key] ?? ''}
-                                                                    onChange={(e) => handleNumericChange(e.target.value, period.label, (val) => setFormData({
-                                                                        ...formData,
-                                                                        house: {
-                                                                            ...formData.house,
-                                                                            last_bill: {
-                                                                                ...formData.house.last_bill,
-                                                                                consumption: {
-                                                                                    ...formData.house.last_bill.consumption,
-                                                                                    [period.key]: val,
-                                                                                },
-                                                                            },
-                                                                        },
-                                                                    }))}
-                                                                />
-                                                            </div>
-                                                        ))}
-                                                        <div className="space-y-2">
-                                                            <Label>Valor total da fatura</Label>
-                                                            <div className="relative">
-                                                                <Input
-                                                                    type="number"
-                                                                    min="0"
-                                                                    step="0.01"
-                                                                    className="border-gray-300 focus-visible:ring-orange-600 pr-8"
-                                                                    value={formData.house.last_bill.total}
-                                                                    onChange={(e) => handleNumericChange(e.target.value, 'Valor total da fatura', (val) => setFormData({
-                                                                        ...formData,
-                                                                        house: {
-                                                                            ...formData.house,
-                                                                            last_bill: {
-                                                                                ...formData.house.last_bill,
-                                                                                total: val,
-                                                                            },
-                                                                        },
-                                                                    }))}
-                                                                />
-                                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {isAdminMode && (
-                                                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                                                        <div className="mb-3 flex items-center justify-between gap-3">
-                                                            <p className="text-sm font-semibold">
-                                                                {formData.house.use_last_bill ? 'Preço estimado' : 'Preços padrão'}
-                                                            </p>
-                                                            <Badge variant="outline" className="border-gray-300 text-gray-600">
-                                                                {formData.tariff.type === 'simple' ? 'Simples' : formData.tariff.type === 'bi' ? 'Bi-horário' : 'Tri-horário'}
-                                                            </Badge>
-                                                        </div>
-                                                        <div className="grid gap-3 sm:grid-cols-3">
-                                                            {activeTariffPeriods.map((period) => (
-                                                                <div key={period.key} className="rounded-md bg-white border border-gray-200 px-3 py-2">
-                                                                    <p className="text-xs uppercase tracking-widest text-gray-400">{period.label}</p>
-                                                                    <p className="mt-1 font-semibold text-gray-900">
-                                                                        {formatTariffPrice(estimatedHouseTariffPrices[period.key])}
-                                                                    </p>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ) : null}
-
-                                        <div className="pt-4 border-t border-gray-200 space-y-4">
-                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                                <div>
-                                                    <Label className="mb-1 text-base font-bold">Localização e Rede Elétrica</Label>
-                                                    <p className="text-sm text-gray-500">Ajude-nos a identificar o perfil solar e compatibilidade da rede.</p>
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                                <div className="space-y-2">
-                                                    <Label>País</Label>
-                                                    <Input
-                                                        type="text"
-                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                        value={formData.solar.country}
-                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, country: e.target.value } })}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label>Cidade</Label>
-                                                    <Input
-                                                        type="text"
-                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                        value={formData.solar.city}
-                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, city: e.target.value } })}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label>Localidade</Label>
-                                                    <Input
-                                                        type="text"
-                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                        value={formData.solar.location}
-                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, location: e.target.value } })}
-                                                        placeholder="Ex: Alfragide"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Tipo de Instalação Elétrica</Label>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-md">
-                                                    <Button
-                                                        className={`h-12 ${formData.solar.grid_type === 'single_phase' ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, grid_type: 'single_phase' } })}
-                                                    >
-                                                        Monofásica (1 fase)
-                                                    </Button>
-                                                    <Button
-                                                        className={`h-12 ${formData.solar.grid_type === 'three_phase' ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, grid_type: 'three_phase' } })}
-                                                    >
-                                                        Trifásica (3 fases)
-                                                    </Button>
-                                                </div>
-                                                {formData.solar.grid_type === 'single_phase' && (
-                                                    <p className="text-xs text-orange-600 font-medium">
-                                                        Apenas serão sugeridos inversores monofásicos compatíveis com a sua rede.
-                                                    </p>
-                                                )}
-                                            </div>
-                                            {renderRoofMapPicker()}
-                                        </div>
-
-                                        <div className="pt-4 border-t border-gray-200 space-y-4">
-                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                                <div>
-                                                    <Label className="mb-1">Tem painéis solares?</Label>
-                                                    <p className="text-sm text-gray-500">Se tiver, adicionamos perfil de produção mais preciso.</p>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-2 sm:w-auto">
-                                                    <Button
-                                                        className={`h-12 ${formData.solar.has_solar ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
-                                                        onClick={() => setFormData({
+                                                    <FriendlyNumericInput
+                                                        label="Valor Total"
+                                                        value={formData.house.last_bill.total}
+                                                        onChange={(val) => setFormData({
                                                             ...formData,
-                                                            solar: {
-                                                                ...formData.solar,
-                                                                has_solar: false,
-                                                                existing_inverter_brand: '',
-                                                                existing_inverter_model: '',
-                                                                existing_inverter_max_power_kw: 0,
-                                                                has_battery: false,
-                                                                battery_capacity_kwh: 0,
-                                                                existing_battery_brand: '',
-                                                                existing_battery_model: '',
-                                                                existing_battery_max_power_kw: 0,
-                                                            }
+                                                            house: {
+                                                                ...formData.house,
+                                                                last_bill: {
+                                                                    ...formData.house.last_bill,
+                                                                    total: val,
+                                                                },
+                                                            },
                                                         })}
-                                                    >
-                                                        Não
-                                                    </Button>
-                                                    <Button
-                                                        className={`h-12 ${formData.solar.has_solar ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                        onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_solar: true } })}
-                                                    >
-                                                        Sim
-                                                    </Button>
-                                                </div>
-                                            </div>
-
-                                            {formData.solar.has_solar && (
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                    <div className="space-y-2">
-                                                        <Label>Potência de pico existente (kWp)</Label>
-                                                        <Input
-                                                            type="number"
-                                                            step="0.1"
-                                                            min="0"
-                                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                                            value={formData.solar.peak_kw}
-                                                            onChange={(e) => handleNumericChange(e.target.value, 'Potência de pico existente', (val) => setFormData({ ...formData, solar: { ...formData.solar, peak_kw: val } }))}
+                                                        unit="€"
+                                                    />
+                                                    {formData.solar.has_solar && (
+                                                        <FriendlyNumericInput
+                                                            label="Produção Solar"
+                                                            value={formData.house.last_bill.production || 0}
+                                                            onChange={(val) => setFormData({
+                                                                ...formData,
+                                                                house: {
+                                                                    ...formData.house,
+                                                                    last_bill: {
+                                                                        ...formData.house.last_bill,
+                                                                        production: val,
+                                                                    },
+                                                                },
+                                                            })}
+                                                            unit="kWh"
                                                         />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label>Potência máxima do inversor atual (kW)</Label>
-                                                        <Input
-                                                            type="number"
-                                                            step="0.1"
-                                                            min="0"
-                                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                                            value={formData.solar.existing_inverter_max_power_kw}
-                                                            onChange={(e) => handleNumericChange(e.target.value, 'Potência máxima do inversor', (val) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_max_power_kw: val } }))}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label>Marca do inversor atual</Label>
-                                                        <Input
-                                                            type="text"
-                                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                                            value={formData.solar.existing_inverter_brand}
-                                                            onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_brand: e.target.value } })}
-                                                            placeholder="Ex: Huawei"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label>Modelo do inversor atual</Label>
-                                                        <Input
-                                                            type="text"
-                                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                                            value={formData.solar.existing_inverter_model}
-                                                            onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_inverter_model: e.target.value } })}
-                                                            placeholder="Ex: SUN2000-5KTL"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2 md:col-span-2">
-                                                        <Label>Deseja adicionar mais painéis solares?</Label>
-                                                        <div className="grid grid-cols-2 gap-2 max-w-sm">
-                                                            <Button
-                                                                className={`h-12 ${formData.solar.expand_solar ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
-                                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, expand_solar: false } })}
-                                                            >
-                                                                Não
-                                                            </Button>
-                                                            <Button
-                                                                className={`h-12 ${formData.solar.expand_solar ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, expand_solar: true } })}
-                                                            >
-                                                                Sim
-                                                            </Button>
-                                                        </div>
-                                                        {!formData.solar.expand_solar && (
-                                                            <p className="mt-2 text-sm text-gray-500">
-                                                                As sugestões focar-se-ão apenas em baterias para o sistema existente.
-                                                            </p>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="space-y-2 md:col-span-2">
-                                                        <Label>Já tem bateria?</Label>
-                                                        <div className="grid grid-cols-2 gap-2 max-w-sm">
-                                                            <Button
-                                                                className={`h-12 ${formData.solar.has_battery ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
-                                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_battery: false, battery_capacity_kwh: 0, existing_battery_brand: '', existing_battery_model: '', existing_battery_max_power_kw: 0 } })}
-                                                            >
-                                                                Não
-                                                            </Button>
-                                                            <Button
-                                                                className={`h-12 ${formData.solar.has_battery ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, has_battery: true, battery_capacity_kwh: formData.solar.battery_capacity_kwh || 5 } })}
-                                                            >
-                                                                Sim
-                                                            </Button>
-                                                        </div>
-
-                                                        {formData.solar.has_battery && (
-                                                            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                <div className="space-y-2">
-                                                                    <Label>Capacidade da bateria atual (kWh)</Label>
-                                                                    <Input
-                                                                        type="number"
-                                                                        min="0"
-                                                                        step="0.1"
-                                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                                        value={formData.solar.battery_capacity_kwh}
-                                                                        onChange={(e) => handleNumericChange(e.target.value, 'Capacidade da bateria atual', (val) => setFormData({ ...formData, solar: { ...formData.solar, battery_capacity_kwh: val } }))}
-                                                                    />
-                                                                </div>
-                                                                <div className="space-y-2">
-                                                                    <Label>Potência máxima da bateria atual (kW)</Label>
-                                                                    <Input
-                                                                        type="number"
-                                                                        min="0"
-                                                                        step="0.1"
-                                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                                        value={formData.solar.existing_battery_max_power_kw}
-                                                                        onChange={(e) => handleNumericChange(e.target.value, 'Potência máxima da bateria atual', (val) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_max_power_kw: val } }))}
-                                                                    />
-                                                                </div>
-                                                                <div className="space-y-2">
-                                                                    <Label>Marca da bateria atual</Label>
-                                                                    <Input
-                                                                        type="text"
-                                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                                        value={formData.solar.existing_battery_brand}
-                                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_brand: e.target.value } })}
-                                                                        placeholder="Ex: Huawei"
-                                                                    />
-                                                                </div>
-                                                                <div className="space-y-2">
-                                                                    <Label>Modelo do bateria atual</Label>
-                                                                    <Input
-                                                                        type="text"
-                                                                        className="border-gray-300 focus-visible:ring-orange-600"
-                                                                        value={formData.solar.existing_battery_model}
-                                                                        onChange={(e) => setFormData({ ...formData, solar: { ...formData.solar, existing_battery_model: e.target.value } })}
-                                                                        placeholder="Ex: Luna2000"
-                                                                    />
-                                                                </div>
-                                                                <p className="text-xs text-gray-500 md:col-span-2">
-                                                                    Estes dados serão considerados como equipamento já instalado no dimensionamento.
-                                                                </p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="pt-4 border-t border-gray-200 space-y-4">
-                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                                <div className="flex items-start gap-3">
-                                                    <Car className="w-5 h-5 mt-1 text-orange-600" />
-                                                    <div>
-                                                        <Label className="mb-1">Tem carro elétrico?</Label>
-                                                        <p className="text-sm text-gray-500">Adicionamos o consumo de carregamento à simulação energética.</p>
-                                                    </div>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-2 sm:w-auto">
-                                                    <Button
-                                                        className={`h-12 ${formData.electric_vehicles.has_electric_vehicle ? 'bg-white border border-gray-200 text-black hover:bg-gray-100' : 'bg-orange-600 text-white hover:bg-orange-700'}`}
-                                                        onClick={() => updateElectricVehicleCount(0)}
-                                                    >
-                                                        Não
-                                                    </Button>
-                                                    <Button
-                                                        className={`h-12 ${formData.electric_vehicles.has_electric_vehicle ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                        onClick={() => updateElectricVehicleCount(Math.max(1, formData.electric_vehicles.count || 1))}
-                                                    >
-                                                        Sim
-                                                    </Button>
-                                                </div>
-                                            </div>
-
-                                            {formData.electric_vehicles.has_electric_vehicle && (
-                                                <div className="space-y-4">
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <div>
-                                                            <p className="text-sm font-semibold">Carros elétricos</p>
-                                                            <p className="text-sm text-gray-500">{formData.electric_vehicles.vehicles.length} adicionados</p>
-                                                        </div>
-                                                        <Button
-                                                            type="button"
-                                                            className="h-10 bg-black text-white hover:bg-gray-800"
-                                                            onClick={addElectricVehicle}
-                                                            disabled={formData.electric_vehicles.vehicles.length >= 6}
-                                                        >
-                                                            <Plus className="w-4 h-4 mr-2" />
-                                                            Adicionar carro
-                                                        </Button>
-                                                    </div>
-
-                                                    <div className="space-y-4">
-                                                        {formData.electric_vehicles.vehicles.map((vehicle: any, index: number) => (
-                                                            <div key={index} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                                                                <div className="mb-3 flex items-center justify-between gap-3">
-                                                                    <div className="font-semibold">Carro {index + 1}</div>
-                                                                    <Button
-                                                                        type="button"
-                                                                        variant="outline"
-                                                                        className="h-9 border-gray-300 text-black hover:bg-gray-100"
-                                                                        onClick={() => removeElectricVehicle(index)}
-                                                                    >
-                                                                        <Trash2 className="w-4 h-4" />
-                                                                    </Button>
-                                                                </div>
-                                                                <div className="grid gap-4 md:grid-cols-4">
-                                                                    <div className="space-y-2">
-                                                                        <Label>Km por dia</Label>
-                                                                        <Input
-                                                                            type="number"
-                                                                            min="0"
-                                                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                                                            value={vehicle.daily_km}
-                                                                            onChange={(e) => handleNumericChange(e.target.value, 'Km por dia', (val) => updateElectricVehicle(index, 'daily_km', val))}
-                                                                        />
-                                                                    </div>
-                                                                    <div className="space-y-2">
-                                                                        <Label>Consumo (kWh/km)</Label>
-                                                                        <Input
-                                                                            type="number"
-                                                                            step="0.01"
-                                                                            min="0"
-                                                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                                                            value={vehicle.consumption_kwh_per_km}
-                                                                            onChange={(e) => handleNumericChange(e.target.value, 'Consumo (kWh/km)', (val) => updateElectricVehicle(index, 'consumption_kwh_per_km', val))}
-                                                                        />
-                                                                    </div>
-                                                                    <div className="space-y-2">
-                                                                        <Label>Marca</Label>
-                                                                        <Input
-                                                                            type="text"
-                                                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                                                            value={vehicle.brand}
-                                                                            onChange={(e) => updateElectricVehicle(index, 'brand', e.target.value)}
-                                                                        />
-                                                                    </div>
-                                                                    <div className="space-y-2">
-                                                                        <Label>Modelo</Label>
-                                                                        <Input
-                                                                            type="text"
-                                                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                                                            value={vehicle.model}
-                                                                            onChange={(e) => updateElectricVehicle(index, 'model', e.target.value)}
-                                                                        />
-                                                                    </div>
-                                                                </div>
-                                                                <div className="mt-4 space-y-2">
-                                                                    <Label>Quando carrega normalmente?</Label>
-                                                                    <div className="grid gap-2 md:grid-cols-3">
-                                                                        {[
-                                                                            { key: 'night', label: 'Só à noite' },
-                                                                            { key: 'day', label: 'Durante o dia' },
-                                                                            { key: 'mixed', label: 'Dia e noite' },
-                                                                        ].map((option) => (
-                                                                            <Button
-                                                                                key={option.key}
-                                                                                className={`h-11 ${vehicle.charging_schedule === option.key ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-white border border-gray-200 text-black hover:bg-gray-100'}`}
-                                                                                onClick={() => updateElectricVehicle(index, 'charging_schedule', option.key)}
-                                                                            >
-                                                                                {option.label}
-                                                                            </Button>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {mode === 'bill' && (
-                                            <div className="pt-4 border-t border-gray-200 space-y-4">
-                                                <div className="grid gap-4 md:grid-cols-2">
-                                                    <div className="space-y-2">
-                                                        <Label>Meses de histórico</Label>
-                                                        <Input
-                                                            type="number"
-                                                            min="1"
-                                                            max="12"
-                                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                                            value={formData.bill.historyMonths}
-                                                            onChange={(e) => {
-                                                                const val = Number(e.target.value);
-                                                                if (val < 0) {
-                                                                    toast({
-                                                                        title: 'Valor Inválido',
-                                                                        description: 'O número de meses não pode ser negativo.',
-                                                                        variant: 'destructive',
-                                                                    });
-                                                                    return;
-                                                                }
-                                                                const months = Math.min(12, Math.max(1, val || 1));
-                                                                const history = [...formData.bill.history];
-                                                                if (history.length < months) {
-                                                                    history.push(...Array(months - history.length).fill(null).map(() => createHistoryEntry(formData.tariff.type)));
-                                                                } else {
-                                                                    history.length = months;
-                                                                }
-                                                                setFormData({ ...formData, bill: { ...formData.bill, historyMonths: months, history } });
-                                                            }}
-                                                        />
-                                                        <p className="text-sm text-gray-500">Até 12 meses de consumo anteriores para maior precisão.</p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-4">
-                                                    {formData.bill.history.slice(0, formData.bill.historyMonths).map((entry: any, index: number) => (
-                                                        <div key={index} className="rounded-xl border border-gray-200 p-4 bg-gray-50">
-                                                            <div className="font-semibold mb-3">Mês {index + 1}</div>
-                                                            <div className={`grid gap-4 ${formData.tariff.type === 'tri' ? (formData.solar.has_solar ? 'md:grid-cols-5' : 'md:grid-cols-4') : formData.tariff.type === 'bi' ? (formData.solar.has_solar ? 'md:grid-cols-4' : 'md:grid-cols-3') : (formData.solar.has_solar ? 'md:grid-cols-3' : 'md:grid-cols-2')}`}>
-                                                                {formData.tariff.type === 'simple' && (
-                                                                    <div className="space-y-2">
-                                                                        <Label>Consumo (kWh)</Label>
-                                                                        <Input
-                                                                            type="number"
-                                                                            min="0"
-                                                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                                                            value={entry.simple ?? ''}
-                                                                            onChange={(e) => handleNumericChange(e.target.value, 'Consumo', (val) => {
-                                                                                const history = [...formData.bill.history];
-                                                                                history[index] = { ...history[index], simple: val };
-                                                                                setFormData({ ...formData, bill: { ...formData.bill, history } });
-                                                                            })}
-                                                                        />
-                                                                    </div>
-                                                                )}
-                                                                {formData.tariff.type !== 'simple' && (
-                                                                    <>
-                                                                        <div className="space-y-2">
-                                                                            <Label>Vazio (kWh)</Label>
-                                                                            <Input
-                                                                                type="number"
-                                                                                min="0"
-                                                                                className="border-gray-300 focus-visible:ring-orange-600"
-                                                                                value={entry.offPeak ?? ''}
-                                                                                onChange={(e) => handleNumericChange(e.target.value, 'Vazio', (val) => {
-                                                                                    const history = [...formData.bill.history];
-                                                                                    history[index] = { ...history[index], offPeak: val };
-                                                                                    setFormData({ ...formData, bill: { ...formData.bill, history } });
-                                                                                })}
-                                                                            />
-                                                                        </div>
-                                                                        <div className="space-y-2">
-                                                                            <Label>Cheia (kWh)</Label>
-                                                                            <Input
-                                                                                type="number"
-                                                                                min="0"
-                                                                                className="border-gray-300 focus-visible:ring-orange-600"
-                                                                                value={entry.peak ?? ''}
-                                                                                onChange={(e) => handleNumericChange(e.target.value, 'Cheia', (val) => {
-                                                                                    const history = [...formData.bill.history];
-                                                                                    history[index] = { ...history[index], peak: val };
-                                                                                    setFormData({ ...formData, bill: { ...formData.bill, history } });
-                                                                                })}
-                                                                            />
-                                                                        </div>
-                                                                        {formData.tariff.type === 'tri' && (
-                                                                            <div className="space-y-2">
-                                                                                <Label>Ponta (kWh)</Label>
-                                                                                <Input
-                                                                                    type="number"
-                                                                                    min="0"
-                                                                                    className="border-gray-300 focus-visible:ring-orange-600"
-                                                                                    value={entry.ponta ?? ''}
-                                                                                    onChange={(e) => handleNumericChange(e.target.value, 'Ponta', (val) => {
-                                                                                        const history = [...formData.bill.history];
-                                                                                        history[index] = { ...history[index], ponta: val };
-                                                                                        setFormData({ ...formData, bill: { ...formData.bill, history } });
-                                                                                    })}
-                                                                                />
-                                                                            </div>
-                                                                        )}
-                                                                    </>
-                                                                )}
-                                                                <div className="space-y-2">
-                                                                    <Label>Valor da fatura</Label>
-                                                                    <div className="relative">
-                                                                        <Input
-                                                                            type="number"
-                                                                            min="0"
-                                                                            step="0.01"
-                                                                            className="border-gray-300 focus-visible:ring-orange-600 pr-8"
-                                                                            value={entry.bill_total ?? ''}
-                                                                            onChange={(e) => handleNumericChange(e.target.value, 'Valor da fatura', (val) => {
-                                                                                const history = [...formData.bill.history];
-                                                                                history[index] = { ...history[index], bill_total: val };
-                                                                                setFormData({ ...formData, bill: { ...formData.bill, history } });
-                                                                            })}
-                                                                        />
-                                                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
-                                                                    </div>
-                                                                </div>
-                                                                {formData.solar.has_solar && (
-                                                                    <div className="space-y-2">
-                                                                        <Label>Produção solar (kWh)</Label>
-                                                                        <Input
-                                                                            type="number"
-                                                                            min="0"
-                                                                            className="border-gray-300 focus-visible:ring-orange-600"
-                                                                            value={entry.production ?? ''}
-                                                                            onChange={(e) => handleNumericChange(e.target.value, 'Produção solar', (val) => {
-                                                                                const history = [...formData.bill.history];
-                                                                                history[index] = { ...history[index], production: val };
-                                                                                setFormData({ ...formData, bill: { ...formData.bill, history } });
-                                                                            })}
-                                                                        />
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            {isAdminMode && (
-                                                                <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
-                                                                    <div className="mb-3 flex items-center justify-between gap-3">
-                                                                        <p className="text-sm font-semibold">Estimativa deste mês</p>
-                                                                        <Badge variant="outline" className="border-gray-300 text-gray-600">
-                                                                            {formData.tariff.type === 'simple' ? 'Simples' : formData.tariff.type === 'bi' ? 'Bi-horário' : 'Tri-horário'}
-                                                                        </Badge>
-                                                                    </div>
-                                                                    <div className="grid gap-3 sm:grid-cols-3">
-                                                                        {activeTariffPeriods.map((period) => {
-                                                                            const monthPrices = getBillMonthTariffPrices(formData.tariff.type, entry);
-                                                                            return (
-                                                                                <div key={period.key} className="rounded-md bg-gray-50 border border-gray-200 px-3 py-2">
-                                                                                    <p className="text-xs uppercase tracking-widest text-gray-400">{period.label}</p>
-                                                                                    <p className="mt-1 font-semibold text-gray-900">
-                                                                                        {formatTariffPrice(monthPrices[period.key])}
-                                                                                    </p>
-                                                                                </div>
-                                                                            );
-                                                                        })}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-
-                                <div className="pt-4 border-t border-gray-200">
-                                    <Label>Qual o valor máximo de investimento que pretende? (Opcional)</Label>
-                                    <div className="mt-2 relative max-w-sm">
-                                        <Input
-                                            type="number"
-                                            min="0"
-                                            placeholder="Ex: 5000"
-                                            className="border-gray-300 focus-visible:ring-orange-600 pr-8"
-                                            value={formData.max_investment}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                if (val !== '' && Number(val) < 0) {
-                                                    toast({
-                                                        title: 'Valor Inválido',
-                                                        description: 'O valor para "Investimento Máximo" não pode ser negativo.',
-                                                        variant: 'destructive',
-                                                    });
-                                                    return;
-                                                }
-                                                setFormData({ ...formData, max_investment: val });
-                                            }}
-                                        />
-                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
-                                    </div>
-                                    <p className="mt-1 text-xs text-gray-500">Se deixar em branco, mostraremos todas as opções disponíveis.</p>
-                                </div>
-
-                                <div className="flex gap-3 pt-4">
-                                    <Button variant="outline" className="border-gray-300 text-black hover:bg-gray-100" onClick={() => goToStep(1, null)}>
-                                        <ChevronLeft className="mr-2 w-4 h-4" /> Voltar
-                                    </Button>
-                                    <Button className="flex-grow bg-orange-600 hover:bg-orange-700 text-white h-12 text-lg" onClick={runSimulation} disabled={loading}>
-                                        {loading ? <Loader2 className="animate-spin mr-2" /> : "Gerar Recomendação"}
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* Step 3: Results */}
-                    {step === 3 && results && (
-                        <div className="space-y-8 animate-in zoom-in-95 duration-500 max-w-7xl mx-auto">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                <div>
-                                    <h2 className="text-2xl font-bold">Análise de Resultados</h2>
-                                    <p className="text-sm text-gray-500">Explore as melhores sugestões ou analise todas as soluções geradas.</p>
-                                </div>
-                                <Button
-                                    onClick={handlePremiumInterest}
-                                    className="bg-gradient-to-r from-orange-600 to-orange-500 text-white hover:from-orange-700 hover:to-orange-600 shadow-lg border-b-4 border-orange-800 active:border-b-0 active:translate-y-1 transition-all"
-                                    disabled={isSubmittingPremium || !results?.recommendations?.length}
-                                >
-                                    {isSubmittingPremium ? (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <FileText className="mr-2 h-4 w-4" />
-                                    )}
-                                    Descarregar Relatório Técnico Detalhado - 9,90€
-                                </Button>
-                                {isAdminMode && results?.debug_series && (
-                                    <Button
-                                        onClick={downloadDebugCSV}
-                                        variant="outline"
-                                        className="border-orange-200 text-orange-700 hover:bg-orange-50"
-                                    >
-                                        <Download className="mr-2 h-4 w-4" />
-                                        Exportar CSV (Debug)
-                                    </Button>
-                                )}
-                            </div>
-
-                            {isAdminMode && results?.debug_series && (
-                                <DebugSimulationChart data={results.debug_series} />
-                            )}
-
-                            {/* Retrofit Match Warning */}
-                            {results?.summary?.retrofit_match && !results.summary.retrofit_match.matched_id && (
-                                <Alert className="bg-amber-50 border-amber-200 text-amber-900 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
-                                    <AlertTriangle className="h-5 w-5 text-amber-600" />
-                                    <div className="ml-2">
-                                        <AlertTitle className="font-bold flex items-center gap-2">
-                                            Equipamento atual não reconhecido
-                                        </AlertTitle>
-                                        <AlertDescription className="mt-1 text-amber-800 leading-relaxed">
-                                            Não conseguimos identificar com total certeza o modelo <strong>{results.summary.retrofit_match.brand} {results.summary.retrofit_match.model}</strong> na nossa base de dados técnica.
-                                            <br />
-                                            Por segurança, as soluções abaixo incluem a <strong>substituição total do inversor</strong> para garantir compatibilidade a 100%. Se o seu equipamento atual for recente, contacte-nos para avaliarmos um orçamento personalizado reaproveitando o seu hardware.
-                                        </AlertDescription>
-                                    </div>
-                                </Alert>
-                            )}
-
-                            <Tabs defaultValue="best" value={activeTab} onValueChange={setActiveTab} className="w-full">
-                                <TabsList className="grid w-full max-w-md grid-cols-2 mb-8 h-12 p-1 bg-gray-100 rounded-xl">
-                                    <TabsTrigger value="best" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                                        <LayoutGrid className="w-4 h-4 mr-2" />
-                                        Melhores Sugestões
-                                    </TabsTrigger>
-                                    <TabsTrigger value="all" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                                        <LucideLineChart className="w-4 h-4 mr-2" />
-                                        Todas as Soluções
-                                    </TabsTrigger>
-                                </TabsList>
-
-                                <TabsContent value="best" className="space-y-10 focus-visible:outline-none focus-visible:ring-0">
-                                    {results?.recommendations?.length === 0 ? (
-                                        <div className="bg-orange-50 border-l-4 border-orange-500 p-6 rounded-r-xl">
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-2xl animate-bounce">😟</span>
-                                                <h3 className="text-lg font-bold text-orange-900">Nenhuma solução encontrada</h3>
-                                            </div>
-                                            <p className="mt-2 text-orange-800">
-                                                Com os parâmetros atuais, não conseguimos encontrar um sistema de baterias que cumpra os requisitos técnicos e económicos.
-                                                Experimente ajustar o seu consumo, orçamento ou potência solar e tente novamente.
-                                            </p>
-                                            <Button
-                                                variant="outline"
-                                                className="mt-4 border-orange-500 text-orange-900 hover:bg-orange-100"
-                                                onClick={() => goToStep(2)}
-                                            >
-                                                Ajustar Parâmetros
-                                            </Button>
-                                        </div>
-                                    ) : (
-                                        recommendationGroups.map((group) => (
-                                            group.items.length > 0 && (
-                                                <section key={group.tier} className="space-y-4">
-                                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between border-b border-gray-200 pb-2">
-                                                        <div>
-                                                            <div className="flex items-center gap-3">
-                                                                <h2 className="text-xl font-extrabold tracking-tight">{group.title}</h2>
-                                                                <Badge variant="outline" className={group.badgeClass}>
-                                                                    {group.items.length} opções
-                                                                </Badge>
-                                                            </div>
-                                                            <p className="text-sm text-gray-500">{group.description}</p>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                        {group.items.map((rec: any, idx: number) => (
-                                                            <Card
-                                                                key={`${group.tier}-${rec.system_name || rec.battery?.id || idx}`}
-                                                                onClick={() => setSelectedRecommendation(rec)}
-                                                                className="cursor-pointer relative overflow-hidden transition-all hover:scale-[1.02] bg-white flex flex-col h-full border-gray-200 shadow-sm"
-                                                            >
-                                                                <CardHeader className="p-4 pb-2">
-                                                                    <CardTitle className="text-lg leading-tight">Solução {idx + 1}</CardTitle>
-                                                                    <CardDescription className="text-xs mt-1 line-clamp-2">
-                                                                        {getBatteryDescription(rec)}
-                                                                        {rec.inverter && ` • Inv. ${rec.inverter.brand}`}
-                                                                        {rec.solar_panels && ` • ${rec.solar_panels.quantity} Painéis`}
-                                                                    </CardDescription>
-                                                                </CardHeader>
-
-                                                                <CardContent className="p-4 pt-2 flex-grow flex flex-col gap-4">
-                                                                    <div className="flex items-baseline gap-1 border-b border-gray-100 pb-3">
-                                                                        <span className="text-2xl font-extrabold">{formatPrice(rec.capex_total_eur)}</span>
-                                                                        <span className="text-gray-400 text-xs">est.</span>
-                                                                    </div>
-
-                                                                    <div className="grid grid-cols-2 gap-2 rounded-lg bg-gray-50 p-2 text-sm border border-gray-100">
-                                                                        <div>
-                                                                            <p className="text-xs text-gray-500">Poupança</p>
-                                                                            <p className="font-bold text-orange-600">{formatPrice(rec.savings_annual_eur)}/ano</p>
-                                                                        </div>
-                                                                        <div>
-                                                                            <p className="text-xs text-gray-500">Retorno</p>
-                                                                            <p className="font-bold">{rec.payback_years ? `${rec.payback_years} anos` : 'N/A'}</p>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    {rec.tariff_optimization && (
-                                                                        <div className="absolute top-2 right-2 p-1.5 rounded-full bg-orange-100 border border-orange-200 text-orange-600 shadow-sm animate-pulse" title={`Dica de Otimização: Mude para ${rec.tariff_optimization.recommended_type === 'bi' ? 'Bi-horário' : rec.tariff_optimization.recommended_type === 'tri' ? 'Tri-horário' : 'Simples'}`}>
-                                                                            <Lightbulb className="w-4 h-4" />
-                                                                        </div>
-                                                                    )}
-
-                                                                    <div className="flex flex-col gap-2 mt-auto">
-                                                                        <Button
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleRequestQuote(rec);
-                                                                            }}
-                                                                            className="w-full bg-white border border-gray-300 text-black hover:bg-gray-50"
-                                                                            size="sm"
-                                                                        >
-                                                                            Solicitar orçamentos (4,90€)
-                                                                        </Button>
-                                                                    </div>
-                                                                </CardContent>
-                                                            </Card>
-                                                        ))}
-                                                    </div>
-                                                </section>
-                                            )
-                                        ))
-                                    )}
-                                </TabsContent>
-
-                                <TabsContent value="all" className="focus-visible:outline-none focus-visible:ring-0">
-                                    <Card className="border-gray-200">
-                                        <CardHeader className="pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                            <div>
-                                                <CardTitle className="text-xl">Todas as Soluções Geradas</CardTitle>
-                                                <CardDescription>
-                                                    Analise como as diferentes variáveis se relacionam em todas as soluções tecnicamente viáveis.
-                                                </CardDescription>
-                                            </div>
-                                            <div className="flex bg-gray-100 p-1 rounded-lg">
-                                                <Button
-                                                    variant={allSolutionsView === 'chart' ? 'secondary' : 'ghost'}
-                                                    size="sm"
-                                                    onClick={() => setAllSolutionsView('chart')}
-                                                    className={`rounded-md ${allSolutionsView === 'chart' ? 'bg-white shadow-sm text-black' : 'text-gray-500'}`}
-                                                >
-                                                    <LucideLineChart className="w-4 h-4 mr-2" />
-                                                    Gráfico
-                                                </Button>
-                                                <Button
-                                                    variant={allSolutionsView === 'table' ? 'secondary' : 'ghost'}
-                                                    size="sm"
-                                                    onClick={() => setAllSolutionsView('table')}
-                                                    className={`rounded-md ${allSolutionsView === 'table' ? 'bg-white shadow-sm text-black' : 'text-gray-500'}`}
-                                                >
-                                                    <LayoutGrid className="w-4 h-4 mr-2" />
-                                                    Tabela
-                                                </Button>
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent className="space-y-6">
-                                            {/* Filtros Avançados */}
-                                            <div className="flex flex-wrap items-center gap-3 pb-2">
-                                                <Label className="text-gray-500 mr-1">Filtrar por:</Label>
-                                                {[
-                                                    { id: 'all', label: 'Todas', icon: Sparkles },
-                                                    { id: 'battery_only', label: 'Só Bateria', icon: Battery },
-                                                    { id: 'solar_only', label: 'Só Painéis', icon: Sun },
-                                                    { id: 'hybrid', label: 'Híbridas (Bat + Painéis)', icon: Zap },
-                                                ].map((f) => {
-                                                    const Icon = f.icon;
-                                                    return (
-                                                        <Button
-                                                            key={f.id}
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => setFilterType(f.id as any)}
-                                                            className={`h-9 rounded-full px-4 border-gray-200 transition-all ${filterType === f.id ? 'bg-orange-600 border-orange-600 text-white hover:bg-orange-700' : 'bg-white text-gray-600 hover:border-gray-400'}`}
-                                                        >
-                                                            <Icon className={`w-3.5 h-3.5 mr-2 ${filterType === f.id ? 'text-white' : 'text-orange-500'}`} />
-                                                            {f.label}
-                                                        </Button>
-                                                    );
-                                                })}
-                                            </div>
-
-                                            {allSolutionsView === 'chart' ? (
-                                                <>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
-                                                        <div className="space-y-2">
-                                                            <Label className="text-gray-600 text-xs uppercase font-bold tracking-wider">Eixo X (Horizontal)</Label>
-                                                            <Select value={xAxis} onValueChange={setXAxis}>
-                                                                <SelectTrigger className="bg-white border-gray-200 shadow-sm h-11">
-                                                                    <SelectValue />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="new_battery_capacity_kwh">Energia da bateria (kWh)</SelectItem>
-                                                                    <SelectItem value="panel_power_kwp">Potência dos painéis (kWp)</SelectItem>
-                                                                    <SelectItem value="capex_total_eur">Custo total (€)</SelectItem>
-                                                                    <SelectItem value="payback_years">Anos de retorno</SelectItem>
-                                                                    <SelectItem value="cost_per_kwh_battery">€/kWh da bateria</SelectItem>
-                                                                    <SelectItem value="cost_per_kwp_panels">€/kWp dos painéis</SelectItem>
-                                                                    <SelectItem value="max_system_power_kw">Máxima potência do sistema (kW)</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label className="text-gray-600 text-xs uppercase font-bold tracking-wider">Eixo Y (Vertical)</Label>
-                                                            <Select value={yAxis} onValueChange={setYAxis}>
-                                                                <SelectTrigger className="bg-white border-gray-200 shadow-sm h-11">
-                                                                    <SelectValue />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="new_battery_capacity_kwh">Energia da bateria (kWh)</SelectItem>
-                                                                    <SelectItem value="panel_power_kwp">Potência dos painéis (kWp)</SelectItem>
-                                                                    <SelectItem value="capex_total_eur">Custo total (€)</SelectItem>
-                                                                    <SelectItem value="payback_years">Anos de retorno</SelectItem>
-                                                                    <SelectItem value="cost_per_kwh_battery">€/kWh da bateria</SelectItem>
-                                                                    <SelectItem value="cost_per_kwp_panels">€/kWp dos painéis</SelectItem>
-                                                                    <SelectItem value="max_system_power_kw">Máxima potência do sistema (kW)</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="h-[550px] w-full mt-4 bg-white rounded-xl border border-gray-100 p-2 shadow-inner">
-                                                        <ResponsiveContainer width="100%" height="100%">
-                                                            <ScatterChart margin={{ top: 30, right: 30, bottom: 30, left: 30 }}>
-                                                                <CartesianGrid strokeDasharray="3 3" vertical={true} stroke="#f3f4f6" />
-                                                                <XAxis
-                                                                    type="number"
-                                                                    dataKey={xAxis}
-                                                                    name={xAxis}
-                                                                    stroke="#94a3b8"
-                                                                    fontSize={11}
-                                                                    tickLine={false}
-                                                                    axisLine={false}
-                                                                    tickFormatter={(val) => xAxis.includes('eur') || xAxis.includes('cost') ? `${val}€` : val}
-                                                                    label={{ value: xAxis.replace(/_/g, ' '), position: 'bottom', offset: 0, fill: '#64748b', fontSize: 10, fontWeight: 'bold' }}
-                                                                />
-                                                                <YAxis
-                                                                    type="number"
-                                                                    dataKey={yAxis}
-                                                                    name={yAxis}
-                                                                    stroke="#94a3b8"
-                                                                    fontSize={11}
-                                                                    tickLine={false}
-                                                                    axisLine={false}
-                                                                    tickFormatter={(val) => yAxis.includes('eur') || yAxis.includes('cost') ? `${val}€` : val}
-                                                                    label={{ value: yAxis.replace(/_/g, ' '), angle: -90, position: 'left', offset: 10, fill: '#64748b', fontSize: 10, fontWeight: 'bold' }}
-                                                                />
-                                                                <ZAxis type="number" range={[200, 200]} />
-                                                                <ChartTooltip
-                                                                    cursor={{ strokeDasharray: '3 3', stroke: '#94a3b8' }}
-                                                                    content={({ active, payload }) => {
-                                                                        if (active && payload && payload.length) {
-                                                                            const data = payload[0].payload;
-                                                                            // Novas flags vindas do backend para categorização precisa
-                                                                            const isHybrid = data.new_battery_added && data.new_panels_added;
-                                                                            const isSolarOnly = !data.new_battery_added && data.new_panels_added;
-                                                                            const isBatteryOnly = data.new_battery_added && !data.new_panels_added;
-
-                                                                            return (
-                                                                                <div className="bg-white/95 backdrop-blur-sm p-5 border border-gray-200 shadow-2xl rounded-2xl min-w-[280px]">
-                                                                                    <div className="flex items-center justify-between mb-3">
-                                                                                        <Badge className={isHybrid ? 'bg-orange-600' : isSolarOnly ? 'bg-blue-600' : 'bg-emerald-600'}>
-                                                                                            {isHybrid ? 'Híbrido' : isSolarOnly ? 'Só Solar' : 'Só Bateria'}
-                                                                                        </Badge>
-                                                                                        <span className="text-xl font-bold text-gray-900">{formatPrice(data.capex_total_eur)}</span>
-                                                                                    </div>
-
-                                                                                    <div className="space-y-3">
-                                                                                        <div className="space-y-1.5 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                                                                            {data.new_battery_added && data.battery && (
-                                                                                                <div className="flex items-center gap-2 text-xs">
-                                                                                                    <Battery className="w-3.5 h-3.5 text-orange-600" />
-                                                                                                    <span className="font-medium truncate">{getBatteryDescription(data)}</span>
-                                                                                                </div>
-                                                                                            )}
-                                                                                            {data.inverter && (
-                                                                                                <div className="flex items-center gap-2 text-xs">
-                                                                                                    <Zap className="w-3.5 h-3.5 text-blue-600" />
-                                                                                                    <span className="font-medium truncate">
-                                                                                                        {data.inverter.brand} {data.inverter.model}
-                                                                                                        {data.is_retrofit && <span className="ml-1 text-[10px] text-emerald-600 font-bold">(Inversor atual)</span>}
-                                                                                                    </span>
-                                                                                                </div>
-                                                                                            )}
-                                                                                            {data.new_panels_added && data.solar_panels && (
-                                                                                                <div className="flex items-center gap-2 text-xs">
-                                                                                                    <Sun className="w-3.5 h-3.5 text-amber-500" />
-                                                                                                    <span className="font-medium truncate">{data.solar_panels.quantity}x {data.solar_panels.panel?.brand || 'Painéis'}</span>
-                                                                                                </div>
-                                                                                            )}
-                                                                                        </div>
-
-                                                                                        <div className="grid grid-cols-2 gap-3 text-xs">
-                                                                                            <div className="flex flex-col">
-                                                                                                <span className="text-gray-500">Payback</span>
-                                                                                                <span className="font-bold text-gray-900">{data.payback_years} anos</span>
-                                                                                            </div>
-                                                                                            <div className="flex flex-col">
-                                                                                                <span className="text-gray-500">Poupança Anual</span>
-                                                                                                <span className="font-bold text-emerald-600">{formatPrice(data.savings_annual_eur)}</span>
-                                                                                            </div>
-                                                                                            <div className="flex flex-col">
-                                                                                                <span className="text-gray-500">Novo Solar</span>
-                                                                                                <span className="font-bold text-gray-900">{data.new_panels_added ? data.solar_panels.added_power_kwp || data.panel_power_kwp : 0} kWp</span>
-                                                                                            </div>
-                                                                                            <div className="flex flex-col">
-                                                                                                <span className="text-gray-500">Nova Bat.</span>
-                                                                                                <span className="font-bold text-gray-900">{data.new_battery_added ? data.new_battery_capacity_kwh : 0} kWh</span>
-                                                                                            </div>
-                                                                                        </div>
-                                                                                        <p className="text-[10px] text-orange-500 font-bold text-center mt-2 animate-pulse">CLIQUE PARA MAIS DETALHES</p>
-                                                                                    </div>
-                                                                                </div>
-                                                                            );
-                                                                        }
-                                                                        return null;
-                                                                    }}
-                                                                />
-                                                                <Scatter
-                                                                    name="Híbridas"
-                                                                    data={filteredRecommendations.filter(r => r.new_battery_added && r.new_panels_added)}
-                                                                    fill="#ea580c"
-                                                                    size={100}
-                                                                    className="cursor-pointer transition-transform"
-                                                                    onClick={(data) => setSelectedRecommendation(data)}
-                                                                />
-                                                                <Scatter
-                                                                    name="Só Bateria"
-                                                                    data={filteredRecommendations.filter(r => r.new_battery_added && !r.new_panels_added)}
-                                                                    fill="#10b981"
-                                                                    size={100}
-                                                                    className="cursor-pointer transition-transform"
-                                                                    onClick={(data) => setSelectedRecommendation(data)}
-                                                                />
-                                                                <Scatter
-                                                                    name="Só Solar"
-                                                                    data={filteredRecommendations.filter(r => !r.new_battery_added && r.new_panels_added)}
-                                                                    fill="#2563eb"
-                                                                    size={100}
-                                                                    className="cursor-pointer transition-transform"
-                                                                    onClick={(data) => setSelectedRecommendation(data)}
-                                                                />
-                                                            </ScatterChart>
-                                                        </ResponsiveContainer>
-                                                    </div>
-
-                                                    <div className="flex justify-center gap-6 mt-2 pb-2">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-3 h-3 rounded-full bg-orange-600" />
-                                                            <span className="text-xs font-bold text-gray-600">Híbrida</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                                                            <span className="text-xs font-bold text-gray-600">Só Bateria</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-3 h-3 rounded-full bg-blue-600" />
-                                                            <span className="text-xs font-bold text-gray-600">Só Solar</span>
-                                                        </div>
-                                                    </div>
-
-                                                    <p className="text-center text-xs text-gray-400 italic">
-                                                        * Passe com o rato nos pontos para ver o resumo. Clique para ver o relatório completo de cada solução.
-                                                    </p>
-                                                </>
-                                            ) : (
-                                                <div className="overflow-x-auto rounded-lg border border-gray-100">
-                                                    <Table>
-                                                        <TableHeader>
-                                                            <TableRow className="bg-gray-50 hover:bg-gray-50 text-[11px]">
-                                                                <TableHead className="font-bold text-gray-900">Bateria</TableHead>
-                                                                <TableHead className="font-bold text-gray-900">Inversor</TableHead>
-                                                                <TableHead className="font-bold text-gray-900">Painéis</TableHead>
-                                                                <TableHead className="font-bold text-gray-900 text-right cursor-pointer hover:text-orange-600 transition-colors" onClick={() => handleSort('capex_total_eur')}>
-                                                                    Custo (€) {sortConfig?.key === 'capex_total_eur' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                                                                </TableHead>
-                                                                <TableHead className="font-bold text-gray-900 text-right cursor-pointer hover:text-orange-600 transition-colors" onClick={() => handleSort('payback_years')}>
-                                                                    Payback (Anos) {sortConfig?.key === 'payback_years' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                                                                </TableHead>
-                                                                <TableHead className="font-bold text-gray-900 text-right cursor-pointer hover:text-orange-600 transition-colors" onClick={() => handleSort('new_battery_capacity_kwh')}>
-                                                                    Bat. (kWh) {sortConfig?.key === 'new_battery_capacity_kwh' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                                                                </TableHead>
-                                                                <TableHead className="font-bold text-gray-900 text-right cursor-pointer hover:text-orange-600 transition-colors" onClick={() => handleSort('panel_power_kwp')}>
-                                                                    Sol. (kWp) {sortConfig?.key === 'panel_power_kwp' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                                                                </TableHead>
-                                                                <TableHead className="font-bold text-gray-900 text-right cursor-pointer hover:text-orange-600 transition-colors" onClick={() => handleSort('cost_per_kwh_battery')}>
-                                                                    €/kWh Bat. {sortConfig?.key === 'cost_per_kwh_battery' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                                                                </TableHead>
-                                                                <TableHead className="font-bold text-gray-900 text-right cursor-pointer hover:text-orange-600 transition-colors" onClick={() => handleSort('cost_per_kwp_panels')}>
-                                                                    €/kWp Painéis {sortConfig?.key === 'cost_per_kwp_panels' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                                                                </TableHead>
-                                                                <TableHead className="font-bold text-gray-900 text-right cursor-pointer hover:text-orange-600 transition-colors" onClick={() => handleSort('max_system_power_kw')}>
-                                                                    Pot. Máx. (kW) {sortConfig?.key === 'max_system_power_kw' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                                                                </TableHead>
-                                                            </TableRow>
-                                                        </TableHeader>
-                                                        <TableBody>
-                                                            {sortedRecommendations.map((data: any, idx: number) => (
-                                                                <TableRow
-                                                                    key={idx}
-                                                                    className="cursor-pointer hover:bg-orange-50/50 transition-colors text-[11px]"
-                                                                    onClick={() => setSelectedRecommendation(data)}
-                                                                >
-                                                                    <TableCell>
-                                                                        {data.battery ? (
-                                                                            <div className="flex items-center gap-1.5">
-                                                                                <Battery className="w-3 h-3 text-orange-600 shrink-0" />
-                                                                                <div>
-                                                                                    <div className="font-medium truncate max-w-[120px]">{data.battery.brand} {data.battery.model}</div>
-                                                                                    <div className="text-gray-400 text-[10px]">Qtd: {data.battery.quantity || 1}</div>
-                                                                                </div>
-                                                                            </div>
-                                                                        ) : ''}
-                                                                    </TableCell>
-                                                                    <TableCell>
-                                                                        {data.inverter ? (
-                                                                            <div className="flex items-center gap-1.5">
-                                                                                <Zap className="w-3 h-3 text-blue-600 shrink-0" />
-                                                                                <div>
-                                                                                    <div className="font-medium truncate max-w-[120px]">{data.inverter.brand} {data.inverter.model}</div>
-                                                                                    <div className="text-gray-400 text-[10px]">Qtd: {data.inverter.quantity || 1}</div>
-                                                                                </div>
-                                                                            </div>
-                                                                        ) : ''}
-                                                                    </TableCell>
-                                                                    <TableCell>
-                                                                        {data.solar_panels ? (
-                                                                            <div className="flex items-center gap-1.5">
-                                                                                <Sun className="w-3 h-3 text-amber-500 shrink-0" />
-                                                                                <div>
-                                                                                    <div className="font-medium truncate max-w-[120px]">{data.solar_panels.panel?.brand} {data.solar_panels.panel?.model}</div>
-                                                                                    <div className="text-gray-400 text-[10px]">Qtd: {data.solar_panels.quantity}</div>
-                                                                                </div>
-                                                                            </div>
-                                                                        ) : ''}
-                                                                    </TableCell>
-                                                                    <TableCell className="text-right font-bold text-gray-900">{Math.round(data.capex_total_eur).toLocaleString()}€</TableCell>
-                                                                    <TableCell className="text-right">{data.payback_years}</TableCell>
-                                                                    <TableCell className="text-right font-medium">{data.new_battery_capacity_kwh} kWh</TableCell>
-                                                                    <TableCell className="text-right font-medium">{data.panel_power_kwp} kWp</TableCell>
-                                                                    <TableCell className="text-right text-gray-500">{data.cost_per_kwh_battery ? `${Math.round(data.cost_per_kwh_battery)}€` : ''}</TableCell>
-                                                                    <TableCell className="text-right text-gray-500">{data.cost_per_kwp_panels ? `${Math.round(data.cost_per_kwp_panels)}€` : ''}</TableCell>
-                                                                    <TableCell className="text-right font-medium">{data.max_system_power_kw ? `${data.max_system_power_kw}kW` : ''}</TableCell>
-                                                                </TableRow>
-                                                            ))}
-                                                        </TableBody>
-                                                    </Table>
-                                                    {sortedRecommendations.length === 0 && (
-                                                        <div className="p-12 text-center bg-gray-50 border-t border-gray-100">
-                                                            <div className="bg-gray-200 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                                                                <Info className="text-gray-400 w-6 h-6" />
-                                                            </div>
-                                                            <p className="text-gray-500 font-medium">Nenhuma solução encontrada com este filtro.</p>
-                                                            <Button variant="link" onClick={() => setFilterType('all')} className="text-orange-600">Ver todas as soluções</Button>
-                                                        </div>
                                                     )}
                                                 </div>
                                             )}
-                                        </CardContent>
-                                    </Card>
-                                </TabsContent>
-                            </Tabs>
-
-                            {/* Modal de Detalhes Refatorado */}
-                            {selectedRecommendation && (
-                                <RecommendationModal
-                                    recommendation={selectedRecommendation}
-                                    onClose={() => setSelectedRecommendation(null)}
-                                    onRequestQuote={handleRequestQuote}
-                                    formatPrice={formatPrice}
-                                    getSystemName={getSystemName}
-                                    getExistingBatteryDescription={getExistingBatteryDescription}
-                                    getPriceBreakdown={getPriceBreakdown}
-                                />
-                            )}
-
-                            {/* Secção de Avaliação */}
-                            <div className="bg-white p-8 rounded-2xl border-2 border-orange-100 shadow-sm text-center space-y-6">
-                                {!hasRated ? (
-                                    <>
-                                        <div>
-                                            <h3 className="text-xl font-bold mb-2">O que achou destas soluções?</h3>
-                                            <p className="text-gray-500">A sua avaliação ajuda-nos a melhorar o nosso algoritmo.</p>
                                         </div>
+                                    )}
 
-                                        <div className="flex flex-wrap justify-center gap-2">
-                                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
-                                                <button
-                                                    key={star}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setUserRating(star);
-                                                        handleRatingSubmit(star, undefined, false);
-                                                    }}
-                                                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${userRating === star ? 'bg-orange-600 text-white' : 'bg-gray-50 text-gray-400 hover:bg-orange-100 hover:text-orange-600'}`}
-                                                >
-                                                    <span className="font-bold text-sm">{star}</span>
-                                                </button>
-                                            ))}
+                                    <div className="pt-6 border-t border-gray-100">
+                                        <Label className="text-gray-900 font-bold uppercase tracking-tight">Tipo de Instalação Elétrica</Label>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 h-[52px]">
+                                            <Button
+                                                variant={formData.solar.grid_type === 'single_phase' ? "default" : "outline"}
+                                                className={formData.solar.grid_type === 'single_phase' ? "bg-orange-600 hover:bg-orange-700" : "border-gray-200"}
+                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, grid_type: 'single_phase' } })}
+                                            >
+                                                Monofásica (1 fase)
+                                            </Button>
+                                            <Button
+                                                variant={formData.solar.grid_type === 'three_phase' ? "default" : "outline"}
+                                                className={formData.solar.grid_type === 'three_phase' ? "bg-orange-600 hover:bg-orange-700" : "border-gray-200"}
+                                                onClick={() => setFormData({ ...formData, solar: { ...formData.solar, grid_type: 'three_phase' } })}
+                                            >
+                                                Trifásica (3 fases)
+                                            </Button>
                                         </div>
-
-                                        {userRating !== null && userRating <= 9 && (
-                                            <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-8 pt-6 max-w-2xl mx-auto border-t border-gray-100 text-left">
-                                                {FEEDBACK_FORM_QUESTIONS.map((q) => (
-                                                    <div key={q.id} className="space-y-3">
-                                                        <Label className="text-base font-bold text-gray-900">{q.question}</Label>
-                                                        <div className="grid grid-cols-1 gap-2">
-                                                            {q.options.map((option) => (
-                                                                <div
-                                                                    key={option}
-                                                                    className="flex items-start space-x-3 p-3 rounded-lg border border-gray-100 hover:bg-orange-50/50 transition-colors cursor-pointer"
-                                                                >
-                                                                    <Checkbox
-                                                                        id={`${q.id}-${option}`}
-                                                                        checked={(feedbackQuestions[q.id] || []).includes(option)}
-                                                                        onCheckedChange={(checked) => {
-                                                                            const current = feedbackQuestions[q.id] || [];
-                                                                            const next = checked
-                                                                                ? [...current, option]
-                                                                                : current.filter(item => item !== option);
-                                                                            setFeedbackQuestions({ ...feedbackQuestions, [q.id]: next });
-                                                                        }}
-                                                                    />
-                                                                    <label
-                                                                        htmlFor={`${q.id}-${option}`}
-                                                                        className="text-sm leading-tight text-gray-700 cursor-pointer w-full"
-                                                                    >
-                                                                        {option}
-                                                                    </label>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                ))}
-
-                                                <div className="space-y-3 pt-4">
-                                                    <Label className="text-base font-bold text-gray-900">Algo mais que queira partilhar? (Opcional)</Label>
-                                                    <Textarea
-                                                        value={ratingComment}
-                                                        onChange={(e) => setRatingComment(e.target.value)}
-                                                        placeholder="Diga-nos o que faltou ou o que poderia ser melhor..."
-                                                        className="mt-2 bg-white border-gray-200"
-                                                        rows={3}
-                                                    />
-                                                </div>
-                                                <Button
-                                                    onClick={() => handleRatingSubmit(userRating, ratingComment, true)}
-                                                    disabled={isSendingRating}
-                                                    className="w-full bg-orange-600 hover:bg-orange-700 text-white h-12 text-lg font-bold"
-                                                >
-                                                    {isSendingRating ? <Loader2 className="animate-spin w-5 h-5" /> : 'Submeter Feedback'}
-                                                </Button>
-                                            </div>
-                                        )}
-
-                                        {userRating !== null && userRating > 9 && (
-                                            <div className="animate-in fade-in duration-300 pt-2">
-                                                <p className="text-emerald-600 font-medium">Obrigado pela sua avaliação!</p>
-                                            </div>
-                                        )}
-                                    </>
-                                ) : (
-                                    <div className="py-4 animate-in zoom-in duration-500">
-                                        <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <CheckCircle2 className="w-8 h-8" />
-                                        </div>
-                                        <h3 className="text-xl font-bold text-gray-900">Obrigado pelo seu feedback!</h3>
-                                        <p className="text-gray-500">A sua opinião é fundamental para continuarmos a evoluir.</p>
                                     </div>
-                                )}
-                            </div>
 
-                            <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 text-sm text-gray-500">
-                                <h4 className="font-bold text-black mb-2">Notas da Simulação:</h4>
-                                <ul className="list-disc ml-4 space-y-1">
-                                    {(results.notes || []).map((note: string, index: number) => (
-                                        <li key={index}>{note}</li>
-                                    ))}
-                                </ul>
-                            </div>
+                                    <div className="pt-8 border-t border-gray-100">
+                                        <StepConsumptionData
+                                            formData={formData}
+                                            setFormData={setFormData}
+                                            addElectricVehicle={addElectricVehicle}
+                                            removeElectricVehicle={removeElectricVehicle}
+                                            updateElectricVehicle={updateElectricVehicle}
+                                        />
+                                    </div>
 
-                            <div className="text-center">
-                                <Button variant="link" onClick={() => goToStep(1, null)} className="text-gray-500 hover:text-black">Refazer Simulação</Button>
-                            </div>
-                        </div>
-                    )}
+                                    <div className="space-y-4 pt-8 border-t border-gray-100">
+                                        <Label className="text-gray-900 font-bold uppercase tracking-tight">Investimento Máximo (Opcional)</Label>
+                                        <div className="relative max-w-sm">
+                                            <Input
+                                                type="number"
+                                                placeholder="Ex: 5000"
+                                                className="h-12 border-gray-300 focus-visible:ring-orange-600 pr-10 rounded-xl"
+                                                value={formData.max_investment}
+                                                onChange={(e) => setFormData({ ...formData, max_investment: e.target.value })}
+                                            />
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">€</span>
+                                        </div>
+                                        <p className="text-xs text-gray-400">Deixe em branco para ver todas as opções tecnológicas.</p>
+                                    </div>
+                                </div>
 
-                    {/* Waiting List Section */}
-                    <section className="mt-24 p-10 bg-orange-50 rounded-3xl text-black relative overflow-hidden max-w-7xl mx-auto">
-                        <div className="relative z-10 max-w-xl">
-                            <h2 className="text-2xl font-bold mb-4">Deseja um Relatório Técnico Completo?</h2>
-                            <p className="text-gray-700 mb-6">A nossa equipa realiza um estudo detalhado e perfil de carga específico para a sua empresa ou habitação.</p>
-                            <div className="flex flex-col sm:flex-row gap-3">
-                                <Input value={reportEmail} onChange={(e) => setReportEmail(e.target.value)} placeholder="Email" className="bg-white border-gray-200 text-black placeholder:text-gray-400 focus-visible:ring-orange-600" />
-                                <Button onClick={handleSendReportEmail} disabled={isSendingReportEmail} className="bg-orange-600 hover:bg-orange-700 px-8 text-white">
-                                    {isSendingReportEmail ? <Loader2 className="animate-spin w-4 h-4" /> : 'Receber Informação'}
-                                </Button>
-                            </div>
-
-                            <div className="mt-8 border-t border-orange-200 pt-6">
-                                <h3 className="text-lg font-bold mb-2">Ajude-nos a melhorar</h3>
-                                <p className="text-gray-700 mb-4">Partilhe feedback sobre a simulação, resultados ou experiência de utilização.</p>
-                                <Textarea
-                                    value={feedbackMessage}
-                                    onChange={(e) => setFeedbackMessage(e.target.value)}
-                                    placeholder="Escreva aqui o seu feedback"
-                                    rows={4}
-                                    className="bg-white border-gray-200 text-black placeholder:text-gray-400 focus-visible:ring-orange-600"
-                                />
-                                <div className="mt-3 flex justify-end">
-                                    <Button onClick={handleSendFeedback} disabled={isSendingFeedback} className="bg-black hover:bg-gray-800 text-white">
-                                        {isSendingFeedback ? <Loader2 className="animate-spin w-4 h-4" /> : 'Enviar Feedback'}
+                                <div className="flex gap-3 pt-8 border-t border-gray-100">
+                                    <Button variant="outline" className="h-12 px-8 border-gray-300 rounded-xl" onClick={() => goToStep(3)}>
+                                        <ChevronLeft className="mr-2 w-4 h-4" /> Voltar
+                                    </Button>
+                                    <Button
+                                        className="flex-1 bg-orange-600 hover:bg-orange-700 text-white h-12 text-lg font-bold rounded-xl shadow-lg shadow-orange-100"
+                                        onClick={runSimulation}
+                                        disabled={loading}
+                                    >
+                                        {loading ? <Loader2 className="animate-spin mr-2" /> : <><Zap className="w-5 h-5 mr-2" /> Gerar Recomendação</>}
                                     </Button>
                                 </div>
                             </div>
-                        </div>
-                        <Battery className="absolute -right-10 -bottom-10 w-64 h-64 text-orange-200/20 rotate-12" />
-                    </section>
+                        )}
 
+                        {/* Step 5: Results */}
+                        {step === 5 && results && (
+                            <div className="space-y-8 animate-in zoom-in-95 duration-500 max-w-7xl mx-auto">
+                                {loading ? (
+                                    <div className="space-y-6">
+                                        <div className="flex items-center justify-center py-12">
+                                            <div className="text-center space-y-4">
+                                                <div className="relative">
+                                                    <div className="w-20 h-20 border-4 border-orange-100 border-t-orange-600 rounded-full animate-spin mx-auto" />
+                                                    <Zap className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-orange-600 w-8 h-8" />
+                                                </div>
+                                                <h3 className="text-xl font-bold text-gray-900">Calculando a sua independência...</h3>
+                                                <p className="text-gray-500">O nosso algoritmo está a analisar milhares de combinações.</p>
+                                            </div>
+                                        </div>
+                                        <ResultsSkeleton />
+                                    </div>
+                                ) : (
+                                    <div className="space-y-8">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <h2 className="text-3xl font-bold text-gray-900">Análise de Resultados</h2>
+                                                <p className="text-gray-500">Explore as melhores sugestões para a sua casa.</p>
+                                            </div>
+                                            <Button
+                                                onClick={handlePremiumInterest}
+                                                className="bg-black hover:bg-gray-800 text-white h-12 px-6 rounded-xl shadow-xl transition-all active:scale-95"
+                                                disabled={isSubmittingPremium || !results?.recommendations?.length}
+                                            >
+                                                {isSubmittingPremium ? (
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <FileText className="mr-2 h-4 w-4" />
+                                                )}
+                                                Relatório Técnico Detalhado
+                                            </Button>
+                                            {isAdminMode && results?.debug_series && (
+                                                <Button
+                                                    onClick={downloadDebugCSV}
+                                                    variant="outline"
+                                                    className="border-orange-200 text-orange-700 hover:bg-orange-50 h-12 rounded-xl"
+                                                >
+                                                    <Download className="mr-2 h-4 w-4" />
+                                                    Exportar CSV (Debug)
+                                                </Button>
+                                            )}
+                                        </div>
+
+                                        {isAdminMode && results?.debug_series && (
+                                            <DebugSimulationChart data={results.debug_series} />
+                                        )}
+
+                                        {/* Retrofit Match Warning */}
+                                        {results?.summary?.retrofit_match && !results.summary.retrofit_match.matched_id && (
+                                            <Alert className="bg-amber-50 border-amber-200 text-amber-900 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500 rounded-2xl">
+                                                <AlertTriangle className="h-5 w-5 text-amber-600" />
+                                                <div className="ml-2">
+                                                    <AlertTitle className="font-bold flex items-center gap-2">
+                                                        Equipamento atual não reconhecido
+                                                    </AlertTitle>
+                                                    <AlertDescription className="mt-1 text-amber-800 leading-relaxed">
+                                                        Não conseguimos identificar com total certeza o modelo <strong>{results.summary.retrofit_match.brand} {results.summary.retrofit_match.model}</strong> na nossa base de dados técnica.
+                                                        <br />
+                                                        Por segurança, as soluções abaixo incluem a <strong>substituição total do inversor</strong> para garantir compatibilidade a 100%. Se o seu equipamento atual for recente, contacte-nos para avaliarmos um orçamento personalizado reaproveitando o seu hardware.
+                                                    </AlertDescription>
+                                                </div>
+                                            </Alert>
+                                        )}
+
+                                        <Tabs defaultValue="best" value={activeTab} onValueChange={setActiveTab} className="w-full">
+                                            <TabsList className="grid w-full max-w-md grid-cols-2 mb-8 h-12 p-1 bg-gray-100 rounded-xl">
+                                                <TabsTrigger value="best" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                                                    <LayoutGrid className="w-4 h-4 mr-2" />
+                                                    Melhores Sugestões
+                                                </TabsTrigger>
+                                                <TabsTrigger value="all" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                                                    <LucideLineChart className="w-4 h-4 mr-2" />
+                                                    Todas as Soluções
+                                                </TabsTrigger>
+                                            </TabsList>
+
+                                            <TabsContent value="best" className="space-y-10 focus-visible:outline-none focus-visible:ring-0">
+                                                {results?.recommendations?.length === 0 ? (
+                                                    <div className="bg-orange-50 border-l-4 border-orange-500 p-6 rounded-r-xl">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-2xl animate-bounce">😟</span>
+                                                            <h3 className="text-lg font-bold text-orange-900">Nenhuma solução encontrada</h3>
+                                                        </div>
+                                                        <p className="mt-2 text-orange-800">
+                                                            Com os parâmetros atuais, não conseguimos encontrar um sistema de baterias que cumpra os requisitos técnicos e económicos.
+                                                            Experimente ajustar o seu consumo, orçamento ou potência solar e tente novamente.
+                                                        </p>
+                                                        <Button
+                                                            variant="outline"
+                                                            className="mt-4 border-orange-500 text-orange-900 hover:bg-orange-100 h-12 rounded-xl"
+                                                            onClick={() => goToStep(2)}
+                                                        >
+                                                            Ajustar Parâmetros
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    recommendationGroups.map((group) => (
+                                                        group.items.length > 0 && (
+                                                            <section key={group.tier} className="space-y-4">
+                                                                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between border-b border-gray-200 pb-2">
+                                                                    <div>
+                                                                        <div className="flex items-center gap-3">
+                                                                            <h2 className="text-xl font-extrabold tracking-tight text-gray-900">{group.title}</h2>
+                                                                            <Badge variant="outline" className={cn("font-bold", group.badgeClass)}>
+                                                                                {group.items.length} opções
+                                                                            </Badge>
+                                                                        </div>
+                                                                        <p className="text-sm text-gray-500">{group.description}</p>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                                    {group.items.map((rec: any, idx: number) => (
+                                                                        <Card
+                                                                            key={`${group.tier}-${rec.system_name || rec.battery?.id || idx}`}
+                                                                            onClick={() => setSelectedRecommendation(rec)}
+                                                                            className="cursor-pointer relative overflow-hidden transition-all hover:scale-[1.02] hover:shadow-xl bg-white flex flex-col h-full border-gray-200 rounded-2xl group"
+                                                                        >
+                                                                            <CardHeader className="p-6 pb-2">
+                                                                                <CardTitle className="text-xl leading-tight text-gray-900">Solução {idx + 1}</CardTitle>
+                                                                                <CardDescription className="text-sm mt-1 line-clamp-2 text-gray-500">
+                                                                                    {getBatteryDescription(rec)}
+                                                                                    {rec.inverter && ` • Inv. ${rec.inverter.brand}`}
+                                                                                    {rec.solar_panels && ` • ${rec.solar_panels.quantity} Painéis`}
+                                                                                </CardDescription>
+                                                                            </CardHeader>
+
+                                                                            <CardContent className="p-6 pt-2 flex-grow flex flex-col gap-6">
+                                                                                <div className="flex items-baseline gap-1 border-b border-gray-100 pb-4">
+                                                                                    <span className="text-3xl font-black text-gray-900">{formatPrice(rec.capex_total_eur)}</span>
+                                                                                    <span className="text-gray-400 text-xs font-bold uppercase">est.</span>
+                                                                                </div>
+
+                                                                                <div className="grid grid-cols-2 gap-3 rounded-2xl bg-gray-50 p-4 text-sm border border-gray-100">
+                                                                                    <div>
+                                                                                        <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Poupança</p>
+                                                                                        <p className="font-bold text-emerald-600 text-lg">{formatPrice(rec.savings_annual_eur)}/ano</p>
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Retorno</p>
+                                                                                        <p className="font-bold text-gray-900 text-lg">{rec.payback_years ? `${rec.payback_years} anos` : 'N/A'}</p>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                {rec.tariff_optimization && (
+                                                                                    <div className="absolute top-4 right-4 p-2 rounded-full bg-orange-100 border border-orange-200 text-orange-600 shadow-sm animate-pulse" title={`Dica de Otimização: Mude para ${rec.tariff_optimization.recommended_type === 'bi' ? 'Bi-horário' : rec.tariff_optimization.recommended_type === 'tri' ? 'Tri-horário' : 'Simples'}`}>
+                                                                                        <Lightbulb className="w-5 h-5" />
+                                                                                    </div>
+                                                                                )}
+
+                                                                                <div className="flex flex-col gap-2 mt-auto">
+                                                                                    <Button
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            handleRequestQuote(rec);
+                                                                                        }}
+                                                                                        className="w-full bg-white border-2 border-gray-200 text-gray-900 hover:bg-gray-50 hover:border-orange-200 h-12 font-bold rounded-xl transition-all"
+                                                                                        size="sm"
+                                                                                    >
+                                                                                        Solicitar orçamentos
+                                                                                    </Button>
+                                                                                </div>
+                                                                            </CardContent>
+                                                                        </Card>
+                                                                    ))}
+                                                                </div>
+                                                            </section>
+                                                        )
+                                                    ))
+                                                )}
+                                            </TabsContent>
+
+                                            <TabsContent value="all" className="focus-visible:outline-none focus-visible:ring-0">
+                                                <Card className="border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                                                    <CardHeader className="pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-50/50 border-b border-gray-100">
+                                                        <div>
+                                                            <CardTitle className="text-xl font-bold text-gray-900">Todas as Soluções Geradas</CardTitle>
+                                                            <CardDescription className="text-gray-500">
+                                                                Analise como as diferentes variáveis se relacionam em todas as soluções tecnicamente viáveis.
+                                                            </CardDescription>
+                                                        </div>
+                                                        <div className="flex bg-gray-200/50 p-1 rounded-xl">
+                                                            <Button
+                                                                variant={allSolutionsView === 'chart' ? 'secondary' : 'ghost'}
+                                                                size="sm"
+                                                                onClick={() => setAllSolutionsView('chart')}
+                                                                className={`rounded-lg h-9 px-4 ${allSolutionsView === 'chart' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
+                                                            >
+                                                                <LucideLineChart className="w-4 h-4 mr-2" />
+                                                                Gráfico
+                                                            </Button>
+                                                            <Button
+                                                                variant={allSolutionsView === 'table' ? 'secondary' : 'ghost'}
+                                                                size="sm"
+                                                                onClick={() => setAllSolutionsView('table')}
+                                                                className={`rounded-lg h-9 px-4 ${allSolutionsView === 'table' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
+                                                            >
+                                                                <LayoutGrid className="w-4 h-4 mr-2" />
+                                                                Tabela
+                                                            </Button>
+                                                        </div>
+                                                    </CardHeader>
+                                                    <CardContent className="p-6 space-y-8">
+                                                        {/* Filtros Avançados */}
+                                                        <div className="flex flex-wrap items-center gap-3">
+                                                            <Label className="text-gray-500 font-bold uppercase text-[10px] tracking-widest mr-2">Filtrar por</Label>
+                                                            {[
+                                                                { id: 'all', label: 'Todas', icon: Sparkles },
+                                                                { id: 'battery_only', label: 'Só Bateria', icon: Battery },
+                                                                { id: 'solar_only', label: 'Só Painéis', icon: Sun },
+                                                                { id: 'hybrid', label: 'Híbridas', icon: Zap },
+                                                            ].map((f) => {
+                                                                const Icon = f.icon;
+                                                                return (
+                                                                    <Button
+                                                                        key={f.id}
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => setFilterType(f.id as any)}
+                                                                        className={`h-10 rounded-xl px-5 border-gray-200 transition-all font-medium ${filterType === f.id ? 'bg-orange-600 border-orange-600 text-white hover:bg-orange-700' : 'bg-white text-gray-600 hover:border-gray-400 hover:text-gray-900'}`}
+                                                                    >
+                                                                        <Icon className={`w-4 h-4 mr-2 ${filterType === f.id ? 'text-white' : 'text-orange-500'}`} />
+                                                                        {f.label}
+                                                                    </Button>
+                                                                );
+                                                            })}
+                                                        </div>
+
+                                                        {allSolutionsView === 'chart' ? (
+                                                            <>
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                                                                    <div className="space-y-3">
+                                                                        <Label className="text-gray-400 text-[10px] uppercase font-bold tracking-widest">Eixo X (Horizontal)</Label>
+                                                                        <Select value={xAxis} onValueChange={setXAxis}>
+                                                                            <SelectTrigger className="bg-white border-gray-200 shadow-sm h-12 rounded-xl text-gray-900 font-medium">
+                                                                                <SelectValue />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent className="bg-white">
+                                                                                <SelectItem value="new_battery_capacity_kwh">Energia da bateria (kWh)</SelectItem>
+                                                                                <SelectItem value="panel_power_kwp">Potência dos painéis (kWp)</SelectItem>
+                                                                                <SelectItem value="capex_total_eur">Custo total (€)</SelectItem>
+                                                                                <SelectItem value="payback_years">Anos de retorno</SelectItem>
+                                                                                <SelectItem value="cost_per_kwh_battery">€/kWh da bateria</SelectItem>
+                                                                                <SelectItem value="cost_per_kwp_panels">€/kWp dos painéis</SelectItem>
+                                                                                <SelectItem value="max_system_power_kw">Máxima potência do sistema (kW)</SelectItem>
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </div>
+                                                                    <div className="space-y-3">
+                                                                        <Label className="text-gray-400 text-[10px] uppercase font-bold tracking-widest">Eixo Y (Vertical)</Label>
+                                                                        <Select value={yAxis} onValueChange={setYAxis}>
+                                                                            <SelectTrigger className="bg-white border-gray-200 shadow-sm h-12 rounded-xl text-gray-900 font-medium">
+                                                                                <SelectValue />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent className="bg-white">
+                                                                                <SelectItem value="new_battery_capacity_kwh">Energia da bateria (kWh)</SelectItem>
+                                                                                <SelectItem value="panel_power_kwp">Potência dos painéis (kWp)</SelectItem>
+                                                                                <SelectItem value="capex_total_eur">Custo total (€)</SelectItem>
+                                                                                <SelectItem value="payback_years">Anos de retorno</SelectItem>
+                                                                                <SelectItem value="cost_per_kwh_battery">€/kWh da bateria</SelectItem>
+                                                                                <SelectItem value="cost_per_kwp_panels">€/kWp dos painéis</SelectItem>
+                                                                                <SelectItem value="max_system_power_kw">Máxima potência do sistema (kW)</SelectItem>
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="h-[550px] w-full mt-6 bg-white rounded-2xl border border-gray-100 p-4 shadow-sm relative group/chart">
+                                                                    <ResponsiveContainer width="100%" height="100%">
+                                                                        <ScatterChart margin={{ top: 30, right: 30, bottom: 30, left: 30 }}>
+                                                                            <CartesianGrid strokeDasharray="3 3" vertical={true} stroke="#f3f4f6" />
+                                                                            <XAxis
+                                                                                type="number"
+                                                                                dataKey={xAxis}
+                                                                                name={xAxis}
+                                                                                stroke="#94a3b8"
+                                                                                fontSize={11}
+                                                                                tickLine={false}
+                                                                                axisLine={false}
+                                                                                tickFormatter={(val) => xAxis.includes('eur') || xAxis.includes('cost') ? `${val}€` : val}
+                                                                                label={{ value: xAxis.replace(/_/g, ' '), position: 'bottom', offset: 0, fill: '#64748b', fontSize: 10, fontWeight: 'bold' }}
+                                                                            />
+                                                                            <YAxis
+                                                                                type="number"
+                                                                                dataKey={yAxis}
+                                                                                name={yAxis}
+                                                                                stroke="#94a3b8"
+                                                                                fontSize={11}
+                                                                                tickLine={false}
+                                                                                axisLine={false}
+                                                                                tickFormatter={(val) => yAxis.includes('eur') || yAxis.includes('cost') ? `${val}€` : val}
+                                                                                label={{ value: yAxis.replace(/_/g, ' '), angle: -90, position: 'left', offset: 10, fill: '#64748b', fontSize: 10, fontWeight: 'bold' }}
+                                                                            />
+                                                                            <ZAxis type="number" range={[150, 150]} />
+                                                                            <ChartTooltip
+                                                                                cursor={{ strokeDasharray: '3 3', stroke: '#cbd5e1' }}
+                                                                                content={({ active, payload }) => {
+                                                                                    if (active && payload && payload.length) {
+                                                                                        const data = payload[0].payload;
+                                                                                        const isHybrid = data.new_battery_added && data.new_panels_added;
+                                                                                        const isSolarOnly = !data.new_battery_added && data.new_panels_added;
+                                                                                        const isBatteryOnly = data.new_battery_added && !data.new_panels_added;
+
+                                                                                        return (
+                                                                                            <div className="bg-white/95 backdrop-blur-md p-6 border border-gray-200 shadow-2xl rounded-2xl min-w-[300px] animate-in zoom-in-95 duration-200">
+                                                                                                <div className="flex items-center justify-between mb-4">
+                                                                                                    <Badge className={cn("font-bold px-3 py-1", isHybrid ? 'bg-orange-600' : isSolarOnly ? 'bg-blue-600' : 'bg-emerald-600')}>
+                                                                                                        {isHybrid ? 'Híbrido' : isSolarOnly ? 'Só Solar' : 'Só Bateria'}
+                                                                                                    </Badge>
+                                                                                                    <span className="text-2xl font-black text-gray-900">{formatPrice(data.capex_total_eur)}</span>
+                                                                                                </div>
+
+                                                                                                <div className="space-y-4">
+                                                                                                    <div className="space-y-2 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                                                                                        {data.new_battery_added && data.battery && (
+                                                                                                            <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
+                                                                                                                <Battery className="w-4 h-4 text-orange-600" />
+                                                                                                                <span className="truncate">{getBatteryDescription(data)}</span>
+                                                                                                            </div>
+                                                                                                        )}
+                                                                                                        {data.inverter && (
+                                                                                                            <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
+                                                                                                                <Zap className="w-4 h-4 text-blue-600" />
+                                                                                                                <span className="truncate">
+                                                                                                                    {data.inverter.brand} {data.inverter.model}
+                                                                                                                    {data.is_retrofit && <span className="ml-1 text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-md font-black uppercase">Retrofit</span>}
+                                                                                                                </span>
+                                                                                                            </div>
+                                                                                                        )}
+                                                                                                        {data.new_panels_added && data.solar_panels && (
+                                                                                                            <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
+                                                                                                                <Sun className="w-4 h-4 text-amber-500" />
+                                                                                                                <span className="truncate">{data.solar_panels.quantity}x {data.solar_panels.panel?.brand || 'Painéis'}</span>
+                                                                                                            </div>
+                                                                                                        )}
+                                                                                                    </div>
+
+                                                                                                    <div className="grid grid-cols-2 gap-4 text-xs font-bold">
+                                                                                                        <div className="flex flex-col gap-1">
+                                                                                                            <span className="text-gray-400 uppercase text-[9px] tracking-widest font-black">Payback</span>
+                                                                                                            <span className="text-gray-900 text-sm">{data.payback_years} anos</span>
+                                                                                                        </div>
+                                                                                                        <div className="flex flex-col gap-1">
+                                                                                                            <span className="text-gray-400 uppercase text-[9px] tracking-widest font-black">Poupança Anual</span>
+                                                                                                            <span className="text-emerald-600 text-sm">{formatPrice(data.savings_annual_eur)}</span>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                    <p className="text-[10px] text-orange-600 font-black text-center mt-3 animate-pulse border-t border-orange-50 pt-3">CLIQUE PARA DETALHES COMPLETOS</p>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        );
+                                                                                    }
+                                                                                    return null;
+                                                                                }}
+                                                                            />
+                                                                            <Scatter
+                                                                                name="Híbridas"
+                                                                                data={filteredRecommendations.filter(r => r.new_battery_added && r.new_panels_added)}
+                                                                                fill="#ea580c"
+                                                                                size={100}
+                                                                                className="cursor-pointer"
+                                                                                onClick={(data) => setSelectedRecommendation(data.payload)}
+                                                                            />
+                                                                            <Scatter
+                                                                                name="Só Bateria"
+                                                                                data={filteredRecommendations.filter(r => r.new_battery_added && !r.new_panels_added)}
+                                                                                fill="#10b981"
+                                                                                size={100}
+                                                                                className="cursor-pointer"
+                                                                                onClick={(data) => setSelectedRecommendation(data.payload)}
+                                                                            />
+                                                                            <Scatter
+                                                                                name="Só Solar"
+                                                                                data={filteredRecommendations.filter(r => !r.new_battery_added && r.new_panels_added)}
+                                                                                fill="#2563eb"
+                                                                                size={100}
+                                                                                className="cursor-pointer"
+                                                                                onClick={(data) => setSelectedRecommendation(data.payload)}
+                                                                            />
+                                                                        </ScatterChart>
+                                                                    </ResponsiveContainer>
+                                                                </div>
+
+                                                                <div className="flex justify-center gap-8 mt-4 pb-2">
+                                                                    <div className="flex items-center gap-2.5">
+                                                                        <div className="w-3.5 h-3.5 rounded-full bg-orange-600 shadow-sm" />
+                                                                        <span className="text-[11px] font-black uppercase text-gray-600 tracking-wider">Híbrida</span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2.5">
+                                                                        <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-sm" />
+                                                                        <span className="text-[11px] font-black uppercase text-gray-600 tracking-wider">Só Bateria</span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2.5">
+                                                                        <div className="w-3.5 h-3.5 rounded-full bg-blue-600 shadow-sm" />
+                                                                        <span className="text-[11px] font-black uppercase text-gray-600 tracking-wider">Só Solar</span>
+                                                                    </div>
+                                                                </div>
+
+                                                                <p className="text-center text-[10px] text-gray-400 italic">
+                                                                    * Passe com o rato nos pontos para ver o resumo. Clique para ver o relatório completo de cada solução.
+                                                                </p>
+                                                            </>
+                                                        ) : (
+                                                            <div className="overflow-hidden rounded-2xl border border-gray-100 shadow-sm bg-white font-sans">
+                                                                <div className="overflow-x-auto">
+                                                                    <Table>
+                                                                        <TableHeader>
+                                                                            <TableRow className="bg-gray-50 hover:bg-gray-50 text-[10px]">
+                                                                                <TableHead className="font-bold text-gray-400 uppercase tracking-widest px-4">Bateria</TableHead>
+                                                                                <TableHead className="font-bold text-gray-400 uppercase tracking-widest">Inversor</TableHead>
+                                                                                <TableHead className="font-bold text-gray-400 uppercase tracking-widest">Painéis</TableHead>
+                                                                                <TableHead className="font-bold text-gray-400 uppercase tracking-widest text-right cursor-pointer hover:text-orange-600 transition-colors" onClick={() => handleSort('capex_total_eur')}>
+                                                                                    Custo (€) {sortConfig?.key === 'capex_total_eur' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                                                                </TableHead>
+                                                                                <TableHead className="font-bold text-gray-400 uppercase tracking-widest text-right cursor-pointer hover:text-orange-600 transition-colors" onClick={() => handleSort('payback_years')}>
+                                                                                    Payback (Anos) {sortConfig?.key === 'payback_years' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                                                                </TableHead>
+                                                                                <TableHead className="font-bold text-gray-400 uppercase tracking-widest text-right cursor-pointer hover:text-orange-600 transition-colors" onClick={() => handleSort('new_battery_capacity_kwh')}>
+                                                                                    Bat. (kWh) {sortConfig?.key === 'new_battery_capacity_kwh' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                                                                </TableHead>
+                                                                                <TableHead className="font-bold text-gray-400 uppercase tracking-widest text-right cursor-pointer hover:text-orange-600 transition-colors" onClick={() => handleSort('panel_power_kwp')}>
+                                                                                    Sol. (kWp) {sortConfig?.key === 'panel_power_kwp' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                                                                </TableHead>
+                                                                            </TableRow>
+                                                                        </TableHeader>
+                                                                        <TableBody>
+                                                                            {sortedRecommendations.map((data: any, idx: number) => (
+                                                                                <TableRow
+                                                                                    key={idx}
+                                                                                    className="cursor-pointer hover:bg-orange-50/50 transition-colors text-sm font-medium text-gray-700"
+                                                                                    onClick={() => setSelectedRecommendation(data)}
+                                                                                >
+                                                                                    <TableCell className="px-4">
+                                                                                        {data.battery ? (
+                                                                                            <div className="flex items-center gap-2">
+                                                                                                <Battery className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+                                                                                                <div>
+                                                                                                    <div className="font-bold text-gray-900 truncate max-w-[140px] uppercase tracking-tighter">{data.battery.brand} {data.battery.model}</div>
+                                                                                                    <div className="text-gray-400 text-[10px] font-medium">Qtd: {data.battery.quantity || 1}</div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        ) : <span className="text-gray-400 font-normal italic">Sem bateria</span>}
+                                                                                    </TableCell>
+                                                                                    <TableCell>
+                                                                                        {data.inverter ? (
+                                                                                            <div className="flex items-center gap-2">
+                                                                                                <Zap className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                                                                                                <div>
+                                                                                                    <div className="font-bold text-gray-900 truncate max-w-[140px] uppercase tracking-tighter">{data.inverter.brand} {data.inverter.model}</div>
+                                                                                                    <div className="text-gray-400 text-[10px] font-medium">Qtd: {data.inverter.quantity || 1}</div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        ) : ''}
+                                                                                    </TableCell>
+                                                                                    <TableCell>
+                                                                                        {data.solar_panels ? (
+                                                                                            <div className="flex items-center gap-2">
+                                                                                                <Sun className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                                                                                <div>
+                                                                                                    <div className="font-bold text-gray-900 truncate max-w-[140px] uppercase tracking-tighter">{data.solar_panels.panel?.brand} {data.solar_panels.panel?.model}</div>
+                                                                                                    <div className="text-gray-400 text-[10px] font-medium">Qtd: {data.solar_panels.quantity}</div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        ) : <span className="text-gray-400 font-normal italic">Sem painéis</span>}
+                                                                                    </TableCell>
+                                                                                    <TableCell className="text-right font-bold text-gray-900 text-sm whitespace-nowrap">{Math.round(data.capex_total_eur).toLocaleString()}€</TableCell>
+                                                                                    <TableCell className="text-right font-bold text-gray-900">{data.payback_years}</TableCell>
+                                                                                    <TableCell className="text-right font-bold text-orange-600">{data.new_battery_capacity_kwh} kWh</TableCell>
+                                                                                    <TableCell className="text-right font-bold text-blue-600">{data.panel_power_kwp} kWp</TableCell>
+                                                                                </TableRow>
+                                                                            ))}
+                                                                        </TableBody>
+                                                                    </Table>
+                                                                </div>
+                                                                {sortedRecommendations.length === 0 && (
+                                                                    <div className="p-16 text-center bg-gray-50/50">
+                                                                        <div className="bg-gray-200 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-sm">
+                                                                            <Info className="text-gray-400 w-8 h-8" />
+                                                                        </div>
+                                                                        <p className="text-gray-500 font-bold text-lg">Nenhuma solução encontrada com este filtro.</p>
+                                                                        <Button variant="link" onClick={() => setFilterType('all')} className="text-orange-600 font-black mt-2 h-12 uppercase tracking-widest text-xs">Ver todas as soluções</Button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </CardContent>
+                                                </Card>
+                                            </TabsContent>
+                                        </Tabs>
+
+                                        {/* Modal de Detalhes Refatorado */}
+                                        {selectedRecommendation && (
+                                            <RecommendationModal
+                                                recommendation={selectedRecommendation}
+                                                onClose={() => setSelectedRecommendation(null)}
+                                                onRequestQuote={handleRequestQuote}
+                                                formatPrice={formatPrice}
+                                                getSystemName={getSystemName}
+                                                getExistingBatteryDescription={getExistingBatteryDescription}
+                                                getPriceBreakdown={getPriceBreakdown}
+                                            />
+                                        )}
+
+                                        {/* Secção de Avaliação */}
+                                        <div className="bg-white p-10 rounded-[2.5rem] border-2 border-orange-100 shadow-xl shadow-orange-50/50 text-center space-y-8 max-w-4xl mx-auto relative overflow-hidden group">
+                                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-200 via-orange-500 to-orange-200" />
+                                            {!hasRated ? (
+                                                <>
+                                                    <div className="space-y-3">
+                                                        <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">O que achou destas soluções?</h3>
+                                                        <p className="text-gray-500 font-medium">A sua avaliação ajuda-nos a melhorar o nosso algoritmo de inteligência artificial.</p>
+                                                    </div>
+
+                                                    <div className="flex flex-wrap justify-center gap-3">
+                                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
+                                                            <button
+                                                                key={star}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setUserRating(star);
+                                                                    handleRatingSubmit(star, undefined, false);
+                                                                }}
+                                                                className={cn(
+                                                                    "w-12 h-12 rounded-2xl flex items-center justify-center transition-all font-black text-lg border-2 shadow-sm active:scale-90",
+                                                                    userRating === star
+                                                                        ? 'bg-orange-600 text-white border-orange-700 shadow-orange-200 scale-110'
+                                                                        : 'bg-white text-gray-400 border-gray-100 hover:border-orange-200 hover:text-orange-600 hover:bg-orange-50'
+                                                                )}
+                                                            >
+                                                                {star}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+
+                                                    {userRating !== null && userRating <= 9 && (
+                                                        <div className="animate-in fade-in slide-in-from-top-4 duration-500 space-y-10 pt-10 max-w-2xl mx-auto border-t border-gray-100 text-left">
+                                                            {FEEDBACK_FORM_QUESTIONS.map((q) => (
+                                                                <div key={q.id} className="space-y-4">
+                                                                    <Label className="text-lg font-black text-gray-900 flex items-center gap-3">
+                                                                        <div className="w-2 h-6 bg-orange-500 rounded-full" />
+                                                                        {q.question}
+                                                                    </Label>
+                                                                    <div className="grid grid-cols-1 gap-3">
+                                                                        {q.options.map((option) => (
+                                                                            <div
+                                                                                key={option}
+                                                                                className={cn(
+                                                                                    "flex items-start space-x-4 p-4 rounded-2xl border-2 transition-all cursor-pointer group/opt",
+                                                                                    (feedbackQuestions[q.id] || []).includes(option)
+                                                                                        ? 'border-orange-500 bg-orange-50 shadow-sm'
+                                                                                        : 'border-gray-50 bg-white hover:border-orange-200'
+                                                                                )}
+                                                                                onClick={() => {
+                                                                                    const current = feedbackQuestions[q.id] || [];
+                                                                                    const next = current.includes(option)
+                                                                                        ? current.filter(item => item !== option)
+                                                                                        : [...current, option];
+                                                                                    setFeedbackQuestions({ ...feedbackQuestions, [q.id]: next });
+                                                                                }}
+                                                                            >
+                                                                                <Checkbox
+                                                                                    id={`${q.id}-${option}`}
+                                                                                    checked={(feedbackQuestions[q.id] || []).includes(option)}
+                                                                                    className="mt-0.5 border-2 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600"
+                                                                                    onCheckedChange={() => { }} // Handled by div onClick
+                                                                                />
+                                                                                <label
+                                                                                    htmlFor={`${q.id}-${option}`}
+                                                                                    className="text-sm font-bold text-gray-700 cursor-pointer w-full leading-relaxed"
+                                                                                >
+                                                                                    {option}
+                                                                                </label>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+
+                                                            <div className="space-y-4 pt-6">
+                                                                <Label className="text-lg font-black text-gray-900 flex items-center gap-3">
+                                                                    <div className="w-2 h-6 bg-orange-500 rounded-full" />
+                                                                    Algo mais que queira partilhar? (Opcional)
+                                                                </Label>
+                                                                <Textarea
+                                                                    value={ratingComment}
+                                                                    onChange={(e) => setRatingComment(e.target.value)}
+                                                                    placeholder="Diga-nos o que faltou ou o que poderia ser melhor..."
+                                                                    className="mt-2 bg-gray-50 border-gray-100 rounded-2xl p-5 text-gray-900 font-medium focus:ring-orange-500 focus:bg-white transition-all min-h-[120px]"
+                                                                />
+                                                            </div>
+                                                            <Button
+                                                                onClick={() => handleRatingSubmit(userRating, ratingComment, true)}
+                                                                disabled={isSendingRating}
+                                                                className="w-full bg-orange-600 hover:bg-orange-700 text-white h-14 text-xl font-black rounded-2xl shadow-xl shadow-orange-100 uppercase tracking-widest transition-all active:scale-95"
+                                                            >
+                                                                {isSendingRating ? <Loader2 className="animate-spin w-6 h-6" /> : 'Submeter Feedback'}
+                                                            </Button>
+                                                        </div>
+                                                    )}
+
+                                                    {userRating !== null && userRating > 9 && (
+                                                        <div className="animate-in fade-in zoom-in duration-500 pt-4">
+                                                            <p className="text-emerald-600 font-black text-xl uppercase tracking-tighter">Muito obrigado pela sua avaliação máxima! 🚀</p>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <div className="py-8 animate-in zoom-in duration-700">
+                                                    <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-50">
+                                                        <CheckCircle2 className="w-12 h-12" />
+                                                    </div>
+                                                    <h3 className="text-3xl font-black text-gray-900 uppercase tracking-tighter">Feedback Recebido!</h3>
+                                                    <p className="text-gray-500 font-bold mt-2 text-lg">A sua opinião é o motor da nossa evolução constante.</p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="bg-gray-50 p-8 rounded-3xl border border-gray-100 text-sm text-gray-500 space-y-4 max-w-4xl mx-auto">
+                                            <h4 className="font-black text-gray-900 uppercase tracking-widest flex items-center gap-2">
+                                                <Info className="w-4 h-4 text-orange-600" />
+                                                Notas da Simulação
+                                            </h4>
+                                            <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                                                {(results.notes || []).map((note: string, index: number) => (
+                                                    <li key={index} className="flex gap-2 items-start leading-relaxed font-medium">
+                                                        <span className="text-orange-500 font-black">•</span>
+                                                        {note}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+
+                                        <div className="text-center py-10">
+                                            <Button
+                                                variant="ghost"
+                                                onClick={() => goToStep(1, null)}
+                                                className="text-gray-400 hover:text-orange-600 font-black uppercase tracking-widest text-xs h-12 rounded-xl transition-all"
+                                            >
+                                                <ChevronLeft className="w-4 h-4 mr-2" />
+                                                Refazer Simulação Completa
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Step 4 Old Content (redundant, handled above, but keeping structure for safety during migration) */}
+                        {/* Waiting List Section - Always visible at bottom of results or final steps */}
+                        {step >= 4 && (
+                            <section className="mt-24 p-12 bg-white rounded-[3rem] text-gray-900 relative overflow-hidden max-w-7xl mx-auto shadow-2xl shadow-orange-100/20 border border-orange-100 group">
+                                <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_80%_20%,rgba(249,115,22,0.05),transparent)] z-0" />
+                                <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                                    <div className="space-y-8">
+                                        <div className="space-y-4">
+                                            <h2 className="text-4xl font-black uppercase tracking-tighter leading-none text-gray-900">
+                                                Deseja um <span className="text-orange-600">Relatório Técnico</span> Completo?
+                                            </h2>
+                                            <p className="text-gray-600 text-lg font-medium leading-relaxed">
+                                                A nossa equipa realiza um estudo detalhado e perfil de carga específico para a sua empresa ou habitação, incluindo análise de faturas reais e projeção de ROI a 20 anos.
+                                            </p>
+                                        </div>
+                                        <div className="flex flex-col sm:flex-row gap-3">
+                                            <Input
+                                                value={reportEmail}
+                                                onChange={(e) => setReportEmail(e.target.value)}
+                                                placeholder="Introduza o seu email profissional"
+                                                className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus-visible:ring-orange-500 h-14 rounded-2xl px-6 text-lg font-bold"
+                                            />
+                                            <Button onClick={handleSendReportEmail} disabled={isSendingReportEmail} className="bg-orange-600 text-white hover:bg-orange-700 px-10 h-14 text-lg font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-orange-100 transition-all active:scale-95 shrink-0">
+                                                {isSendingReportEmail ? <Loader2 className="animate-spin w-6 h-6" /> : 'Receber Estudo'}
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-orange-50/50 backdrop-blur-sm p-10 rounded-[2rem] border border-orange-100 space-y-6">
+                                        <div className="space-y-2">
+                                            <h3 className="text-2xl font-black uppercase tracking-tighter text-gray-900">Ajude-nos a melhorar</h3>
+                                            <p className="text-gray-600 font-medium">Partilhe feedback sobre a simulação ou sugestões de funcionalidades.</p>
+                                        </div>
+                                        <Textarea
+                                            value={feedbackMessage}
+                                            onChange={(e) => setFeedbackMessage(e.target.value)}
+                                            placeholder="Escreva aqui a sua mensagem..."
+                                            rows={4}
+                                            className="bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 focus-visible:ring-orange-500 rounded-2xl p-5 text-lg font-bold"
+                                        />
+                                        <div className="flex justify-end">
+                                            <Button onClick={handleSendFeedback} disabled={isSendingFeedback} className="bg-black text-white hover:bg-gray-900 px-8 h-12 font-black uppercase tracking-widest text-xs rounded-xl shadow-lg transition-all active:scale-95">
+                                                {isSendingFeedback ? <Loader2 className="animate-spin w-4 h-4" /> : 'Enviar Mensagem'}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <Battery className="absolute -right-20 -bottom-20 w-80 h-80 text-orange-500/10 rotate-12 pointer-events-none group-hover:scale-110 transition-transform duration-700" />
+                            </section>
+                        )}
+                    </div>
                 </div>
             </main >
 
             <Footer />
 
             <Dialog open={isPremiumModalOpen} onOpenChange={setIsPremiumModalOpen}>
-                <DialogContent className="sm:max-w-md bg-white">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-                            <Sparkles className="w-5 h-5 text-orange-600" />
-                            Ups!
-                        </DialogTitle>
-                        <div className="pt-4 text-base text-gray-700 leading-relaxed space-y-4">
-                            <p>
-                                Esta funcionalidade premium ainda está em fase final de desenvolvimento.
-                            </p>
-                            <p>
-                                Registámos o seu interesse e iremos entrar em contacto assim que estiver disponivel!
-                            </p>
+                <DialogContent className="sm:max-w-md bg-white rounded-[2rem] border-none shadow-2xl overflow-hidden p-0">
+                    <div className="h-2 bg-gradient-to-r from-orange-400 to-orange-600" />
+                    <div className="p-10 space-y-8">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-4 text-3xl font-black text-gray-900 uppercase tracking-tighter">
+                                <div className="p-3 bg-orange-100 rounded-2xl text-orange-600">
+                                    <Sparkles className="w-8 h-8" />
+                                </div>
+                                Ups! Quase lá...
+                            </DialogTitle>
+                            <div className="pt-6 text-lg text-gray-600 leading-relaxed space-y-6 font-medium">
+                                <p>
+                                    Esta funcionalidade premium de <span className="text-gray-900 font-black">Relatórios Profissionais</span> ainda está em fase final de testes.
+                                </p>
+                                <p className="bg-orange-50 p-4 rounded-2xl border border-orange-100 text-orange-800 text-base font-bold">
+                                    Registámos o seu interesse e a nossa equipa irá entrar em contacto assim que estiver disponível com uma oferta especial de lançamento!
+                                </p>
+                            </div>
+                        </DialogHeader>
+                        <div className="flex justify-center">
+                            <Button
+                                onClick={() => setIsPremiumModalOpen(false)}
+                                className="bg-orange-600 hover:bg-orange-700 text-white px-12 h-14 text-xl font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-orange-100 transition-all active:scale-95 w-full"
+                            >
+                                Perfeito, obrigado!
+                            </Button>
                         </div>
-                    </DialogHeader>
-                    <div className="flex justify-center pt-6">
-                        <Button onClick={() => setIsPremiumModalOpen(false)} className="bg-orange-600 hover:bg-orange-700 text-white px-10 h-12 text-lg font-bold rounded-xl shadow-md transition-all active:scale-95">
-                            Perfeito, obrigado!
-                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
